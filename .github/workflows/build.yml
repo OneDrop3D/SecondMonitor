@@ -96,6 +96,9 @@ jobs:
           v="${GITHUB_REF_NAME#v}"
           awk -v t="## Version $v" '$0==t{f=1;next} f&&/^## Version /{exit} f&&/^---$/{exit} f' CHANGELOG.md > notes.md
           [ -s notes.md ] || echo "SecondMonitor $v" > notes.md
+          # Release déjà publiée avec ses fichiers (par OneDrop3D ou à la main) : on n'y touche pas.
+          n=$(gh release view "$GITHUB_REF_NAME" --json assets -q '.assets | length' 2>/dev/null || echo 0)
+          if [ "$n" -ge 6 ]; then echo "Release $GITHUB_REF_NAME déjà complète : fichiers conservés."; exit 0; fi
           # les trois systèmes se construisent en parallèle : le premier crée la release, les autres y ajoutent leurs fichiers
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
             gh release create "$GITHUB_REF_NAME" --prerelease --title "SecondMonitor $v" --notes-file notes.md || true

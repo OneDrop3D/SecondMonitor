@@ -3,6 +3,13 @@
 Hub d'ingénieur de course (Mac, Windows, Linux) et collecteur pour le PC de jeu (Windows, Linux/SteamOS).
 Basé sur [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) de winzarten (licence MIT).
 
+## Version 0.3.1
+
+- Première version publiée : hub pour Mac (Apple Silicon et Intel), Windows et Linux ; collecteur pour Windows et Linux/SteamOS.
+- Construction automatique de tous les systèmes (OneDrop3D et GitHub Actions).
+
+---
+
 ## Version 0.3.0
 
 - **Collecteur** : petit programme pour le PC de jeu (Windows, Linux/SteamOS) qui remplace SecondMonitor complet, avec les mêmes jeux et une charge minimale.
