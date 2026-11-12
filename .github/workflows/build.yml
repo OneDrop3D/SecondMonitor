@@ -11,6 +11,11 @@
 name: Construction
 on:
   workflow_dispatch:
+    inputs:
+      systemes:
+        description: "Systèmes à construire (mac, windows, linux), séparés par des virgules"
+        required: false
+        default: "mac,windows,linux"
   push:
     branches: [main]
     tags: ['v*']
@@ -30,25 +35,35 @@ jobs:
       - name: Compilation du collecteur
         run: dotnet build Collector/src -c Release
 
-  construction:
+  # Liste des systèmes demandés : le Publieur OneDrop3D ne demande que ceux qu'il ne construit pas sur le Mac
+  # (pas de machine macOS réservée pour rien, pas de release provisoire orpheline).
+  plan:
     needs: tests
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    outputs:
+      matrice: ${{ steps.m.outputs.matrice }}
+    steps:
+      - id: m
+        env:
+          DEMANDE: ${{ github.event.inputs.systemes || 'mac,windows,linux' }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          tous = [
+            {"systeme": "windows", "machine": "ubuntu-24.04", "commande": "win", "fichiers": "dist/SecondMonitor-*-windows-x64.zip"},
+            {"systeme": "linux", "machine": "ubuntu-24.04", "commande": "linux", "fichiers": "dist/SecondMonitor-*-linux-x64.tar.gz"},
+            {"systeme": "mac", "machine": "macos-latest", "commande": "mac", "fichiers": "dist/SecondMonitor-Hub-*-mac-*.zip"},
+          ]
+          voulus = {x.strip() for x in os.environ["DEMANDE"].split(",") if x.strip()}
+          print("matrice=" + json.dumps({"include": [x for x in tous if x["systeme"] in voulus]}))
+          PY
+
+  construction:
+    needs: plan
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - systeme: windows
-            machine: ubuntu-24.04
-            commande: win
-            fichiers: dist/SecondMonitor-*-windows-x64.zip
-          - systeme: linux
-            machine: ubuntu-24.04
-            commande: linux
-            fichiers: dist/SecondMonitor-*-linux-x64.tar.gz
-          - systeme: mac
-            machine: macos-latest
-            commande: mac
-            fichiers: dist/SecondMonitor-Hub-*-mac-*.zip
+      matrix: ${{ fromJSON(needs.plan.outputs.matrice) }}
     runs-on: ${{ matrix.machine }}
     timeout-minutes: 45
     steps:
