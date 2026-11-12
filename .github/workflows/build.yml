@@ -1,10 +1,13 @@
 # SecondMonitor : tests à chaque envoi, construction de tous les systèmes à la demande et sur les étiquettes v*.
 #
-# Construction sur macOS : construire.sh y produit aussi les archives Windows et Linux (.NET compile pour tous).
-# - Lancée par le Publieur OneDrop3D (workflow_dispatch) : les fichiers partent dans des releases provisoires
-#   « ci-<run>-secondmonitor-mac|windows|linux » (une archive .tar chacune, avec le dossier dist/), que le Publieur
-#   télécharge puis supprime. Pas d'artefacts : leur stockage est compté sur tout le compte.
-# - Lancée par une étiquette v* : une release publique « v<version> » (préversion) reçoit directement les archives.
+# - Windows et Linux se construisent sur Linux (machines GitHub toujours disponibles) : .NET compile pour tous.
+# - Mac se construit à part sur macOS (application .app signée) : ces machines sont parfois saturées chez GitHub ;
+#   si la file d'attente dépasse 45 min, ce seul système échoue, Windows et Linux sont quand même livrés.
+#
+# Lancée par le Publieur OneDrop3D (workflow_dispatch) : chaque système part dans une release provisoire
+# « ci-<run>-secondmonitor-mac|windows|linux » (une archive .tar avec le dossier dist/), que le Publieur télécharge
+# puis supprime. Pas d'artefacts : leur stockage est compté sur tout le compte.
+# Lancée par une étiquette v* : les archives vont dans la release publique « v<version> » (préversion).
 name: Construction
 on:
   workflow_dispatch:
@@ -30,7 +33,24 @@ jobs:
   construction:
     needs: tests
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - systeme: windows
+            machine: ubuntu-24.04
+            commande: win
+            fichiers: dist/SecondMonitor-*-windows-x64.zip
+          - systeme: linux
+            machine: ubuntu-24.04
+            commande: linux
+            fichiers: dist/SecondMonitor-*-linux-x64.tar.gz
+          - systeme: mac
+            machine: macos-latest
+            commande: mac
+            fichiers: dist/SecondMonitor-Hub-*-mac-*.zip
+    runs-on: ${{ matrix.machine }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v5
@@ -39,35 +59,35 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '20'
-      - name: Construire tous les systèmes
-        run: ./construire.sh tous
+      - name: Outils (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y zsh zip
+      - name: Construire (${{ matrix.systeme }})
+        run: ./construire.sh ${{ matrix.commande }}
 
-      - name: Envoi au Publieur (releases provisoires)
+      - name: Envoi au Publieur (release provisoire)
         if: github.event_name == 'workflow_dispatch'
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          NOM: secondmonitor-${{ matrix.systeme }}
         run: |
           set -e
-          envoyer() {
-            nom="$1"; shift
-            tar -cf "$nom.tar" "$@"
-            tar -tvf "$nom.tar"
-            tag="ci-$GITHUB_RUN_ID-$nom"
-            if gh release view "$tag" >/dev/null 2>&1; then
-              gh release upload "$tag" "$nom.tar" --clobber
-            else
-              gh release create "$tag" "$nom.tar" --target "$GITHUB_SHA" --prerelease \
-                --title "Construction $GITHUB_RUN_ID ($nom)" \
-                --notes "Transit vers le Publieur OneDrop3D : supprimée dès qu'elle est téléchargée."
-            fi
-          }
-          envoyer secondmonitor-mac dist/SecondMonitor-Hub-*-mac-*.zip
-          envoyer secondmonitor-windows dist/SecondMonitor-*-windows-x64.zip
-          envoyer secondmonitor-linux dist/SecondMonitor-*-linux-x64.tar.gz
+          tar -cf "$NOM.tar" ${{ matrix.fichiers }}
+          tar -tvf "$NOM.tar"
+          tag="ci-$GITHUB_RUN_ID-$NOM"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$NOM.tar" --clobber
+          else
+            gh release create "$tag" "$NOM.tar" --target "$GITHUB_SHA" --prerelease \
+              --title "Construction $GITHUB_RUN_ID ($NOM)" \
+              --notes "Transit vers le Publieur OneDrop3D : supprimée dès qu'elle est téléchargée."
+          fi
 
       - name: Release publique
         if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -76,5 +96,10 @@ jobs:
           v="${GITHUB_REF_NAME#v}"
           awk -v t="## Version $v" '$0==t{f=1;next} f&&/^## Version /{exit} f&&/^---$/{exit} f' CHANGELOG.md > notes.md
           [ -s notes.md ] || echo "SecondMonitor $v" > notes.md
-          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.tar.gz --prerelease \
-            --title "SecondMonitor $v" --notes-file notes.md
+          # les trois systèmes se construisent en parallèle : le premier crée la release, les autres y ajoutent leurs fichiers
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --prerelease --title "SecondMonitor $v" --notes-file notes.md || true
+          for i in 1 2 3 4 5; do
+            gh release upload "$GITHUB_REF_NAME" ${{ matrix.fichiers }} --clobber && break
+            sleep 10
+          done
