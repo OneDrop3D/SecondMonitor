@@ -1,0 +1,65 @@
+﻿<UserControl
+    x:Class="SecondMonitor.WindowsControls.WPF.TimeSpanBarControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:SecondMonitor.WindowsControls.WPF.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:SecondMonitor.WindowsControls.WPF"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    mc:Ignorable="d">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <converters:TimeSpanToBrushConverter x:Key="TimeSpanToBrushConverter" />
+            <converters:TimeSpanToColorConverter x:Key="TimeSpanToColorConverter" />
+            <converters:TimeSpanToSecondsConverter x:Key="TimeSpanToSecondsConverter" />
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <StackPanel Background="{StaticResource Anthracite05Brush}">
+            <Label
+                HorizontalAlignment="Center"
+                Content="{Binding RelativeSource={RelativeSource AncestorType=local:TimeSpanBarControl}, Path=Title}"
+                FontSize="12"
+                FontWeight="Bold"
+                Foreground="{StaticResource LightGrey01Brush}" />
+            <Border BorderThickness="1" BorderBrush="{StaticResource DarkGrey05Brush}">
+                <Grid>
+                    <TextBlock Style="{StaticResource StandardText}" Text="Waiting For Reference Lap" VerticalAlignment="Center" HorizontalAlignment="Center" 
+                               Visibility="{Binding RelativeSource={RelativeSource AncestorType=local:TimeSpanBarControl}, Path=HasValidReferenceLap, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                    <Grid Background="{StaticResource Anthracite01Brush}" Visibility="{Binding RelativeSource={RelativeSource AncestorType=local:TimeSpanBarControl}, Path=HasValidReferenceLap, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Border BorderThickness="2" BorderBrush="{StaticResource DarkGrey05Brush}" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.ZIndex="2" Background="{StaticResource Anthracite01Brush}">
+                            <TextBlock Style="{StaticResource StandardText}" Margin="3,3,3,3"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       Background="{StaticResource Anthracite01Brush}"
+                                       Text="{Binding RelativeSource={RelativeSource AncestorType=local:TimeSpanBarControl}, Path=Value, Converter={StaticResource TimeSpanToSecondsConverter}}"
+                                       FontWeight="Bold"
+                                       Foreground="{Binding RelativeSource={RelativeSource AncestorType=local:TimeSpanBarControl}, Path=Value, Converter={StaticResource TimeSpanToBrushConverter}}" />
+                        </Border>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="5*" />
+                                <ColumnDefinition Width="5*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Rectangle
+                                x:Name="DeltaRectangle"
+                                Grid.Column="1"
+                                Width="50"
+                                Height="21"
+                                Margin="0,0,0,0"
+                                HorizontalAlignment="Left"
+                                Fill="{Binding RelativeSource={RelativeSource AncestorType=local:TimeSpanBarControl}, Path=Value, Converter={StaticResource TimeSpanToBrushConverter}}"
+                                RadiusX="00"
+                                RadiusY="00" />
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Border>
+
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -1,0 +1,8 @@
+<Project>
+    <PropertyGroup>
+        <LangVersion>12</LangVersion>
+    </PropertyGroup>
+    <PropertyGroup>
+        <Version>9.39.2.0</Version>
+    </PropertyGroup>
+</Project>

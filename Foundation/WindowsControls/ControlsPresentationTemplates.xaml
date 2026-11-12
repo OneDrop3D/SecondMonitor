@@ -1,0 +1,23 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="WPF/TrackRecords/TrackRecordsTemplates.xaml"/>
+        <ResourceDictionary Source="WPF/TrackRecords/RecordsOverviewView.xaml"/>
+        <ResourceDictionary Source="WPF/WheelDiameterWizard/WheelDiameterPresentation.xaml"/>
+        <ResourceDictionary Source="WPF/SplashScreen/SplashScreen.xaml"/>
+        <ResourceDictionary Source="WPF/TrackInfoControl/TrackGeometryView.xaml"/>
+        <ResourceDictionary Source="WPF/Dialogs/DialogPresentations.xaml"/>
+        <ResourceDictionary Source="WPF/Layouts/ViewSequenceControl.xaml"/>
+        <ResourceDictionary Source="WPF/Layouts/Layouts.xaml"/>
+        <ResourceDictionary Source="WPF/DriverPosition/SituationOverview.xaml"/>
+        <ResourceDictionary Source="WPF/Weather/WindInformation.xaml"/>
+        <ResourceDictionary Source="WPF/CarSystems/CarAndFuelStatusView.xaml"/>
+        <ResourceDictionary Source="WPF/CarSystems/CarStatusView.xaml"/>
+        <ResourceDictionary Source="WPF/Layouts/Configuration/LayoutConfigurationView.xaml"/>
+        <ResourceDictionary Source="WPF/Text/Text.xaml"/>
+        <ResourceDictionary Source="WPF/TabControl/TabControl.xaml"/>
+        <ResourceDictionary Source="WPF/PluginsConfig/PluginSettingsView.xaml"/>
+        <ResourceDictionary Source="WPF/DynamicGrid/Columns/ColumnDescriptorsView.xaml"/>
+        <ResourceDictionary Source="WPF/RaceSuggestion/RaceSuggestionView.xaml"/>
+        <ResourceDictionary Source="WPF/ColorPicker/ColorPickerStyles.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

@@ -1,0 +1,29 @@
+﻿<Window x:Class="SecondMonitor.Timing.Application.CarSettings.CarSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:carSettings="clr-namespace:SecondMonitor.Timing.Application.CarSettings"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=carSettings:CarSettingsWindowViewModel}"
+        Title="Car Settings" d:DesignHeight="450" d:DesignWidth="800" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" WindowStyle="SingleBorderWindow" SizeToContent="WidthAndHeight">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/WindowsControls;component/WPF/CarSettingsControl/CarSettingsControl.xaml" />
+                <ResourceDictionary Source="CarSettingsResources.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            </ResourceDictionary>
+            </Window.Resources>
+    <Grid Background="{StaticResource Anthracite01Brush}">
+        <TabControl Background="{StaticResource Anthracite01Brush}">
+            <TabItem Header="Car Settings">
+                <ContentPresenter Content="{Binding CarModelPropertiesViewModel}"/>
+            </TabItem>
+            <TabItem Header="Telemetry">
+                <ContentPresenter Content="{Binding LastCarDataViewMode}"/>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>

@@ -1,0 +1,2087 @@
+﻿<Window x:Class="SecondMonitor.Timing.Application.Presentation.View.DisplaySettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+        xmlns:dmBasicProperties="clr-namespace:SecondMonitor.DataModel.BasicProperties;assembly=DataModel"
+        xmlns:system="clr-namespace:System;assembly=mscorlib"
+        xmlns:viewModel="clr-namespace:SecondMonitor.ViewModels.Settings.ViewModel;assembly=SecondMonitor.ViewModels"
+        xmlns:model="clr-namespace:SecondMonitor.ViewModels.Settings.Model;assembly=SecondMonitor.ViewModels"
+        xmlns:converters="clr-namespace:SecondMonitor.WindowsControls.WPF.Converters;assembly=WindowsControls"
+        xmlns:wpf="clr-namespace:SecondMonitor.WindowsControls.WPF;assembly=WindowsControls"
+        xmlns:units="clr-namespace:SecondMonitor.DataModel.BasicProperties.Units;assembly=DataModel"
+        xmlns:donateButton="clr-namespace:SecondMonitor.WindowsControls.WPF.DonateButton;assembly=WindowsControls"
+        xmlns:dd="urn:gong-wpf-dragdrop"
+        xmlns:dataGrid="clr-namespace:SecondMonitor.ViewModels.DataGrid;assembly=SecondMonitor.ViewModels"
+        xmlns:columns="clr-namespace:SecondMonitor.ViewModels.Settings.ViewModel.Columns;assembly=SecondMonitor.ViewModels"
+        xmlns:helpButton="clr-namespace:SecondMonitor.WindowsControls.WPF.HelpButton;assembly=WindowsControls"
+        xmlns:quantityText="clr-namespace:SecondMonitor.WindowsControls.WPF.QuantityText;assembly=WindowsControls"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=viewModel:DisplaySettingsViewModel, IsDesignTimeCreatable=True}"
+        Title="SettingsView"
+        SizeToContent="WidthAndHeight" MinWidth="650" ResizeMode="NoResize">
+    <Window.Resources>
+        <ResourceDictionary>
+            <converters:IntegerToStringConverter x:Key="IntegerToStringConverter" />
+            <ObjectDataProvider x:Key="DataFromTemperatureEnum" MethodName="GetValues"
+                                ObjectType="{x:Type system:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="dmBasicProperties:TemperatureUnits" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
+            <ObjectDataProvider x:Key="DataFromPressureEnum" MethodName="GetValues"
+                                ObjectType="{x:Type system:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="dmBasicProperties:PressureUnits" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
+            <ObjectDataProvider x:Key="DataFromVolumeEnum" MethodName="GetValues"
+                                ObjectType="{x:Type system:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="dmBasicProperties:VolumeUnits" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
+            <ObjectDataProvider x:Key="DataFromVelocityEnum" MethodName="GetValues"
+                                ObjectType="{x:Type system:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="dmBasicProperties:VelocityUnits" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
+            <ObjectDataProvider x:Key="DataFromDisplayModeEnum" MethodName="GetValues"
+                                ObjectType="{x:Type system:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="model:DisplayModeEnum" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
+            <ObjectDataProvider x:Key="DataFromMultiClassDisplayKindEnum" MethodName="GetValues"
+                                ObjectType="{x:Type system:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="dmBasicProperties:MultiClassDisplayKind" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
+            <ObjectDataProvider x:Key="DataForForceUnitsEnum" MethodName="GetValues"
+                                ObjectType="{x:Type system:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="dmBasicProperties:ForceUnits" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
+            <ObjectDataProvider x:Key="DataForAngleUnitsEnum" MethodName="GetValues"
+                                ObjectType="{x:Type system:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="dmBasicProperties:AngleUnits" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
+
+            <ObjectDataProvider x:Key="DataForPowerUnitsEnum" MethodName="GetValues"
+                                ObjectType="{x:Type system:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="units:PowerUnits" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
+
+            <ObjectDataProvider x:Key="DataForTorqueUnitsEnum" MethodName="GetValues"
+                                ObjectType="{x:Type system:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="units:TorqueUnits" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
+
+            <ObjectDataProvider x:Key="DataForVerticalAlignmentEnum" MethodName="GetValues"
+                                ObjectType="{x:Type system:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="model:VerticalAlignment" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
+
+            <ObjectDataProvider x:Key="DataForHorizontalAlignmentEnum" MethodName="GetValues"
+                                ObjectType="{x:Type system:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="model:HorizontalAlignment" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
+
+            <DataTemplate DataType="{x:Type dataGrid:GenericColumnDescriptorTemplate}">
+                <Border BorderBrush="{StaticResource LightGrey01Brush}"
+                        BorderThickness="1" Padding="0,0,0,5">
+                    <TextBlock Style="{StaticResource StandardText}"
+                               VerticalAlignment="Center"
+                               Margin="10" Text="{Binding Name}"
+                               DockPanel.Dock="Top" />
+                </Border>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModel:DeltaLapSettingViewModel}">
+                <GroupBox Header="Lap Delta" Foreground="{StaticResource LightGrey01Brush}"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          DockPanel.Dock="Left">
+                    <StackPanel Orientation="Vertical " Margin="0,0,0,15">
+                        <TextBlock Margin="5,5,0,0" Text="Practice: "
+                                   FontWeight="Bold"
+                                   FontSize="{StaticResource NormalFontSize}"
+                                   VerticalAlignment="Center" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="50" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Column="0" Grid.Row="0" Margin="5,5,0,5" Width="140"
+                                       Text="Top Delta Bar" TextAlignment="Center" HorizontalAlignment="Stretch"
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Grid.Row="0" Margin="5,5,0,0"  Width="140"
+                                       Text="Bottom Delta Bar" TextAlignment="Center" HorizontalAlignment="Stretch"
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <Grid Grid.Column="0" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Center" Margin="5,0,0,0" Width="140"
+                                          ItemsSource="{Binding AllReferenceKindValues }"
+                                          SelectedItem="{Binding PracticeTopLapReferenceKind}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+                            <Grid Grid.Column="2" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Center" Margin="5,0,0,0" Width="140"
+                                          ItemsSource="{Binding AllReferenceKindValues }"
+                                          SelectedItem="{Binding PracticeBottomLapReferenceKind}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+                        </Grid>
+
+                        <TextBlock Margin="5,15,0,0" Text="Qualification: "
+                                   FontWeight="Bold"
+                                   FontSize="{StaticResource NormalFontSize}"
+                                   VerticalAlignment="Center" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="50" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Column="0" Grid.Row="0" Margin="5,5,0,5" Width="140"
+                                       Text="Top Delta Bar" TextAlignment="Center" HorizontalAlignment="Stretch"
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Grid.Row="0" Margin="5,5,0,0"  Width="140"
+                                       Text="Bottom Delta Bar" TextAlignment="Center" HorizontalAlignment="Stretch"
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <Grid Grid.Column="0" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Center" Margin="5,0,0,0" Width="140"
+                                          ItemsSource="{Binding AllReferenceKindValues }"
+                                          SelectedItem="{Binding QualificationTopLapReferenceKind}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+                            <Grid Grid.Column="2" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Center" Margin="5,0,0,0" Width="140"
+                                          ItemsSource="{Binding AllReferenceKindValues }"
+                                          SelectedItem="{Binding QualificationBottomLapReferenceKind}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+                        </Grid>
+
+                        <TextBlock Margin="5,15,0,0" Text="Race: "
+                                   FontWeight="Bold"
+                                   FontSize="{StaticResource NormalFontSize}"
+                                   VerticalAlignment="Center" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="50" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Column="0" Grid.Row="0" Margin="5,5,0,5" Width="140"
+                                       Text="Top Delta Bar" TextAlignment="Center" HorizontalAlignment="Stretch"
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Grid.Row="0" Margin="5,5,0,0"  Width="140"
+                                       Text="Bottom Delta Bar" TextAlignment="Center" HorizontalAlignment="Stretch"
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <Grid Grid.Column="0" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Center" Margin="5,0,0,0" Width="140"
+                                          ItemsSource="{Binding AllReferenceKindValues }"
+                                          SelectedItem="{Binding RaceTopLapReferenceKind}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+                            <Grid Grid.Column="2" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Center" Margin="5,0,0,0" Width="140"
+                                          ItemsSource="{Binding AllReferenceKindValues }"
+                                          SelectedItem="{Binding RaceBottomLapReferenceKind}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+                        </Grid>
+                    </StackPanel>
+                </GroupBox>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModel:DisplaySettingsViewModel}" x:Key="SessionSettingsDataTemplate">
+                <StackPanel Orientation="Vertical">
+                    <GroupBox Header="Session Best" Foreground="{StaticResource LightGrey01Brush}"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              DockPanel.Dock="Left">
+                        <StackPanel Orientation="Vertical ">
+
+                            <Label Content="Session Best Information:" HorizontalAlignment="Left"
+                                   VerticalAlignment="Center"
+                                   Margin="0,10,0,0" Foreground="{StaticResource LightGrey01Brush}" />
+                            <ComboBox HorizontalAlignment="Left" Margin="0,0,0,5"
+                                      VerticalAlignment="Top" Width="250"
+                                      ItemsSource="{Binding AllSessionBestInformationKind}"
+                                      SelectedItem="{Binding SelectedSessionBestInformationKind}"
+                                      Style="{StaticResource StandardComboBoxStyle}" />
+                        </StackPanel>
+                    </GroupBox>
+                    <ContentPresenter Content="{Binding DeltaLapSettingViewModel}"/>
+                    <GroupBox Header="Track Records" Foreground="{StaticResource LightGrey01Brush}"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              DockPanel.Dock="Left">
+                        <StackPanel Margin="0,0,0,5">
+                            <CheckBox Content="Enabled" Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="5,10,0,0"
+                                      IsChecked="{Binding TrackRecordsSettingsViewModel.IsEnabled}"
+                                      ToolTip="Enables and Disables the track records functionality." />
+                            <CheckBox Content="Show session &#x0a;records only"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="5,10,0,0"
+                                      IsChecked="{Binding TrackRecordsSettingsViewModel.DisplayRecordForCurrentSessionType}"
+                                      ToolTip="When enabled only records done in the current session type is shown. i.e. in races you only see records done in race." />
+
+                            <CheckBox Content="Show Average Speed"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="5,10,0,0"
+                                      IsChecked="{Binding TrackRecordsSettingsViewModel.IsShowAverageSpeedEnabled}"
+                                      ToolTip="Show also the average speed in the track records widget." />
+
+                        </StackPanel>
+                    </GroupBox>
+                    <ContentPresenter Content="{Binding WeatherInfoSettings}" />
+                </StackPanel>
+            </DataTemplate>
+
+
+            <DataTemplate DataType="{x:Type viewModel:RestApiSettingsViewModel}">
+                <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="1" Margin="5" Padding="5">
+                    <StackPanel>
+                        <CheckBox IsChecked="{Binding IsEnabled}" Margin="5" VerticalAlignment="Center"  VerticalContentAlignment="Center">
+                        <TextBlock Style="{StaticResource StandardText}"
+                                   VerticalAlignment="Center" TextAlignment="Center"
+                                   Text="Enable REST API"/>
+                        </CheckBox>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource StandardText}"
+                                       VerticalAlignment="Center" TextAlignment="Center"
+                                       Text="Port:" Margin="5"/>
+                            <TextBox Width="150" Margin="5" Style="{StaticResource StandardTextBox}" Text="{Binding Port, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=5007}"></TextBox>
+                        </StackPanel>
+                        <CheckBox IsChecked="{Binding IsSwaggerEnabled}" Margin="5" VerticalAlignment="Center"  VerticalContentAlignment="Center">
+                            <TextBlock Style="{StaticResource StandardText}"
+                                       VerticalAlignment="Center" TextAlignment="Center"
+                                       Text="Enable Swagger Page" />
+                        </CheckBox>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource StandardText}" Text="Swagger URL:" Margin="5"/>
+                            <TextBlock HorizontalAlignment="Center" Margin="5"
+                                       Foreground="{StaticResource LightGrey01Brush}"
+                                       Grid.ZIndex="2">
+                                <Hyperlink Foreground="{StaticResource LightGrey01Brush}"
+                                           NavigateUri="{Binding SwaggerUrl}"
+                                           RequestNavigate="Hyperlink_OnRequestNavigate">
+                                    <TextBlock Style="{StaticResource StandardText}" Text="{Binding SwaggerUrl}"></TextBlock>
+                                </Hyperlink>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <TextBlock Style="{StaticResource StandardText}"
+                                   VerticalAlignment="Center" FontStyle="Italic"
+                                   Margin="10"
+                                   Text="Note: All settings in this tab require application restart to take effect"
+                                   DockPanel.Dock="Top" />
+                    </StackPanel>
+                </Border>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModel:AutoDeleteSettingsViewModel}">
+                <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="1" Margin="5" Padding="5">
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Style="{StaticResource StandardText}"
+                               VerticalAlignment="Center"
+                               Margin="0,10,10,10" Text="{Binding Title}"
+                               DockPanel.Dock="Top" />
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox IsChecked="{Binding IsDeleteBySizeEnabled}" VerticalAlignment="Center"  VerticalContentAlignment="Center">
+                            <TextBlock Style="{StaticResource StandardText}"
+                                   VerticalAlignment="Center" TextAlignment="Center"
+                                   Text="Delete When Exceeding Size:"/>
+                        </CheckBox>
+                        <TextBox Style="{StaticResource StandardTextBox}" Text="{Binding MaxMegabytes, Converter={StaticResource IntegerToStringConverter}}" Margin="15,0,0,0" MinWidth="70"/>
+                        <TextBlock Style="{StaticResource StandardText}" Text="MB" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0, 5,0,0">
+                        <CheckBox IsChecked="{Binding IsDeleteByDaysEnabled}" VerticalAlignment="Center"  VerticalContentAlignment="Center">
+                            <TextBlock Style="{StaticResource StandardText}"
+                                       VerticalAlignment="Center" TextAlignment="Center"
+                                       Text="Delete Files Older Than:"/>
+                        </CheckBox>
+                        <TextBox Style="{StaticResource StandardTextBox}" Text="{Binding MaxDays, Converter={StaticResource IntegerToStringConverter}}" Margin="15,0,0,0" MinWidth="70"/>
+                        <TextBlock Style="{StaticResource StandardText}" Text="Days" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0, 5,0,0">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Dir:"/>
+                        <TextBox Style="{StaticResource StandardTextBox}" IsReadOnly="True" Margin="5,0,0,0" Text="{Binding Directory}" MinWidth="150"/>
+                        <Button Content="..." VerticalContentAlignment="Bottom" Margin="5,0,0,0"
+                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="19"
+                                Command="{Binding Path=OpenSelectFolderCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModel:SimsAutoDeleteSettingsViewModel}">
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Style="{StaticResource StandardText}"
+                               VerticalAlignment="Center"
+                               Margin="10" Text="Delete Obsolete Files:"
+                               DockPanel.Dock="Top" />
+                    <ItemsControl ItemsSource="{Binding AllAutoDeleteSettings}"/>
+                </StackPanel>
+            </DataTemplate>
+            
+            <DataTemplate DataType="{x:Type viewModel:ChampionshipSettingViewModel}">
+                <StackPanel Orientation="Vertical">
+                    <GroupBox Header="Running Events" Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Stretch" Grid.Column="0" Padding="5">
+                        <CheckBox IsChecked="{Binding IsMultiplayerEnabled}"
+                                  Content="Allow Championship Functionality in Multiplayer." Margin="5"
+                                  Foreground="{StaticResource LightGrey01Brush}" />
+                    </GroupBox>
+                    <GroupBox Header="Driver Outlines" Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Stretch" Grid.Column="0" Padding="5">
+                        <StackPanel Orientation="Vertical">
+                            <CheckBox IsChecked="{Binding IsOutlineLeaderEnabled}"
+                                      Content="Highlight Championship Leader" Margin="5"
+                                      Foreground="{StaticResource LightGrey01Brush}" />
+                            <StackPanel Orientation="Horizontal" Margin="5">
+                                <TextBlock Style="{StaticResource StandardText}" Text="Leader Outline Color:" />
+                                <Grid Margin="10,0,2,0"
+                                      Background="{Binding LeaderOutLine, Converter={StaticResource ColorDtoToSolidBrushConverter}, Mode=OneWay}"
+                                      Width="30" Height="20" />
+                                <xctk:ColorPicker
+                                    SelectedColor="{Binding LeaderOutLine, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource ColorDtoToColorConverter}}" />
+                            </StackPanel>
+
+                            <CheckBox IsChecked="{Binding IsOutLineDriveLessPointsEnabled}"
+                                      Content="Highlight Drivers With Less Points" Margin="5,40,0,0"
+                                      Foreground="{StaticResource LightGrey01Brush}" />
+                            <StackPanel Orientation="Horizontal" Margin="5">
+                                <TextBlock Style="{StaticResource StandardText}" Margin="0,0,5,0"
+                                           Text="Max Drivers To Highlight:" />
+                                <TextBox Style="{StaticResource StandardTextBox}"
+                                         Text="{Binding MaxOutlinedDriveLessPoints, Converter={StaticResource IntegerToStringConverter}, FallbackValue=3}"
+                                         Width="30" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="5">
+                                <TextBlock Style="{StaticResource StandardText}" Text="Outline Color From:" />
+                                <Grid Margin="10,0,2,0"
+                                      Background="{Binding DriverLessPointsOutlineFrom, Converter={StaticResource ColorDtoToSolidBrushConverter}, Mode=OneWay}"
+                                      Width="30" Height="20" />
+                                <xctk:ColorPicker
+                                    SelectedColor="{Binding DriverLessPointsOutlineFrom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource ColorDtoToColorConverter}}" />
+
+                                <TextBlock Margin="40,0,0,0" Style="{StaticResource StandardText}"
+                                           Text="Outline Color To:" />
+                                <Grid Margin="10,0,2,0"
+                                      Background="{Binding DriverLessPointsOutlineTo, Converter={StaticResource ColorDtoToSolidBrushConverter}, Mode=OneWay}"
+                                      Width="30" Height="20" />
+                                <xctk:ColorPicker
+                                    SelectedColor="{Binding DriverLessPointsOutlineTo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource ColorDtoToColorConverter}}" />
+                            </StackPanel>
+
+                            <CheckBox IsChecked="{Binding IsOutLineDriverMorePointsEnabled}"
+                                      Content="Highlight Drivers With More Points" Margin="5,40,5,5"
+                                      Foreground="{StaticResource LightGrey01Brush}" />
+                            <StackPanel Orientation="Horizontal" Margin="5">
+                                <TextBlock Style="{StaticResource StandardText}" Margin="0,0,5,0"
+                                           Text="Max Drivers To Highlight:" />
+                                <TextBox Style="{StaticResource StandardTextBox}"
+                                         Text="{Binding MaxOutlinedDriversMorePoints, Converter={StaticResource IntegerToStringConverter}, FallbackValue=3}"
+                                         Width="30" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="5">
+                                <TextBlock Style="{StaticResource StandardText}" Text="Outline Color From:" />
+                                <Grid Margin="10,0,2,0"
+                                      Background="{Binding DriverMorePointsOutlineFrom, Converter={StaticResource ColorDtoToSolidBrushConverter}, Mode=OneWay}"
+                                      Width="30" Height="20" />
+                                <xctk:ColorPicker
+                                    SelectedColor="{Binding DriverMorePointsOutlineFrom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource ColorDtoToColorConverter}}" />
+
+                                <TextBlock Margin="40,0,0,0" Style="{StaticResource StandardText}"
+                                           Text="Outline Color To:" />
+                                <Grid Margin="10,0,2,0"
+                                      Background="{Binding DriverMorePointsOutlineTo, Converter={StaticResource ColorDtoToSolidBrushConverter}, Mode=OneWay}"
+                                      Width="30" Height="20" />
+                                <xctk:ColorPicker
+                                    SelectedColor="{Binding DriverMorePointsOutlineTo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource ColorDtoToColorConverter}}" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="5,10,5,5">
+                                <TextBlock Style="{StaticResource StandardText}" Margin="0,0,5,0"
+                                           Text="Max Points Difference to Highlight:" />
+                                <TextBox Width="40" Style="{StaticResource StandardTextBox}"
+                                         Text="{Binding MaxPointsDifferenceToOutline, Converter={StaticResource IntegerToStringConverter}, FallbackValue=20}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </GroupBox>
+                </StackPanel>
+            </DataTemplate>
+
+
+
+            <DataTemplate DataType="{x:Type viewModel:WeatherInfoSettingsViewModel}">
+                <GroupBox Header="Temperature Change Info" Foreground="{StaticResource LightGrey01Brush}" Margin="5,5,0,5"
+                          VerticalAlignment="Stretch" Grid.Column="0">
+                    <StackPanel Orientation="Vertical" Margin="0,0,0,15">
+                        <TextBlock Margin="5,5,0,0" Text="Practice / Qualification:"
+                                   FontWeight="Bold"
+                                   FontSize="{StaticResource NormalFontSize}"
+                                   VerticalAlignment="Center" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="50"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="3" Margin="5,5,0,5"
+                                       Text="Air Temp Change" TextAlignment="Center"
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="4" Grid.Row="0" Grid.ColumnSpan="3" Margin="5,5,0,0"
+                                       Text="Track Temp Change" TextAlignment="Center"
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <Grid Grid.Column="0" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Left" Margin="0,0,0,0" Width="140"
+                                          ItemsSource="{Binding AvailableTemperatureChangeValues }"
+                                          SelectedItem="{Binding PracticeFirstAirTempInfo}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+                            <TextBlock Grid.Column="1" Grid.Row="1" Margin="2,0,2,0" Text=" / "
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <Grid Grid.Column="2" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Left" Margin="0,0,0,0" Width="140"
+                                          ItemsSource="{Binding AvailableTemperatureChangeValues }"
+                                          SelectedItem="{Binding PracticeSecondAirTempInfo}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+
+                            <Grid Grid.Column="4" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Left" Margin="0,0,0,0" Width="140"
+                                          ItemsSource="{Binding AvailableTemperatureChangeValues }"
+                                          SelectedItem="{Binding PracticeFirstTrackTempInfo}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+                            <TextBlock Grid.Column="5" Grid.Row="1" Margin="2,0,2,0" Text=" / "
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <Grid Grid.Column="6" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Left" Margin="0,0,0,0" Width="140"
+                                          ItemsSource="{Binding AvailableTemperatureChangeValues }"
+                                          SelectedItem="{Binding PracticeSecondTrackTempInfo}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+                        </Grid>
+                        <TextBlock Margin="5,25,0,5" Text="Race:"
+                                   FontWeight="Bold"
+                                   FontSize="{StaticResource NormalFontSize}"
+                                   VerticalAlignment="Center" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="50" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="3" Margin="5,5,0,0"
+                                       Text="Air Temp Change" TextAlignment="Center"
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="4" Grid.Row="0" Grid.ColumnSpan="3" Margin="5,5,0,0"
+                                       Text="Track Temp Change" TextAlignment="Center"
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <Grid Grid.Column="0" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Left" Margin="0,0,0,0" Width="140"
+                                          ItemsSource="{Binding AvailableTemperatureChangeValues }"
+                                          SelectedItem="{Binding RaceFirstAirTempInfo}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+                            <TextBlock Grid.Column="1" Grid.Row="1" Margin="2,0,2,0" Text=" / "
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <Grid Grid.Column="2" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Left" Margin="0,0,0,0" Width="140"
+                                          ItemsSource="{Binding AvailableTemperatureChangeValues }"
+                                          SelectedItem="{Binding RaceSecondAirTempInfo}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+
+                            <Grid Grid.Column="4" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Left" Margin="0,0,0,0" Width="140"
+                                          ItemsSource="{Binding AvailableTemperatureChangeValues }"
+                                          SelectedItem="{Binding RaceFirstTrackTempInfo}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+                            <TextBlock Grid.Column="5" Grid.Row="1" Margin="2,0,2,0" Text=" / "
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       VerticalAlignment="Center" />
+                            <Grid Grid.Column="6" Grid.Row="1">
+                                <ComboBox HorizontalAlignment="Left" Margin="0,0,0,0" Width="140"
+                                          ItemsSource="{Binding AvailableTemperatureChangeValues }"
+                                          SelectedItem="{Binding RaceSecondTrackTempInfo}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </Grid>
+                        </Grid>
+
+                    </StackPanel>
+                </GroupBox>
+
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModel:DashboardSettingsViewModel}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <WrapPanel Orientation="Vertical" MaxHeight="200" Grid.Row="0">
+                    <CheckBox Content="Show ABS"
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding AbsEnabled}"/>
+                    <CheckBox Content="Show Alternator"
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding AlternatorEnabled}"/>
+                    <CheckBox Content="Show Bodywork Damage"
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding BodyWorkDamageEnabled}"/>
+                    <CheckBox Content="Show Brake Damage"
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding BrakeDamageEnabled}"/>
+                    <CheckBox Content="Show Clutch Damage"
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding ClutchDamageEnabled}"/>
+                    <CheckBox Content="Show DRS "
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding DrsEnabled}"/>
+                    <CheckBox Content="Show Engine Damage "
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding EngineDamageEnabled}"/>
+                    <CheckBox Content="Show Ers/Boost "
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding ErsEnabled}"/>
+                    <CheckBox Content="Show Gearbox Damage"
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding TransmissionDamageEnabled}"/>
+                    <CheckBox Content="Show Headlights"
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding LightsEnabled}"/>
+                    <CheckBox Content="Show Pit Limiter"
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding PitLimiterEnabled}"/>
+                    <CheckBox Content="Show Suspension Damage"
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding SuspensionDamageEnabled}"/>
+                    <CheckBox Content="Show TC"
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding TcEnabled}"/>
+                    <CheckBox Content="Show Tyre Dirt"
+                              Foreground="{StaticResource LightGrey01Brush}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Left" Margin="5"
+                              IsChecked="{Binding TyreDirtEnabled}"/>
+                    
+                </WrapPanel>
+                    <StackPanel Grid.Row="1">
+                        <StackPanel Orientation="Horizontal" Margin="5">
+                        <TextBlock Margin="0,2,0,2" Text="Recent ABS/TC Activation Time (s): "
+                                   VerticalAlignment="Center"
+                                   Style="{StaticResource StandardText}"
+                                   ToolTip="Seconds, during which the ABS/TC icon will be blue colored, after ABS/TC activation." />
+                        <TextBox
+                            Text="{Binding TcAndAbsTimeout, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=8}"
+                            Width="40" Margin="5,2,0,2" HorizontalAlignment="Left"
+                            Style="{StaticResource StandardTextBox}"
+                            ToolTip="Seconds, during which the ABS/TC icon will be blue colored, after ABS/TC activation.." />
+                    </StackPanel>
+
+                    </StackPanel>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModel:SessionFuelCalculationSettingsViewModel}">
+                <StackPanel Orientation="Vertical">
+                    <CheckBox Margin="0,5,0,0" IsChecked="{Binding AutoOpenOnSessionStart}" VerticalAlignment="Center" VerticalContentAlignment="Center" Content="Auto Open on Session Start" Foreground="{StaticResource LightGrey01Brush}"/>
+                    <CheckBox Margin="0,5,0,0" IsChecked="{Binding AutoOpenWhenInPits}" VerticalAlignment="Center" Content="Auto Open when In Pits" Foreground="{StaticResource LightGrey01Brush}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                        <TextBlock Margin="0,2,0,2" Text="Laps: "
+                                   VerticalAlignment="Center"
+                                   Style="{StaticResource StandardText}"
+                                   ToolTip="Laps of desired of run time." />
+                        <TextBox
+                            Text="{Binding Laps, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=0}"
+                            Width="40" Margin="5,2,0,2" HorizontalAlignment="Left"
+                            Style="{StaticResource StandardTextBox}"
+                            ToolTip="Laps of desired of run time." />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                        <TextBlock Margin="0,2,0,2" Text="Minutes: "
+                                   VerticalAlignment="Center"
+                                   Style="{StaticResource StandardText}"
+                                   ToolTip="Minutes of desired of run time." />
+                        <TextBox
+                            Text="{Binding Minutes, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=0}"
+                            Width="40" Margin="5,2,0,2" HorizontalAlignment="Left"
+                            Style="{StaticResource StandardTextBox}"
+                            ToolTip="Minutes of desired of run time." />
+                    </StackPanel>
+
+                </StackPanel>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModel:RaceSessionFuelCalculationSettingsViewModel}">
+                <StackPanel Orientation="Vertical">
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                        <TextBlock Margin="0,2,0,2" Text="Extra Laps: "
+                                   VerticalAlignment="Center"
+                                   Style="{StaticResource StandardText}"
+                                   ToolTip="Extra Laps to add to fuel calculation." />
+                        <TextBox
+                            Text="{Binding ExtraLaps, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=0}"
+                            Width="40" Margin="5,2,0,2" HorizontalAlignment="Left"
+                            Style="{StaticResource StandardTextBox}"
+                            ToolTip="Laps of desired of run time." />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                        <TextBlock Margin="0,2,0,2" Text="Extra Minutes: "
+                                   VerticalAlignment="Center"
+                                   Style="{StaticResource StandardText}"
+                                   ToolTip="Minutes of desired of run time." />
+                        <TextBox
+                            Text="{Binding ExtraMinutes, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=0}"
+                            Width="40" Margin="5,2,0,2" HorizontalAlignment="Left"
+                            Style="{StaticResource StandardTextBox}"
+                            ToolTip="Extra minutes to add to fuel calcuation." />
+                    </StackPanel>
+
+                </StackPanel>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModel:PitEstimationVisualizationSettingsViewModel}">
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox IsChecked="{Binding IsPitBoardEnabled}" VerticalAlignment="Center" VerticalContentAlignment="Center" Content="PitBoard" Foreground="{StaticResource LightGrey01Brush}" Margin="0,0,40,0"/>
+                        <CheckBox IsChecked="{Binding IsMapEnabled}" VerticalAlignment="Center" Content="Map" Foreground="{StaticResource LightGrey01Brush}"/>
+                    </StackPanel>
+                </StackPanel>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModel:PitEstimationSettingsViewModel}">
+                <GroupBox Header="Pit Estimation" Foreground="{StaticResource LightGrey01Brush}"
+                          VerticalAlignment="Stretch" Grid.Column="0">
+                    <Grid>
+                        <helpButton:HelpButton HelpUrl="https://gitlab.com/winzarten/SecondMonitor/-/wikis/Pit-Estimations" VerticalAlignment="Top" HorizontalAlignment="Right" Width="50" Height="50"/>
+                        <StackPanel Orientation="Vertical">
+                            <Grid Margin="0,0,0,50">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="50" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="5,5,0,0" Text="Show When:"
+                                           FontSize="{StaticResource BigFontSize}"
+                                           Style="{StaticResource StandardText}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Row="0" Grid.Column="2" Margin="5,5,0,0" Text="Show On:"
+                                           FontSize="{StaticResource BigFontSize}"
+                                           Style="{StaticResource StandardText}" VerticalAlignment="Center"
+                                           HorizontalAlignment="Center" />
+                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="5,5,0,0" Text="Always:"
+                                           Style="{StaticResource StandardText}" VerticalAlignment="Center" />
+                                <ContentPresenter Grid.Row="1" Grid.Column="2" Margin="5,5,0,0"
+                                                  Content="{Binding AlwaysEnabled}" VerticalAlignment="Center" />
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Margin="5,5,0,0" Text="Pit Requested:"
+                                           Style="{StaticResource StandardText}" VerticalAlignment="Center" />
+                                <ContentPresenter Grid.Row="2" Grid.Column="2" Margin="5,5,0,0"
+                                                  Content="{Binding PitRequested}" VerticalAlignment="Center" />
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Margin="5,5,0,0" Text="In Pit Widow:"
+                                           Style="{StaticResource StandardText}" VerticalAlignment="Center" />
+                                <ContentPresenter Grid.Row="3" Grid.Column="2" Margin="5,5,0,0"
+                                                  Content="{Binding InPitWindow}" VerticalAlignment="Center" />
+
+                                <TextBlock Grid.Row="4" Grid.Column="0" Margin="5,5,0,0" Text="Fuel Low:"
+                                           Style="{StaticResource StandardText}" VerticalAlignment="Center" />
+                                <ContentPresenter Grid.Row="4" Grid.Column="2" Margin="5,5,0,0"
+                                                  Content="{Binding FuelLow}" VerticalAlignment="Center" />
+
+                                <TextBlock Grid.Row="5" Grid.Column="0" Margin="5,5,0,0" Text="Tyre Worn:"
+                                           Style="{StaticResource StandardText}" VerticalAlignment="Center" />
+                                <ContentPresenter Grid.Row="5" Grid.Column="2" Margin="5,5,0,0"
+                                                  Content="{Binding TyreWorn}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Row="6" Grid.Column="0" Margin="5,5,0,0" Text="Stint Ending:"
+                                           Style="{StaticResource StandardText}" VerticalAlignment="Center" />
+                                <ContentPresenter Grid.Row="6" Grid.Column="2" Margin="5,5,0,0"
+                                                  Content="{Binding StintEnding}" VerticalAlignment="Center" />
+                            </Grid>
+                            <CheckBox IsChecked="{Binding ShowPitBoardAtEntry}" VerticalAlignment="Center" VerticalContentAlignment="Center" Content="Show pit estimation board at pit entry: " Foreground="{StaticResource LightGrey01Brush}"
+                                      Margin="0,3,5,0" FontSize="{StaticResource NormalFontSize}"/>
+                            
+                                <StackPanel Orientation="Horizontal" Margin="5,5,0,0">
+                                    <TextBlock Margin="0,5,0,0" Text="Show when Fuel less than"
+                                               Style="{StaticResource StandardText}"
+                                               ToolTip="Enables pit return position estimation when less than the given laps of fuel remain." />
+                                    <TextBox
+                                        Text="{Binding LapsRemaining, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=5}"
+                                        Width="40" Margin="5,5,0,0" HorizontalAlignment="Left"
+                                        Style="{StaticResource StandardTextBox}"
+                                        ToolTip="Enables pit return position estimation when less than the given laps of fuel remain." />
+                                    <TextBlock Margin="0,5,0,0" Text="Laps"
+                                               Style="{StaticResource StandardText}"
+                                               ToolTip="Enables pit return position estimation when less than the given laps of fuel remain." />
+                                </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="5,5,0,0">
+                                <TextBlock Margin="0,5,0,0" Text="Show when Tyre wear more than"
+                                           Style="{StaticResource StandardText}"
+                                           ToolTip="Enables pit return position estimation when tyre wear of any tyre is more than given %." />
+                                <TextBox
+                                    Text="{Binding TyreWear, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=50}"
+                                    Width="40" Margin="5,5,0,0" HorizontalAlignment="Left"
+                                    Style="{StaticResource StandardTextBox}"
+                                    ToolTip="Enables pit return position estimation when tyre wear of any tyre is more than given %." />
+                                <TextBlock Margin="0,5,0,0" Text="%"
+                                           Style="{StaticResource StandardText}"
+                                           ToolTip="Enables pit return position estimation when tyre wear of any tyre is more than given %." />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="5,5,0,0">
+                                <TextBlock Margin="0,5,0,0" Text="Extra Time"
+                                           Style="{StaticResource StandardText}"
+                                           ToolTip="Time to add in addition to estimated pit lost. This is to compensate to time lost outside of the pit lane (breaking into pits, acceleration, compromised line through first corner)" />
+                                <TextBox
+                                    Text="{Binding ExtraTime, Converter={StaticResource DoubleToScalableDecimalsConverter}, ConverterParameter=1}"
+                                    Width="40" Margin="5,5,0,0" HorizontalAlignment="Left"
+                                    Style="{StaticResource StandardTextBox}"
+                                    ToolTip="Time to add in addition to estimated pit lost." />
+                                <TextBlock Margin="0,5,0,0" Text="seconds"
+                                           Style="{StaticResource StandardText}"
+                                           ToolTip="Time to add in addition to estimated pit lost. This is to compensate to time lost outside of the pit lane (breaking into pits, acceleration, compromised line through first corner)" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="5,15,0,0">
+                                <CheckBox IsChecked="{Binding IsOverridePitStallTimeEnabled}" VerticalAlignment="Center" VerticalContentAlignment="Center" Content="Override Pit Stall Duration to: " Foreground="{StaticResource LightGrey01Brush}"
+                                          Margin="0,3,5,0" FontSize="{StaticResource NormalFontSize}"/>
+                                <TextBox
+                                    Text="{Binding OverridePitStallTime, Converter={StaticResource DoubleToScalableDecimalsConverter}, ConverterParameter=1}"
+                                    Width="40" Margin="5,3,0,0" HorizontalAlignment="Left"
+                                    Style="{StaticResource StandardTextBox}"
+                                    ToolTip="If you know actual time spent in stall, enter it here." VerticalAlignment="Center"/>
+                                <TextBlock Margin="5,3,0,0" Text="seconds"
+                                           Style="{StaticResource StandardText}" VerticalAlignment="Center"
+                                           ToolTip="If you know actual time spent in stall, enter it here." />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="5,5,0,0">
+                                <CheckBox IsChecked="{Binding IsOverridePitLaneTimeEnabled}" VerticalAlignment="Center" VerticalContentAlignment="Center" Content="Override Pit Lane Lost Time to: " Foreground="{StaticResource LightGrey01Brush}"
+                                          Margin="0,3,5,0" FontSize="{StaticResource NormalFontSize}"/>
+                                <TextBox
+                                    Text="{Binding OverridePitLaneTime, Converter={StaticResource DoubleToScalableDecimalsConverter}, ConverterParameter=1}"
+                                    Width="40" Margin="5,3,0,0" HorizontalAlignment="Left"
+                                    Style="{StaticResource StandardTextBox}"
+                                    ToolTip="If you know actual time lost in pit lane (excluding the stop time), enter it here." VerticalAlignment="Center"/>
+                                <TextBlock Margin="5,3,0,0" Text="seconds"
+                                           Style="{StaticResource StandardText}" VerticalAlignment="Center"
+                                           ToolTip="If you know actual time lost in pit lane (excluding the stop time), enter it here." />
+                            </StackPanel>
+                        </StackPanel>
+
+                    </Grid>
+                </GroupBox>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type columns:ColumnsSettingsViewModel}">
+                <Grid>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" HorizontalAlignment="Stretch"
+                              VerticalScrollBarVisibility="Disabled">
+                    <ListBox Background="{StaticResource Anthracite05Brush}" ItemsSource="{Binding ColumnDescriptorViewModels}" dd:DragDrop.IsDragSource="True"  dd:DragDrop.IsDropTarget="True"  dd:DragDrop.DropHandler="{Binding }">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <DockPanel LastChildFill="False" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                    </ListBox>
+                </ScrollViewer>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModel:SessionOptionsViewModel}">
+                <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="1" Padding="0,0,0,5">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="130" />
+                            <ColumnDefinition Width="1080" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <Label Content="Display Times" VerticalAlignment="Top" Margin="5,0,0,0" Foreground="{StaticResource LightGrey01Brush}" />
+                            <ComboBox HorizontalAlignment="Left" Margin="0,0,0,0" Width="94"
+                                      ItemsSource="{Binding Source={StaticResource DataFromDisplayModeEnum}}"
+                                      SelectedItem="{Binding TimesDisplayMode}"
+                                      Style="{StaticResource StandardComboBoxStyle}"  />
+                            <Label Content="Drivers Order" VerticalAlignment="Top" Foreground="{StaticResource LightGrey01Brush}" Margin="5,0,0,0" />
+                            <ComboBox HorizontalAlignment="Left" Margin="5,0,0,0"  Width="94"
+                                      ItemsSource="{Binding AvailableOrderingModes}"
+                                      SelectedItem="{Binding SelectedOrderingMode}"
+                                      Style="{StaticResource StandardComboBoxStyle}" />
+                            <CheckBox Foreground="{StaticResource LightGrey01Brush}"
+                                      Content="Highlight player" Margin="5,5,0,0"
+                                      IsChecked="{Binding HighlightPlayer}" HorizontalContentAlignment="Left" />
+                            <Label Content="Player Font size" VerticalAlignment="Top" Foreground="{StaticResource LightGrey01Brush}" Margin="5,0,0,0" />
+                            <TextBox Margin="5,2,25,10" Style="{StaticResource StandardTextBox}" Text="{Binding HighlightFontSize, Converter={StaticResource IntegerToStringConverter}}"/>
+
+                        </StackPanel>
+                        <Grid Grid.Column="1">
+                            <ContentPresenter Content="{Binding ColumnsSettingsViewModel}"/>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModel:SessionsOptionsViewModel}">
+                <Grid Background="{StaticResource Anthracite05Brush}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <GroupBox Header="Columns Visibility" Foreground="{StaticResource LightGrey01Brush}"
+                                  VerticalAlignment="Stretch" Grid.Column="0">
+                            <StackPanel VerticalAlignment="Stretch">
+                                <Label DockPanel.Dock="Top" Content="Practice:" HorizontalAlignment="Left"
+                                       Margin="0,8,0,0"
+                                       VerticalAlignment="Top" Foreground="{StaticResource LightGrey01Brush}" />
+                                <ContentPresenter DockPanel.Dock="Top"
+                                                  Content="{Binding PracticeSessionDisplayOptionsView}" />
+
+                                <Label DockPanel.Dock="Top" Content="Qualification:" HorizontalAlignment="Left"
+                                       Margin="0,8,0,0"
+                                       VerticalAlignment="Top" Foreground="{StaticResource LightGrey01Brush}" />
+                                <ContentPresenter DockPanel.Dock="Top"
+                                                  Content="{Binding QualificationSessionDisplayOptionsView}" />
+
+                                <Label DockPanel.Dock="Top" Content="Race:" HorizontalAlignment="Left"
+                                       Margin="0,8,0,0"
+                                       VerticalAlignment="Top" Foreground="{StaticResource LightGrey01Brush}" />
+                                <ContentPresenter DockPanel.Dock="Top"
+                                                  Content="{Binding RaceSessionDisplayOptionsView}" />
+                            </StackPanel>
+                        </GroupBox>
+                        <Grid Grid.Column="1" MaxHeight="700">
+                            <Border BorderThickness="1" BorderBrush="{StaticResource DarkGrey01Brush}">
+                                <DockPanel>
+                                    <TextBlock Style="{StaticResource StandardText}" VerticalAlignment="Center"
+                                               FontSize="{StaticResource BigFontSize}" Margin="10,10,10,0"
+                                               Text="Available Columns:" DockPanel.Dock="Top" />
+                                    <TextBlock Style="{StaticResource StandardText}" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                               Margin="3"
+                                               Text="(Drag and Drop)" DockPanel.Dock="Top" FontSize="{StaticResource SmallFontSize}" />
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                                  VerticalScrollBarVisibility="Auto">
+                                        <ListBox BorderThickness="0" Foreground="{StaticResource Anthracite01Brush}"
+                                                 DockPanel.Dock="Bottom"
+                                                 Background="{StaticResource Anthracite01Brush}"
+                                                 ItemsSource="{Binding AvailableColumns }" Width="220"
+                                                 dd:DragDrop.IsDragSource="True" />
+                                    </ScrollViewer>
+                                </DockPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                    <Border Grid.Row="1" BorderThickness="1" BorderBrush="{StaticResource LightGrey01Brush}"
+                            Background="{StaticResource Anthracite02Brush}">
+                        <DockPanel LastChildFill="False">
+                            <Button Height="55" Margin="5" DockPanel.Dock="Left"
+                                    Command="{Binding RevertToDefaultCommand}"
+                                    Style="{StaticResource StandardButton}"
+                                    ToolTip="Resets to default columns settings.">
+                                <Button.Content>
+                                    <wpf:ColorAbleIcon
+                                        StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                        <ContentPresenter Content="{StaticResource ResetSettings}" />
+                                    </wpf:ColorAbleIcon>
+                                </Button.Content>
+                            </Button>
+                            <Button Height="55" Margin="5" DockPanel.Dock="Right"
+                                    Command="{Binding ApplyColumnsCommand}"
+                                    Style="{StaticResource StandardButton}"
+                                    ToolTip="Applies the layout.">
+                                <Button.Content>
+                                    <wpf:ColorAbleIcon Margin="0"
+                                                       StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                        <ContentPresenter Content="{StaticResource OkIcon}" />
+                                    </wpf:ColorAbleIcon>
+                                </Button.Content>
+                            </Button>
+                        </DockPanel>
+                    </Border>
+
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModel:SessionReportSettingsViewModel}">
+                <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="1" Padding="0,0,0,5">
+                    <DockPanel>
+                        <CheckBox DockPanel.Dock="Left" Foreground="{StaticResource LightGrey01Brush}"
+                                  Content="- Export" Margin="10,8,0,10"
+                                  IsChecked="{Binding Export}" HorizontalContentAlignment="Left" />
+                        <CheckBox DockPanel.Dock="Right" Foreground="{StaticResource LightGrey01Brush}"
+                                  Content="- Auto Open" Margin="10,8,0,10"
+                                  IsChecked="{Binding AutoOpen}" HorizontalContentAlignment="Left" />
+                    </DockPanel>
+                </Border>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Background="{StaticResource Anthracite01Brush}">
+        <TabControl Background="{StaticResource Anthracite01Brush}" TabStripPlacement="Left">
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}" HorizontalAlignment="Stretch">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Timing Grid" Margin="5" />
+                    </Grid>
+                </TabItem.Header>
+                <GroupBox Header="Timing Grid" Foreground="{StaticResource LightGrey01Brush}"
+                          HorizontalAlignment="Stretch"
+                          DockPanel.Dock="Top">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="10,0,10,5" Grid.Column="0">
+                            <Label Content="Pace Laps:" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                   Foreground="{StaticResource LightGrey01Brush}" />
+                            <xctk:IntegerUpDown x:Name="UpDownPaceLaps" VerticalAlignment="Top" Minimum="1"
+                                                Maximum="10"
+                                                Text="" Margin="0,0,15,0"
+                                                Value="{Binding PaceLaps, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Foreground="{StaticResource LightGrey01Brush}"
+                                                Background="{StaticResource DarkGrey01Brush}" />
+                            <GroupBox Header="Laps until Gap Closed estimation" Foreground="{StaticResource LightGrey01Brush}"
+                                      BorderThickness="1"
+                                      HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Stretch"
+                                      DockPanel.Dock="Left">
+                                <StackPanel Margin="10,0,10,5" Grid.Column="0">
+                                    <CheckBox Content="Enable Laps to Until Gap is Closed Estimation"
+                                              Foreground="{StaticResource LightGrey01Brush}"
+                                              VerticalAlignment="Top"
+                                              HorizontalAlignment="Left" Margin="0,10,0,0"
+                                              IsChecked="{Binding PaceContainsLapsToCatchEstimation}"
+                                              ToolTip="Adds an estimate of how many laps will it take to catch the driver in front, or how many laps would it take for the car behind to catch the player." />
+                                    <CheckBox Content="Compute Only on Lap Start"
+                                              Foreground="{StaticResource LightGrey01Brush}"
+                                              VerticalAlignment="Top"
+                                              HorizontalAlignment="Left" Margin="0,10,0,0"
+                                              IsChecked="{Binding GapComputeOnlyOnLapStart}"
+                                              ToolTip="If checked, the lap estimation will be computed only on lap start. This is to avoid the estimation jumping a lot because the gap is changing throughout the lap." />
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+
+                                        <TextBlock Margin="0,5,5,0" Text="Start after x minutes have passed:"
+                                                   ToolTip="Estimation will start after initial x minutes after session start."
+                                                   VerticalAlignment="Center" />
+                                        <TextBox Style="{StaticResource StandardTextBox}"
+                                                 Text="{Binding GapClosingInitialTime, Converter={StaticResource DoubleToScalableDecimalsConverter}, ConverterParameter=5.0}"
+                                                 VerticalAlignment="Center"
+                                                 Width="40" Margin="0,5,0,0"
+                                                 ToolTip="Estimation will start after initial x minutes after session start."/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+
+                                        <TextBlock Margin="0,5,5,0" Text="Maximum pos difference for estimation"
+                                                   ToolTip="Number of position in front/behind the gap closure estimation is computed."
+                                                   VerticalAlignment="Center" />
+                                        <TextBox Style="{StaticResource StandardTextBox}"
+                                                 Text="{Binding GapClosingMaximumPositionDifference, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=4}"
+                                                 VerticalAlignment="Center"
+                                                 Width="40" Margin="0,5,0,0"
+                                                 ToolTip="Number of position in front/behind the gap closure estimation is computed." />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+
+                                        <TextBlock Margin="0,5,5,0" Text="Time lost per overtake (seconds):"
+                                                   ToolTip="Estimated time lost for each overtake. Used in calculating how many laps until gap is closed."
+                                                   VerticalAlignment="Center" />
+                                        <TextBox Style="{StaticResource StandardTextBox}"
+                                                 Text="{Binding GapClosingOvertakeTimeLost, Converter={StaticResource DoubleToScalableDecimalsConverter}, ConverterParameter=2.0}"
+                                                 VerticalAlignment="Center"
+                                                 Width="40" Margin="0,5,0,0"
+                                                 ToolTip="Estimated time lost for each overtake. Used in calculating how many laps until gap is closed." />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+
+                                        <TextBlock Margin="0,5,5,0" Text="Maximum laps after race finish"
+                                                   ToolTip="Do not show laps necessary for gap closure if the gap is estimated to close x laps after the race finishes"
+                                                   VerticalAlignment="Center" />
+                                        <TextBox Style="{StaticResource StandardTextBox}"
+                                                 Text="{Binding GapClosingExtraLaps, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=5}"
+                                                 VerticalAlignment="Center"
+                                                 Width="40" Margin="0,5,0,0"
+                                                 ToolTip="Do not show laps necessary for gap closure if the gap is estimated to close x laps after the race finishes" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </GroupBox>
+                            <Label Content="Refresh Rate:" HorizontalAlignment="Left"
+                                   VerticalAlignment="Top"
+                                   Foreground="{StaticResource LightGrey01Brush}" />
+                            <xctk:IntegerUpDown x:Name="UpDownRefreshRate" VerticalAlignment="Top"
+                                                Minimum="50"
+                                                Maximum="5000" Margin="0,0,15,0"
+                                                Text="" Value="{Binding RefreshRate}" Increment="50"
+                                                Foreground="{StaticResource LightGrey01Brush}"
+                                                Background="{StaticResource DarkGrey01Brush}" />
+                            <CheckBox Content="Scroll to Player"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding ScrollToPlayer}" />
+                            <CheckBox Content="Animate Delta Bar"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding AnimateDeltaTimes}"
+                                      ToolTip="Enables and Disables the fluid animation of delta times bars. Disable to lower CPU usage of application." />
+                            <Label Content="MultiClass Display Mode:" HorizontalAlignment="Left"
+                                   VerticalAlignment="Center"
+                                   Margin="0,10,0,0" Foreground="{StaticResource LightGrey01Brush}" />
+                            <ComboBox HorizontalAlignment="Left"
+                                      VerticalAlignment="Top" Width="94"
+                                      ItemsSource="{Binding Source={StaticResource DataFromMultiClassDisplayKindEnum}}"
+                                      SelectedItem="{Binding MultiClassDisplayKind}"
+                                      Style="{StaticResource StandardComboBoxStyle}" />
+                            <CheckBox Content="Force Single Class"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding IsForceSingleClassEnabled}"
+                                      ToolTip="Force the race to be single class, even if more classes are present. (Might require session reset)" />
+                            <StackPanel Orientation="Horizontal">
+
+                                <TextBlock Margin="0,5,5,0" Text="Drivers refreshed per tick:"
+                                           ToolTip="Number of drivers updated on grid and map per one refresh tick (does not affect data precision). Can be used to lower application cpu usage in larger fields."
+                                           VerticalAlignment="Center" />
+                                <TextBox Style="{StaticResource StandardTextBox}"
+                                         Text="{Binding DriversUpdatedPerTick, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=500}"
+                                         VerticalAlignment="Center"
+                                         Width="40" Margin="0,5,0,0"
+                                         ToolTip="Number of drivers updated on grid and map per one refresh tick (does not affect data precision). Can be used to lower application cpu usage in larger fields. " />
+                            </StackPanel>
+                            <TextBlock Margin="0,10,5,0" Text="Pit Stop Time to Show:"
+                                       ToolTip="What time should be displayed in the timing grid pit column."
+                                       VerticalAlignment="Center" />
+                            <ComboBox HorizontalAlignment="Left" Margin ="0,5,0,0"
+                                      VerticalAlignment="Top" Width="94"
+                                      ItemsSource="{Binding AllowedPitStopDisplayModes}"
+                                      SelectedItem="{Binding SelectedPitStopDisplayMode}"
+                                      Style="{StaticResource StandardComboBoxStyle}" />
+                            <CheckBox Content="Show Pit Stop Time as Difference"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding ShowPitStopTimeRelative}"
+                                      ToolTip="Should the pit stop time for opponents be displayed as time difference between players pit stop time, or not" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Grid.Column="1">
+                            <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+                        </StackPanel>
+                        <StackPanel Margin="10,0,10,5" Grid.Column="2">
+                            <TextBlock Margin="0,5,0,0" Text="Hybrid mode settings:"
+                                       FontSize="{StaticResource BigFontSize}"
+                                       VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+                                <TextBlock Margin="0,5,5,0" Text="Close driver window boundary ahead (second):"
+                                           ToolTip="If drivers are in front of player, and within this boundary, they will be considered close to player, and ordered relative in hybrid mode."
+                                           VerticalAlignment="Center" />
+                                <TextBox Style="{StaticResource StandardTextBox}"
+                                         Text="{Binding HybridModeRelativeInFront, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=8}"
+                                         VerticalAlignment="Center"
+                                         Width="40" Margin="0,5,0,0"
+                                         ToolTip="If drivers are in front of player, and within this boundary, they will be considered close to player, and ordered relative in hybrid mode." />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+                                <TextBlock Margin="0,5,5,0" Text="Close driver window boundary behind (second):"
+                                           ToolTip="If drivers are in behind of player, and within this boundary, they will be considered close to player, and ordered relative in hybrid mode."
+                                           VerticalAlignment="Center" />
+                                <TextBox Style="{StaticResource StandardTextBox}"
+                                         Text="{Binding HybridModeRelativeInBehind, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=8}"
+                                         VerticalAlignment="Center"
+                                         Width="40" Margin="0,5,0,0"
+                                         ToolTip="If drivers are in behind of player, and within this boundary, they will be considered close to player, and ordered relative in hybrid mode." />
+                            </StackPanel>
+                            <CheckBox Content="Hybrid mode Grid Gap Enabled"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding IsHybridModeGapEnabled}"
+                                      ToolTip="Enables/Disables the Gap in timing grid separating the relative part of grid from the absolute"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,30">
+                                <TextBlock Margin="0,5,5,0" Text="Hybrid mode Gap Size:"
+                                           ToolTip="Height of the gap in the timing grid separating relative and absolute ordered drivers."
+                                           VerticalAlignment="Center" />
+                                <TextBox Style="{StaticResource StandardTextBox}"
+                                         Text="{Binding HybridModeGapHeight, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=30}"
+                                         VerticalAlignment="Center"
+                                         Width="40" Margin="0,5,0,0"
+                                         ToolTip="Height of the gap in the timing grid separating relative and absolute ordered drivers." />
+                            </StackPanel>
+                            <TextBlock Margin="0,5,0,0" Text="Gap Visualization Settings:"
+                                       FontSize="{StaticResource BigFontSize}"
+                                       VerticalAlignment="Center" />
+                            <CheckBox Content="Enable Gap Visualization"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding IsGapVisualizationEnabled}" />
+                            <TextBlock HorizontalAlignment="Left"
+                                       Foreground="{StaticResource LightGrey01Brush}"
+                                       Text="Gap (seconds)with no gap visualization:" />
+                            <TextBox Style="{StaticResource StandardTextBox}"
+                                     Text="{Binding MinimalGapForVisualization, Converter={StaticResource DoubleToScalableDecimalsConverter}}" />
+                            <Label HorizontalAlignment="Left"
+                                   Foreground="{StaticResource LightGrey01Brush}"
+                                   Content="Gap height for each seconds:" />
+                            <TextBox Style="{StaticResource StandardTextBox}"
+                                     Text="{Binding GapHeightForOneSecond, Converter={StaticResource DoubleToScalableDecimalsConverter}}" />
+                            <Label HorizontalAlignment="Left"
+                                   Foreground="{StaticResource LightGrey01Brush}"
+                                   Content="Maximum Gap Height:" />
+                            <TextBox Style="{StaticResource StandardTextBox}"
+                                     Text="{Binding MaximumGapHeight, Converter={StaticResource DoubleToScalableDecimalsConverter}}" />
+                        </StackPanel>
+                    </Grid>
+                </GroupBox>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}" HorizontalAlignment="Stretch">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Columns" Margin="5"
+                                   HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <ContentPresenter Content="{Binding SessionOptionsViewModel}" />
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Session Info" Margin="5"
+                                   HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <ContentPresenter Content="{Binding .}" ContentTemplate="{StaticResource SessionSettingsDataTemplate}"></ContentPresenter>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Map" Margin="5"
+                                   HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <GroupBox Header="Map Options" Foreground="{StaticResource LightGrey01Brush}"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          DockPanel.Dock="Left">
+                    <StackPanel Margin="0,0,0,5">
+                        <CheckBox Content="Animate Drivers Pos."
+                                  Foreground="{StaticResource LightGrey01Brush}"
+                                  VerticalAlignment="Top"
+                                  HorizontalAlignment="Left" Margin="0,10,0,0"
+                                  IsChecked="{Binding AnimateDriversPosition}"
+                                  ToolTip="Enables and Disables the fluid animation of drivers in the circle maps. Disable to lower CPU usage of application." />
+                        <CheckBox Content="Scale Drivers"
+                                  Foreground="{StaticResource LightGrey01Brush}"
+                                  VerticalAlignment="Top"
+                                  HorizontalAlignment="Left" Margin="0,10,0,0"
+                                  IsChecked="{Binding MapDisplaySettingsViewModel.AutoScaleDrivers}"
+                                  ToolTip="Sets if drivers icons should be scaled with the map. If checked the drivers icons will always be the same size. If unchecked driver icon will always be with scale to the map - always 25 meters." />
+                        <CheckBox Content="Keep Map Ratio"
+                                  Foreground="{StaticResource LightGrey01Brush}"
+                                  VerticalAlignment="Top"
+                                  HorizontalAlignment="Left" Margin="0,10,0,0"
+                                  IsChecked="{Binding MapDisplaySettingsViewModel.KeepMapRatio}"
+                                  ToolTip="If enabled the map will always keep the ratio. If unchecked the map will fill the whole available space, at the cost of distortion." />
+                        <StackPanel Orientation="Horizontal">
+                            <TextBox Style="{StaticResource StandardTextBox}"
+                                     Text="{Binding MapDisplaySettingsViewModel.MapPointsInterval, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=500}"
+                                     Width="40" Margin="0,5,0,0"
+                                     ToolTip="Interval (in MS) defining how often the app should take the drivers position when creating a new map for unknown track. (default is 500ms)" />
+                            <TextBlock Margin="5,5,0,0" Text="Points interval"
+                                       ToolTip="Interval (in MS) defining how often the app should take the drivers position when creating a new map for unknown track. (default is 500ms)" />
+                        </StackPanel>
+                        <CheckBox Content="Show Pit Count Information"
+                                  Foreground="{StaticResource LightGrey01Brush}"
+                                  VerticalAlignment="Top"
+                                  HorizontalAlignment="Left" Margin="0,10,0,0"
+                                  IsChecked="{Binding MapDisplaySettingsViewModel.ShowPitsInformation}"
+                                  ToolTip="Shows additional information about the drivers pit stop count on the bottom part of the driver icon." />
+                        <CheckBox Content="Always Use Circle"
+                                  Foreground="{StaticResource LightGrey01Brush}"
+                                  VerticalAlignment="Top"
+                                  HorizontalAlignment="Left" Margin="0,10,0,0"
+                                  IsChecked="{Binding MapDisplaySettingsViewModel.AlwaysUseCirce}"
+                                  ToolTip="Forces the app to always use the circle instead of a track map." />
+                        <CheckBox Content="Show in Separate Window"
+                                  Foreground="{StaticResource LightGrey01Brush}"
+                                  VerticalAlignment="Top"
+                                  HorizontalAlignment="Left" Margin="0,10,0,0"
+                                  IsChecked="{Binding MapDisplaySettingsViewModel.RenderMapInSeparateWindow}"
+                                  ToolTip="Forces the map to be rendered in separate window." />
+                        <StackPanel Orientation="Horizontal">
+                            <TextBox Style="{StaticResource StandardTextBox}"
+                                     Text="{Binding MapDisplaySettingsViewModel.DriverScalePercentage, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=8}"
+                                     Width="40" Margin="0,5,0,0"
+                                     ToolTip="% of screen size the driver representation should be on track map, if autoscaling is enabled" />
+                            <TextBlock Margin="5,5,0,0" Text="Drivers Scale (%)"
+                                       ToolTip="% of screen size the driver representation should be on track map, if autoscaling is enabled" />
+                        </StackPanel>
+                    </StackPanel>
+                </GroupBox>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="UOM" Margin="5"
+                                   HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <Border Padding="5">
+                    <GroupBox Header="UOM" Foreground="{StaticResource LightGrey01Brush}"
+                              DockPanel.Dock="Left">
+                        <WrapPanel Orientation="Vertical">
+                            <StackPanel>
+                                <Label Content="Temperature" HorizontalAlignment="Left"
+                                       VerticalAlignment="Top" FontWeight="Bold"
+                                       Foreground="{StaticResource LightGrey01Brush}" />
+                                <ComboBox HorizontalAlignment="Left"
+                                          VerticalAlignment="Top" Width="94"
+                                          ItemsSource="{Binding Source={StaticResource DataFromTemperatureEnum}}"
+                                          SelectedItem="{Binding TemperatureUnits}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </StackPanel>
+                            <StackPanel>
+                                <Label Content="Pressure" HorizontalAlignment="Left"
+                                       VerticalAlignment="Top" FontWeight="Bold"
+                                       Foreground="{StaticResource LightGrey01Brush}" />
+                                <ComboBox HorizontalAlignment="Left"
+                                          VerticalAlignment="Top" Width="94"
+                                          ItemsSource="{Binding Source={StaticResource DataFromPressureEnum}}"
+                                          SelectedItem="{Binding PressureUnits}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                                <CheckBox Content="Force PSI in ACC"
+                                          Foreground="{StaticResource LightGrey01Brush}"
+                                          VerticalAlignment="Top"
+                                          HorizontalAlignment="Left" Margin="5,10,0,0"
+                                          IsChecked="{Binding OverrideToPsiInAcc}"
+                                          ToolTip="Forces PSI usage in ACC" />
+                            </StackPanel>
+                            <StackPanel>
+                                <Label Content="Volume" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                       Foreground="{StaticResource LightGrey01Brush}" FontWeight="Bold" />
+                                <ComboBox HorizontalAlignment="Left"
+                                          VerticalAlignment="Top"
+                                          Width="94"
+                                          ItemsSource="{Binding Source={StaticResource DataFromVolumeEnum}}"
+                                          SelectedItem="{Binding VolumeUnits}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </StackPanel>
+                            <StackPanel>
+                                <Label Content="Velocity" HorizontalAlignment="Left"
+                                       VerticalAlignment="Top" FontWeight="Bold"
+                                       Foreground="{StaticResource LightGrey01Brush}" />
+                                <ComboBox HorizontalAlignment="Left" VerticalAlignment="Top" Width="94"
+                                          ItemsSource="{Binding Source={StaticResource DataFromVelocityEnum}}"
+                                          SelectedItem="{Binding VelocityUnits}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </StackPanel>
+                            <StackPanel>
+                                <Label Content="Force" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                       Foreground="{StaticResource LightGrey01Brush}" FontWeight="Bold" />
+                                <ComboBox HorizontalAlignment="Left" VerticalAlignment="Top" Width="94"
+                                          ItemsSource="{Binding Source={StaticResource DataForForceUnitsEnum}}"
+                                          SelectedItem="{Binding ForceUnits}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </StackPanel>
+                            <StackPanel>
+                                <Label Content="Angle" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                       Foreground="{StaticResource LightGrey01Brush}" FontWeight="Bold" />
+                                <ComboBox HorizontalAlignment="Left" VerticalAlignment="Top" Width="94"
+                                          ItemsSource="{Binding Source={StaticResource DataForAngleUnitsEnum}}"
+                                          SelectedItem="{Binding AngleUnits}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </StackPanel>
+                            <StackPanel>
+                                <Label Content="Power" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                       Foreground="{StaticResource LightGrey01Brush}" FontWeight="Bold" />
+                                <ComboBox HorizontalAlignment="Left" VerticalAlignment="Top" Width="94"
+                                          ItemsSource="{Binding Source={StaticResource DataForPowerUnitsEnum}}"
+                                          SelectedItem="{Binding PowerUnits}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </StackPanel>
+                            <StackPanel>
+                                <Label Content="Torque" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                       Foreground="{StaticResource LightGrey01Brush}" FontWeight="Bold" />
+                                <ComboBox HorizontalAlignment="Left" VerticalAlignment="Top" Width="94"
+                                          ItemsSource="{Binding Source={StaticResource DataForTorqueUnitsEnum}}"
+                                          SelectedItem="{Binding TorqueUnits}"
+                                          Style="{StaticResource StandardComboBoxStyle}" />
+                            </StackPanel>
+                        </WrapPanel>
+                    </GroupBox>
+                </Border>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Pit Board" Margin="5"
+                                   HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <Border Padding="5">
+                    <GroupBox Header="Pit Board" Foreground="{StaticResource LightGrey01Brush}"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              DockPanel.Dock="Left">
+                        <StackPanel Margin="0,0,0,5">
+                            <CheckBox Content="Gap change pitboard"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="5,10,0,0"
+                                      IsChecked="{Binding PitBoardSettingsViewModel.IsEnabled}"
+                                      ToolTip="Enables and Disables the end of lap pit board" />
+                            <CheckBox Content="Limit gap change to player class"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="5,10,0,0"
+                                      IsChecked="{Binding PitBoardSettingsViewModel.OnlyPlayerClass}"
+                                      ToolTip="Limits gap change pitboard to player class." />
+                            <StackPanel Orientation="Horizontal" Margin="5,5,0,0">
+                                <TextBlock Margin="0,5,0,0" Text="Display Time (seconds)"
+                                           Style="{StaticResource StandardText}"
+                                           ToolTip="Interval (in Seconds) defining how long the pit board stays opened" />
+                                <TextBox
+                                    Text="{Binding PitBoardSettingsViewModel.DisplaySeconds, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=5}"
+                                    Width="40" Margin="5,3,0,0" HorizontalAlignment="Left"
+                                    Style="{StaticResource StandardTextBox}"
+                                    ToolTip="Interval (in Seconds) defining how long the pit board stays opened" />
+                            </StackPanel>
+                            <CheckBox Content="Yellow Flag Board"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="5,10,0,0"
+                                      IsChecked="{Binding PitBoardSettingsViewModel.IsYellowBoardEnabled}"
+                                      ToolTip="Enables and Disables the board informing about distance to yellow" />
+                            <CheckBox Content="Pit Duration Pit Board"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="5,10,0,0"
+                                      IsChecked="{Binding PitBoardSettingsViewModel.IsPitDurationBoardEnabled}"
+                                      ToolTip="Enables and Disables the board showing the duration of current pit stop" />
+                            <CheckBox Content="Pit Entry Speed Pit Board"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="5,10,0,0"
+                                      IsChecked="{Binding PitBoardSettingsViewModel.IsPitEntrySpeedBoardEnabled}"
+                                      ToolTip="Enables and Disables the board showing speed on pit entry" />
+                            <StackPanel Orientation="Horizontal">
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Margin="0,5,0,0" Text="Horizontal Position"
+                                               Style="{StaticResource StandardText}" />
+                                    <ComboBox HorizontalAlignment="Left" Margin="0,2,0,0"
+                                              Width="94"
+                                              ItemsSource="{Binding Source={StaticResource DataForHorizontalAlignmentEnum}}"
+                                              SelectedItem="{Binding PitBoardSettingsViewModel.HorizontalAlignment}"
+                                              Style="{StaticResource StandardComboBoxStyle}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Vertical" Margin="20,0,0,0">
+                                    <TextBlock Margin="0,5,0,0" Text="Vertical Position"
+                                               Style="{StaticResource StandardText}" />
+                                    <ComboBox HorizontalAlignment="Left" Margin="0,2,0,0"
+                                              Width="94"
+                                              ItemsSource="{Binding Source={StaticResource DataForVerticalAlignmentEnum}}"
+                                              SelectedItem="{Binding PitBoardSettingsViewModel.VerticalAlignment}"
+                                              Style="{StaticResource StandardComboBoxStyle}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </GroupBox>
+                </Border>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Pit Estimation" Margin="5"
+                                   HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <Border Padding="5">
+                    <ContentPresenter Content="{Binding PitEstimationSettingsViewModel}"/>
+                </Border>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Car Info" Margin="5"
+                                   HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <Border Padding="5">
+                    <GroupBox Header="Car Info." Foreground="{StaticResource LightGrey01Brush}"
+                              DockPanel.Dock="Left">
+                        <StackPanel>
+                            <CheckBox Content="Enable Pedal and Gear"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding EnablePedalInformation}"
+                                      ToolTip="Enables and Disables updates for pedals and gear panel." />
+                            <CheckBox Content="Enable Temp. Info"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding EnableTemperatureInformation}"
+                                      ToolTip="Enables and Disables the updates of panels with temperature information." />
+                            <CheckBox Content="Enable non. Temp. Info"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding EnableNonTemperatureInformation}"
+                                      ToolTip="Enables and Disables updates of panels with information other than temperature information." />
+                            <CheckBox Content="Enable camber visualization"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding EnableCamberVisualization}"
+                                      ToolTip="Enables and Disables the camber visualization on the tyres controls." />
+                            <CheckBox Content="Show Recent Lowest Speed"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding IsRecentLowestSpeedEnabled}"
+                                      ToolTip="Enables or Disables the display of recent lowest speed." />
+                            <CheckBox Content="Show Recent Highest Speed"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding IsRecentHighestSpeedEnabled}"
+                                      ToolTip="Enables or Disables the display of recent highest speed." />
+                            <StackPanel Orientation="Horizontal" Margin="5,5,0,0">
+                                <TextBlock Margin="0,5,0,0" Text="Speed Display Time (seconds)" VerticalAlignment="Center"
+                                           Style="{StaticResource StandardText}" FontSize="{StaticResource SmallFontSize}"
+                                           ToolTip="Slowest / Highest timeout Interval" />
+                                <TextBox
+                                    Text="{Binding LowestHighestSpeedTimeout, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=10}"
+                                    Width="40" Margin="5,3,0,0" HorizontalAlignment="Left"
+                                    Style="{StaticResource StandardTextBox}"
+                                    ToolTip="Interval (in Seconds) defining how long it should take for the highest / lowest speed to time out" />
+                            </StackPanel>
+                            <CheckBox Content="Show Bottom Out Indicator"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding IsBottomingOutIndicationEnabled}"
+                                      ToolTip="Enables or Disables the display of car bottoming out." />
+                            <StackPanel Orientation="Horizontal" Margin="5,5,0,0">
+                                <TextBlock Margin="0,0,0,0" Text="Bottom Out Height: " VerticalAlignment="Center"
+                                           Style="{StaticResource StandardText}"
+                                           FontSize="{StaticResource SmallFontSize}"
+                                           ToolTip="Minimal car height, before the bottom out indicator is shown" />
+                                <quantityText:DistanceText HorizontalAlignment="Left"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="{StaticResource SmallFontSize}"
+                                                           FontWeight="Bold"
+                                                           Foreground="{StaticResource LightGrey01Brush}"
+                                                           Width="100"
+                                                           IsReadonly="False"
+                                                           ShowUnitSymbol="True"
+                                                           ToolTip="Minimal car height, before the bottom out indicator is shown"
+                                                           Quantity="{Binding BottomingOutHeight, Mode=TwoWay}"
+                                                           DistanceUnits="{Binding DistanceUnitsVerySmall, Mode=OneWay}" />
+                            </StackPanel>
+                            <GroupBox Header="Dashboard Icons" Foreground="{StaticResource LightGrey01Brush}">
+                                <ContentPresenter Content="{Binding DashboardSettingsViewModel}" />
+                            </GroupBox>
+
+                        </StackPanel>
+                    </GroupBox>
+
+                </Border>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Fuel Calculator" Margin="5"
+                                   HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <Border Padding="5">
+                    <StackPanel>
+                        <GroupBox Header="Pre-Race Fuel Calculation" Foreground="{StaticResource LightGrey01Brush}"
+                                  DockPanel.Dock="Left">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="5,2,0,2">
+                                    <TextBlock Margin="0,2,0,2" Text="Initial Extra Fuel (%) to Use"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource StandardText}"
+                                               ToolTip="Extra Fuel to use for automatic calculations when no previous race session for the car/track combo found" />
+                                    <TextBox
+                                        Text="{Binding MaximumExtraFuel, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=15}"
+                                        Width="40" Margin="5,2,0,2" HorizontalAlignment="Left"
+                                        Style="{StaticResource StandardTextBox}"
+                                        ToolTip="Extra Fuel to use for automatic calculations when no previous race session for the car/track combo found" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="5,2,0,2">
+                                    <TextBlock Margin="0,2,0,2" Text="Minimal Extra Fuel (%) to Use"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource StandardText}"
+                                               ToolTip="Extra Fuel to use for automatic calculations when enough previous race session for the car/track combo are stored" />
+                                    <TextBox
+                                        Text="{Binding MinimumExtraFuel, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=5}"
+                                        Width="40" Margin="5,2,0,2" HorizontalAlignment="Left"
+                                        Style="{StaticResource StandardTextBox}"
+                                        ToolTip="Extra Fuel to use for automatic calculations when enough previous race session for the car/track combo are stored" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="5,2,0,2">
+                                    <TextBlock Margin="0,2,0,2" Text="Required Races To Use Minimal Extra Fuel "
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource StandardText}"
+                                               ToolTip="How many races are for each car/track combo are required to use the minimal extra fuel value" />
+                                    <TextBox
+                                        Text="{Binding RacesToTrainFuel, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=5}"
+                                        Width="40" Margin="5,2,0,2" HorizontalAlignment="Left"
+                                        Style="{StaticResource StandardTextBox}"
+                                        ToolTip="How many races are for each car/track combo are required to use the minimal extra fuel value" />
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Pit Stop Fuel Calculation" Foreground="{StaticResource LightGrey01Brush}"
+                                  DockPanel.Dock="Left">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="5,2,0,2">
+                                    <TextBlock Margin="0,2,0,2" Text="Extra Laps"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource StandardText}"
+                                               ToolTip="Extra Laps of Fuel to add, atop of what is automatically estimated" />
+                                    <TextBox
+                                        Text="{Binding ExtraRaceLaps, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=1}"
+                                        Width="40" Margin="5,2,0,2" HorizontalAlignment="Left"
+                                        Style="{StaticResource StandardTextBox}"
+                                        ToolTip="Extra Laps of Fuel to add, atop of what is automatically estimated" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="5,2,0,2">
+                                    <TextBlock Margin="0,2,0,2" Text="Extra Minutes"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource StandardText}"
+                                               ToolTip="Extra Minutes of Fuel to add, atop of what is automatically estimated" />
+                                    <TextBox
+                                        Text="{Binding ExtraRaceMinutes, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=0}"
+                                        Width="40" Margin="5,2,0,2" HorizontalAlignment="Left"
+                                        Style="{StaticResource StandardTextBox}"
+                                        ToolTip="Extra Minutes of Fuel to add, atop of what is automatically estimated" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="5,2,0,2">
+                                    <TextBlock Margin="0,2,0,2" Text="Contingency fuel (%)"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource StandardText}"
+                                               ToolTip="Extra Contingency Fuel to, atop of what is automatically estimated" />
+                                    <TextBox
+                                        Text="{Binding ExtraContingencyFuel, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=15}"
+                                        Width="40" Margin="5,2,0,2" HorizontalAlignment="Left"
+                                        Style="{StaticResource StandardTextBox}"
+                                        ToolTip="Extra Contingency Fuel to, atop of what is automatically estimated" />
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Practice Fuel Calculation" Foreground="{StaticResource LightGrey01Brush}"
+                                  DockPanel.Dock="Left" Padding="5">
+                            <ContentPresenter Content="{Binding PracticeFuelSettings}"/>
+                        </GroupBox>
+                        <GroupBox Header="Qualification Fuel Calculation" Foreground="{StaticResource LightGrey01Brush}"
+                                  DockPanel.Dock="Left" Padding="5">
+                            <ContentPresenter Content="{Binding QualificationFuelSettings}"/>
+                        </GroupBox>
+                        <GroupBox Header="Race Fuel Calculation" Foreground="{StaticResource LightGrey01Brush}"
+                                  DockPanel.Dock="Left" Padding="5">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="30"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid Grid.Column="0">
+                                    <StackPanel Orientation="Vertical">
+                                        <TextBlock Margin="0,2,0,2" Text="Lap Races"
+                                                   VerticalAlignment="Center"
+                                                   Style="{StaticResource StandardText}"/>
+                                        <ContentPresenter Content="{Binding LapRaceSessionFuelSetting}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <StackPanel Orientation="Horizontal" Grid.Column="1">
+                                    <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+                                </StackPanel>
+
+                                <Grid Grid.Column="2">
+                                    <StackPanel Orientation="Vertical">
+                                    <TextBlock Margin="0,2,0,2" Text="Timed Races"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource StandardText}"/>
+                                    <ContentPresenter Content="{Binding TimedRaceSessionFuelSettings}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Grid>
+                        </GroupBox>
+                    </StackPanel>
+                </Border>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Reports" Margin="5"
+                                   HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <Border Padding="5">
+                    <GroupBox Header="Report Options" Foreground="{StaticResource LightGrey01Brush}"
+                              DockPanel.Dock="Top">
+                        <DockPanel>
+                            <GroupBox DockPanel.Dock="Top" Margin="0,8,0,0" Header="General">
+                                <StackPanel
+                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                    Margin="0,0,0,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Label HorizontalAlignment="Right" VerticalAlignment="Top"
+                                               Foreground="{StaticResource LightGrey01Brush}"
+                                               Content="Maximum Reports:" Height="27" />
+                                        <xctk:IntegerUpDown HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                            Minimum="1"
+                                                            Maximum="9999" Text=""
+                                                            Value="{Binding ReportingSettingsViewModel.MaximumReports, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                            Foreground="{StaticResource LightGrey01Brush}"
+                                                            Background="{StaticResource DarkGrey01Brush}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Label HorizontalAlignment="Right" VerticalAlignment="Top"
+                                               Foreground="{StaticResource LightGrey01Brush}"
+                                               Content="Minimum Session (minutes):" Height="27" Width="165" />
+                                        <xctk:IntegerUpDown HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                            Minimum="1"
+                                                            Maximum="100" Text=""
+                                                            Value="{Binding ReportingSettingsViewModel.MinimumSessionLength, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                            Foreground="{StaticResource LightGrey01Brush}"
+                                                            Background="{StaticResource DarkGrey01Brush}" />
+                                    </StackPanel>
+                                    <CheckBox Content="Also Export .Json File"
+                                              Foreground="{StaticResource LightGrey01Brush}"
+                                              VerticalAlignment="Top"
+                                              HorizontalAlignment="Left" Margin="5"
+                                              IsChecked="{Binding ReportingSettingsViewModel.ExportJson}"
+                                              ToolTip="Whenever a xlsx file is export, a additional .json file, containing the same data, will be exported as well." />
+                                </StackPanel>
+                            </GroupBox>
+                            <Label DockPanel.Dock="Top" Content="Practice:" HorizontalAlignment="Left"
+                                   Margin="0,8,0,0"
+                                   VerticalAlignment="Top" Foreground="{StaticResource LightGrey01Brush}" />
+                            <ContentPresenter DockPanel.Dock="Top"
+                                              Content="{Binding ReportingSettingsViewModel.PracticeReportSettingsView}" />
+
+                            <Label DockPanel.Dock="Top" Content="Qualification:" HorizontalAlignment="Left"
+                                   Margin="0,8,0,0"
+                                   VerticalAlignment="Top" Foreground="{StaticResource LightGrey01Brush}" />
+                            <ContentPresenter DockPanel.Dock="Top"
+                                              Content="{Binding ReportingSettingsViewModel.QualificationReportSettingView}" />
+
+                            <Label DockPanel.Dock="Top" Content="Warm Up:" HorizontalAlignment="Left"
+                                   Margin="0,8,0,0"
+                                   VerticalAlignment="Top" Foreground="{StaticResource LightGrey01Brush}" />
+                            <ContentPresenter DockPanel.Dock="Top"
+                                              Content="{Binding ReportingSettingsViewModel.WarmUpReportSettingsView}" />
+
+                            <Label DockPanel.Dock="Top" Content="Race:" HorizontalAlignment="Left"
+                                   Margin="0,8,0,0"
+                                   VerticalAlignment="Top" Foreground="{StaticResource LightGrey01Brush}" />
+                            <ContentPresenter DockPanel.Dock="Top"
+                                              Content="{Binding ReportingSettingsViewModel.RaceReportSettingsView}" />
+                        </DockPanel>
+                    </GroupBox>
+                </Border>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Telemetry" Margin="5"
+                                   HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <Border Padding="5">
+                    <GroupBox Header="Telemetry" Foreground="{StaticResource LightGrey01Brush}"
+
+                              DockPanel.Dock="Top">
+                        <StackPanel>
+                            <CheckBox Content="Enable Telemetry" Foreground="{StaticResource LightGrey01Brush}"
+                                      Margin="5,5,0,0"
+                                      IsChecked="{Binding TelemetrySettingsViewModel.IsTelemetryLoggingEnabled}" />
+                            <CheckBox Content="Save also XML file" Foreground="{StaticResource LightGrey01Brush}"
+                                      Margin="5,5,0,0"
+                                      IsChecked="{Binding TelemetrySettingsViewModel.IsSaveAlsoAsXMlEnabled}" />
+                            <CheckBox Content="Save also JSON file" Foreground="{StaticResource LightGrey01Brush}"
+                                      Margin="5,5,0,0"
+                                      IsChecked="{Binding TelemetrySettingsViewModel.IsSaveAlsoAsJsonEnabled}" />
+                            <CheckBox Content="Log in Practice Session" Foreground="{StaticResource LightGrey01Brush}"
+                                      Margin="5,5,0,0"
+                                      IsChecked="{Binding TelemetrySettingsViewModel.LogInPractice}" />
+                            <CheckBox Content="Log in Qualification Session" Foreground="{StaticResource LightGrey01Brush}"
+                                      Margin="5,5,0,0"
+                                      IsChecked="{Binding TelemetrySettingsViewModel.LogInQualification}" />
+                            <CheckBox Content="Log in Race Session" Foreground="{StaticResource LightGrey01Brush}"
+                                      Margin="5,5,0,0"
+                                      IsChecked="{Binding TelemetrySettingsViewModel.LogInRace}" />
+                            <CheckBox Content="Log Invalid Laps" Foreground="{StaticResource LightGrey01Brush}"
+                                      Margin="5,5,0,0"
+                                      IsChecked="{Binding TelemetrySettingsViewModel.LogInvalidLaps}" />
+                            <CheckBox Content="Log Opponents Best" Foreground="{StaticResource LightGrey01Brush}"
+                                      Margin="5,15,0,0"
+                                      IsChecked="{Binding TelemetrySettingsViewModel.LogOpponentsBest}" />
+                            <CheckBox Content="Log Best for Each Driver" Foreground="{StaticResource LightGrey01Brush}"
+                                      Margin="5,5,0,0"
+                                      IsChecked="{Binding TelemetrySettingsViewModel.LogBestForEachDriver}" />
+                            <CheckBox Content="Log only Player class" Foreground="{StaticResource LightGrey01Brush}"
+                                      Margin="5,5,0,0"
+                                      IsChecked="{Binding TelemetrySettingsViewModel.LogOnlyPlayerClass}" />
+                            <CheckBox Content="Log All Opponents Laps" Foreground="{StaticResource LightGrey01Brush}"
+                                      Margin="5,5,0,0"
+                                      IsChecked="{Binding TelemetrySettingsViewModel.LogOpponentsAll}" />
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox
+                                    Text="{Binding TelemetrySettingsViewModel.LogOnlyTop, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=10}"
+                                    Style="{StaticResource StandardTextBox}" VerticalAlignment="Center"
+                                    Width="40" Margin="5,5,0,0"
+                                    ToolTip="Opponent needs to be in better place than this number to log his telemetry information (conserves memory) " />
+                                <TextBlock Margin="5,5,0,0" Text="Log only opponents in TOP x Position" Style="{StaticResource StandardText}"
+                                           ToolTip="Opponent needs to be in better place than this number to log his telemetry information (conserves memory) " />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox
+                                    Text="{Binding TelemetrySettingsViewModel.LoggingInterval, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=50}"
+                                    Style="{StaticResource StandardTextBox}" VerticalAlignment="Center"
+                                    Width="40" Margin="5,5,0,0"
+                                    ToolTip="Interval (in MS) defining how often the app should log the telemetry information." />
+                                <TextBlock Margin="5,5,0,0" Text="Telemetry Data Interval (ms)" Style="{StaticResource StandardText}"
+                                           ToolTip="Interval (in MS) defining how often the app should log the telemetry information." />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox
+                                    Text="{Binding TelemetrySettingsViewModel.MaxSessionsKept, Converter={StaticResource IntegerToStringConverter}, ConverterParameter=10}"
+                                    Width="40" Margin="5,5,0,0" Style="{StaticResource StandardTextBox}" VerticalAlignment="Center"
+                                    ToolTip="Defines How Many Sessions, at maximum, should be kept stored. If the number is exceeded, then the application if automatically delete the oldest telemetry data." />
+                                <TextBlock Margin="5,5,0,0" Text="Maximum Sessions Stored"
+                                           Style="{StaticResource StandardText}"
+                                           ToolTip="Defines How Many Sessions, at maximum, should be kept stored. If the number is exceeded, then the application if automatically delete the oldest telemetry data." />
+                            </StackPanel>
+                        </StackPanel>
+
+                    </GroupBox>
+                </Border>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Rating" Margin="5"
+                                   HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <Border Padding="5">
+                    <GroupBox Header="Rating" Foreground="{StaticResource LightGrey01Brush}" DockPanel.Dock="Left">
+                        <StackPanel>
+                            <CheckBox Content="Enable Rating"
+                                      Foreground="{StaticResource LightGrey01Brush}"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Left" Margin="0,10,0,0"
+                                      IsChecked="{Binding RatingSettingsViewModel.IsEnabled}"
+                                      ToolTip="Enables and Disables the rating application module." />
+                            <TextBlock Style="{StaticResource StandardText}" Text="Rating Reference:"
+                                       FontSize="{StaticResource SmallFontSize}" Margin="5,10,0,2" />
+                            <ComboBox HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,0,5,0"
+                                      Width="120"
+                                      ItemsSource="{Binding RatingSettingsViewModel.AvailableReferenceRatingProviders}"
+                                      SelectedItem="{Binding RatingSettingsViewModel.SelectedReferenceRatingProvider}"
+                                      Style="{StaticResource StandardComboBoxStyle}" />
+                            <TextBlock Style="{StaticResource StandardText}" Text="Grace Laps:"
+                                       FontSize="{StaticResource SmallFontSize}" Margin="5,10,0,2" />
+                            <TextBox Style="{StaticResource StandardTextBox}" HorizontalAlignment="Left"
+                                     Text="{Binding RatingSettingsViewModel.GraceLapsCount, Converter={StaticResource NonNegativeIntToStringConverter}}"
+                                     FontSize="{StaticResource SmallFontSize}" Margin="5,0,0,5" Width="50" />
+                            <TextBlock Style="{StaticResource StandardText}" Text="Normalized Field Size:"
+                                       FontSize="{StaticResource SmallFontSize}" Margin="5,10,0,2"
+                                       ToolTip="Scales rating changes to the field of this size. In practice it increases computed rating changed for field that are smaller than this and decreases for fields bigger. 0 is disabled. " />
+                            <TextBox Style="{StaticResource StandardTextBox}" HorizontalAlignment="Left"
+                                     ToolTip="Scales rating changes to the field of this size. In practice it increases computed rating changed for field that are smaller than this and decreases for fields bigger. 0 is disabled. "
+                                     Text="{Binding RatingSettingsViewModel.NormalizedFieldSize, Converter={StaticResource NonNegativeIntToStringConverter}}"
+                                     FontSize="{StaticResource SmallFontSize}" Margin="5,0,0,5" Width="50" />
+                            <TextBlock Style="{StaticResource StandardText}" Text="K factor"
+                                       FontSize="{StaticResource SmallFontSize}" Margin="5,10,0,2"
+                                       ToolTip="Defines K factor of the elo algorithm. This affects rate at which rating changes. Lower K values will result in less rating gained or lost. Default value is 15." />
+                            <StackPanel Orientation="Horizontal">
+                            <Slider Minimum="5" Maximum="50"
+                                    Value="{Binding RatingSettingsViewModel.EloK}"
+                                    TickFrequency="5" TickPlacement="BottomRight" Width="160"
+                                    HorizontalAlignment="Left"
+                                    ToolTip="Defines K factor of the elo algorithm. This affects rate at which rating changes. Lower K values will result in less rating gained or lost. Default value is 15." />
+                            <TextBlock Style="{StaticResource StandardText}" VerticalAlignment="Center"
+                                       Text="{Binding RatingSettingsViewModel.EloK, Converter={StaticResource IntegerToStringConverter}}"
+                                       HorizontalAlignment="Center" ToolTip="Defines K factor of the elo algorithm. This affects rate at which rating changes. Lower K values will result in less rating gained or lost. Default value is 15." />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource StandardText}" Text="Competitive AI Range"
+                                       FontSize="{StaticResource SmallFontSize}" Margin="5,10,0,2"
+                                       ToolTip="Defines how many AI difficulty levels above your assumed level should you still be competitive with the AI." />
+                            <StackPanel Orientation="Horizontal">
+                                <Slider Minimum="1" Maximum="5"
+                                        Value="{Binding RatingSettingsViewModel.AiCompetitiveRange}"
+                                        TickFrequency="0.1" Width="160"
+                                        HorizontalAlignment="Left"
+                                        IsSnapToTickEnabled="True"
+                                        ToolTip="Defines how many AI difficulty levels above your assumed level should you still be competitive with the AI. " />
+                                <TextBlock Style="{StaticResource StandardText}" VerticalAlignment="Center"
+                                           Text="{Binding RatingSettingsViewModel.AiCompetitiveRange, Converter={StaticResource DoubleToScalableDecimalsConverter}}"
+                                           HorizontalAlignment="Center" ToolTip="Defines K factor of the elo algorithm. This affects rate at which rating changes. Lower K values will result in less rating gained or lost. Default value is 15." />
+                            </StackPanel>
+                            <helpButton:HelpButton HelpUrl="https://gitlab.com/winzarten/SecondMonitor/-/wikis/Rating-Settings" VerticalAlignment="Top" HorizontalAlignment="Right" Width="50" Height="50"/>
+                        </StackPanel>
+                    </GroupBox>
+                </Border>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Championships" Margin="5"
+                       HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <Border Padding="5">
+                    <ContentPresenter Content="{Binding ChampionshipSettingViewModel}"/>
+                </Border>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Resources" Margin="5"
+                                   HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <Border Padding="5">
+                    <StackPanel>
+                        <StackPanel>
+                            <TextBlock Margin="0,0,0,0" VerticalAlignment="Top"
+                                       Style="{StaticResource StandardText}"
+                                       Foreground="{StaticResource LightGrey01Brush}"
+                                       Text="Custom Color Resources:" />
+                            <TextBox TextWrapping="Wrap" Margin="0,0,0,0" VerticalAlignment="Top"
+                                     Style="{StaticResource StandardTextBox}"
+                                     Background="{StaticResource Anthracite05Brush}" IsReadOnly="True"
+                                     FontSize="{StaticResource SmallFontSize}"
+                                     Foreground="{StaticResource LightGrey01Brush}" MaxWidth="600"
+                                     Text="Path for custom color resources that will overwrite the default color scheme. Check the wiki how to write them." />
+                            <TextBox HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                                     IsReadOnly="True"
+                                     Text="{Binding CustomResourcesPath, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource StandardTextBox}" />
+                            <Button Content="..." VerticalContentAlignment="Center" Margin="5" Height="21"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top" Width="19"
+                                    Command="{Binding Path=SelectCustomResourceFileCommand}" />
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Top">
+                            <TextBlock Margin="0,0,0,0" VerticalAlignment="Top"
+                                       Style="{StaticResource StandardText}"
+                                       Foreground="{StaticResource LightGrey01Brush}"
+                                       Text="User Files Path:" />
+                            <TextBox TextWrapping="Wrap" Margin="0,0,0,0" VerticalAlignment="Top"
+                                     Style="{StaticResource StandardTextBox}"
+                                     Background="{StaticResource Anthracite05Brush}" IsReadOnly="True"
+                                     FontSize="{StaticResource SmallFontSize}"
+                                     Foreground="{StaticResource LightGrey01Brush}" MaxWidth="600"
+                                     Text="This includes stored maps, telemetry, car settings info and reports. Changing this will not move the existing files to a new locations. Application restart after changing this settings is advisable." />
+                            <TextBox HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                                     IsReadOnly="True"
+                                     Text="{Binding ReportingSettingsViewModel.ExportDirectoryReplacedSpecialDirs, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource StandardTextBox}" />
+                            <Button Content="..." VerticalContentAlignment="Center" Margin="5"  
+                                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="19"
+                                    Command="{Binding Path=ReportingSettingsViewModel.SelectExportDirCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Logs" Margin="5"
+                                   HorizontalAlignment="Stretch" />
+                    </Grid>
+                </TabItem.Header>
+                <Border Padding="5">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" Grid.Column="0">
+                                <Button Height="55"
+                                        Command="{Binding OpenLogDirectoryCommand}"
+                                        Style="{StaticResource StandardButton}"
+                                        ToolTip="Opens the log directory">
+                                    <Button.Content>
+                                        <wpf:ColorAbleIcon Margin="5,5,5,5"
+                                                           StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                            <ContentPresenter Content="{StaticResource FolderIcon}" />
+                                        </wpf:ColorAbleIcon>
+                                    </Button.Content>
+
+                                </Button>
+                                <TextBlock Margin="5,5,0,0" Text="Open Log directory"
+                                           Style="{StaticResource StandardText}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                        <donateButton:DonateButton DockPanel.Dock="Bottom" />
+                    </StackPanel>
+                </Border>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}" ToolTip="Various settings for Sims">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Sim Settings" Margin="5" />
+                    </Grid>
+                </TabItem.Header>
+                <Grid>
+                    <ContentPresenter Content="{Binding PluginsConfigurationViewModel}" />
+                </Grid>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}" ToolTip="Settings for auto deleting stored sim files, like replays or saved games">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Obsolete Files Removal" Margin="5" />
+                    </Grid>
+                </TabItem.Header>
+                <Grid>
+                    <ContentPresenter Content="{Binding SimsAutoDeleteSettingsViewModel}" />
+                </Grid>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}" ToolTip="Layout">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Layout" Margin="5" />
+                    </Grid>
+                </TabItem.Header>
+                <Grid>
+                    <ContentPresenter Content="{Binding LayoutEditorViewModel}" />
+                </Grid>
+            </TabItem>
+            <TabItem Background="{StaticResource Anthracite01Brush}">
+                <TabItem.Header>
+                    <Grid Background="{StaticResource Anthracite01Brush}" ToolTip="Settings for enabling other apps to connect to and retrieve second monitor data.">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Rest API" Margin="5" />
+                    </Grid>
+                </TabItem.Header>
+                <Grid>
+                    <ContentPresenter Content="{Binding RestApiSettingsViewModel}" />
+                </Grid>
+            </TabItem>
+            <TabControl.Resources>
+                <Style TargetType="{x:Type TabPanel}">
+                    <Setter Property="Background" Value="{StaticResource Anthracite01Brush}" />
+                </Style>
+            </TabControl.Resources>
+        </TabControl>
+
+    </Grid>
+</Window>

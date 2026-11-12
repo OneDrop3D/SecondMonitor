@@ -1,0 +1,21 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:workspace="clr-namespace:SecondMonitor.Telemetry.TelemetryApplication.ViewModels.Workspace;assembly=TelemetryApplication"
+                    xmlns:behaviors="clr-namespace:SecondMonitor.WindowsControls.WPF.Behaviors;assembly=WindowsControls"
+                    xmlns:tabControl="clr-namespace:SecondMonitor.WindowsControls.WPF.TabControl;assembly=WindowsControls"
+                    xmlns:b="http://schemas.microsoft.com/xaml/behaviors">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="../TelemetryPresentation.xaml" />
+        <ResourceDictionary>
+            <DataTemplate DataType="{x:Type workspace:WorkspaceViewModel}">
+                <Grid>
+                    <tabControl:TabControlEx ItemsSource="{Binding WorkspaceTabs}" Background="{StaticResource Anthracite01Brush}" BorderThickness="0" >
+                        <b:Interaction.Behaviors>
+                            <behaviors:AutoSelectFirstBehavior/>
+                        </b:Interaction.Behaviors>
+                    </tabControl:TabControlEx>
+                </Grid>
+            </DataTemplate>
+        </ResourceDictionary>
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

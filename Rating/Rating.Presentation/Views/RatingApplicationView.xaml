@@ -1,0 +1,164 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:wpf="clr-namespace:SecondMonitor.WindowsControls.WPF;assembly=WindowsControls"
+                    xmlns:viewModels="clr-namespace:SecondMonitor.Rating.Application.Rating.ViewModels;assembly=Rating.Application">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="../RatingPresentation.xaml" />
+        <ResourceDictionary>
+            <DataTemplate DataType="{x:Type viewModels:RatingApplicationViewModel}">
+                <Border BorderBrush="{StaticResource DarkGrey05Brush}" BorderThickness="1"
+                        Visibility="{Binding IsVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid>
+                        <Grid
+                            Visibility="{Binding IsEnabled, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                            Width="40">
+                            <TextBlock TextAlignment="Center" Style="{StaticResource StandardText}"
+                                       VerticalAlignment="Center" Width="40" TextWrapping="Wrap"
+                                       Text="{Binding CollapsedMessage}" />
+                        </Grid>
+                        <StackPanel Width="170"
+                                    Visibility="{Binding IsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <DockPanel Margin="0,0,0,10" LastChildFill="False">
+
+                                <TextBlock Style="{StaticResource StandardText}" DockPanel.Dock="Left"
+                                           FontSize="{StaticResource BigFontSize}" Text="Ratings"
+                                           VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                <Button DockPanel.Dock="Right" HorizontalAlignment="Right" HorizontalContentAlignment="Center"
+                                        Command="{Binding ShowAllHistoryCommand, Mode=OneWay}"
+                                        Style="{StaticResource StandardButton}" Width="35" Height="35"
+                                        ToolTip="All Races History">
+                                    <Button.Content>
+                                        <TextBlock VerticalAlignment="Center" Margin="-3" HorizontalAlignment="Center" Style="{StaticResource StandardText}" Text="H" FontWeight="Bold" />
+                                    </Button.Content>
+                                </Button>
+                                <Button DockPanel.Dock="Right" HorizontalAlignment="Right" HorizontalContentAlignment="Center"
+                                        Command="{Binding ShowAllRatings, Mode=OneWay}"
+                                        Style="{StaticResource StandardButton}" Width="35" Height="35"
+                                        ToolTip="All Classes Rating">
+                                    <Button.Content>
+                                        <TextBlock VerticalAlignment="Center" Margin="-3" HorizontalAlignment="Center" Style="{StaticResource StandardText}" Text="O" FontWeight="Bold" />
+                                    </Button.Content>
+                                </Button>
+                            </DockPanel>
+                            <Border BorderThickness="1" BorderBrush="{StaticResource LightGrey01Brush}" Padding="2">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource StandardText}" ToolTip="Current Simulator Rating"
+                                               Text="SR:" VerticalAlignment="Center" />
+                                    <ContentPresenter Content="{Binding SimulatorRating}" Margin="5,0,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border BorderThickness="1" BorderBrush="{StaticResource LightGrey01Brush}" Padding="2">
+                                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                    <TextBlock Style="{StaticResource StandardText}" ToolTip="Current Class Rating"
+                                               Text="CR:" VerticalAlignment="Center" />
+                                    <ContentPresenter Content="{Binding ClassRating}" Margin="5,0,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border BorderThickness="1" BorderBrush="{StaticResource LightGrey01Brush}" Padding="2">
+                                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                    <TextBlock Style="{StaticResource StandardText}" ToolTip="Current Difficulty Rating"
+                                               Text="DR:" VerticalAlignment="Center" />
+                                    <ContentPresenter Content="{Binding DifficultyRating}" Margin="5,0,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <DockPanel>
+                                <TextBlock Style="{StaticResource StandardText}" Text="Class:" Margin="5,5,0,0" DockPanel.Dock="Left" />
+                                <Button DockPanel.Dock="Right" HorizontalAlignment="Right" HorizontalContentAlignment="Center"
+                                        Command="{Binding ShowClassHistoryCommand, Mode=OneWay}"
+                                        Style="{StaticResource StandardButton}" Width="32"
+                                        ToolTip="Class Races History">
+                                    <Button.Content>
+                                        <TextBlock VerticalAlignment="Center" Margin="-3" HorizontalAlignment="Center" Style="{StaticResource StandardText}" Text="H" FontWeight="Bold" />
+                                    </Button.Content>
+                                </Button>
+                            </DockPanel>
+                            <Grid Margin="5,2,0,0">
+                                <ComboBox Style="{StaticResource StandardComboBoxStyle}"
+                                          ItemsSource="{Binding SelectableClasses}"
+                                          SelectedItem="{Binding SelectedClass}" IsTextSearchEnabled="True"
+                                          Visibility="{Binding IsClassSelectionEnable, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <TextBlock Style="{StaticResource StandardText}"
+                                           FontSize="{StaticResource SmallFontSize}" Text="{Binding SelectedClass}"
+                                           Visibility="{Binding IsClassSelectionEnable, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                            </Grid>
+                            <TextBlock Style="{StaticResource StandardText}" Text="Difficulty:" Margin="5,5,0,0" />
+                            <Grid Margin="5,2,0,0">
+                                <DockPanel Visibility="{Binding UseSuggestedDifficulty, Converter={StaticResource InverseBooleanToVisibilityConverter}}" >
+                                    <Button Width="30" HorizontalAlignment="Right" HorizontalContentAlignment="Stretch"
+                                            Command="{Binding AssignSelectedDifficultyCommand}"
+                                            Style="{StaticResource StandardButton}"
+                                            ToolTip="Assign Selected Difficulty to Rating" DockPanel.Dock="Right">
+                                        <Button.Content>
+                                            <wpf:ColorAbleIcon Margin="0"
+                                                               StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                                <ContentPresenter Content="{StaticResource ResetIcon}" />
+                                            </wpf:ColorAbleIcon>
+                                        </Button.Content>
+                                    </Button>
+                                    <Button Width="30" HorizontalAlignment="Right" HorizontalContentAlignment="Stretch"
+                                            Command="{Binding IncreaseDifficulty}"
+                                            Style="{StaticResource StandardButton}"
+                                            ToolTip="Increased Difficulty by 1" DockPanel.Dock="Right">
+                                        <Button.Content>
+                                            <wpf:ColorAbleIcon Margin="-2"
+                                                               StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                                <ContentPresenter Content="{StaticResource NextFrame}" />
+                                            </wpf:ColorAbleIcon>
+                                        </Button.Content>
+                                    </Button>
+                                    <Button Width="30" HorizontalAlignment="Right" HorizontalContentAlignment="Stretch"
+                                            Command="{Binding DecreaseDifficulty}"
+                                            Style="{StaticResource StandardButton}"
+                                            ToolTip="Decreases Difficulty by 1" DockPanel.Dock="Right">
+                                        <Button.Content>
+                                            <wpf:ColorAbleIcon Margin="-2"
+                                                               StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                                <ContentPresenter Content="{StaticResource PreviousFrame}" />
+                                            </wpf:ColorAbleIcon>
+                                        </Button.Content>
+                                    </Button>
+                                    <ComboBox Style="{StaticResource StandardComboBoxStyle}" VerticalAlignment="Center"
+                                          ItemsSource="{Binding AiLevels}" SelectedItem="{Binding Difficulty}"
+                                          IsTextSearchEnabled="True" DockPanel.Dock="Left" VerticalContentAlignment="Center"
+                                           />
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource StandardText}"
+                                           Text="{Binding Difficulty, Mode=OneWay}"
+                                           Visibility="{Binding UseSuggestedDifficulty, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </Grid>
+                            <CheckBox Content="Use Suggested Diff" Foreground="{StaticResource LightGrey01Brush}"
+                                      Margin="5,5,0,0" IsChecked="{Binding UseSuggestedDifficulty}" />
+
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <wpf:ColorAbleIcon Margin="5"
+                                                   StrokeBrush="{Binding SessionKind, Mode=OneWay, Converter={StaticResource SessionKindToBrushConverter}}"
+                                                   RebindOnVisibilityChange="True">
+                                    <ContentPresenter Content="{StaticResource CircleLight2}" />
+                                </wpf:ColorAbleIcon>
+                                <TextBlock Grid.Column="1" Style="{StaticResource StandardText}"
+                                           Text="{Binding SessionTextInformation, Mode=OneWay}"
+                                           FontSize="{StaticResource SmallFontSize}" VerticalAlignment="Center"
+                                           HorizontalAlignment="Center" TextWrapping="WrapWithOverflow" />
+                                <wpf:ColorAbleIcon Grid.Column="2" Margin="5" RebindOnVisibilityChange="True"
+                                                   StrokeBrush="{Binding SessionPhaseKind, Mode=OneWay, Converter={StaticResource SessionPhaseToBrushConverter}}">
+                                    <ContentPresenter Content="{StaticResource CircleLight2}" />
+                                </wpf:ColorAbleIcon>
+                            </Grid>
+                            <Grid Margin="0,5,0,5">
+                                <CheckBox Content="Rated Race" Foreground="{StaticResource LightGrey01Brush}"
+                                          VerticalAlignment="Center" HorizontalAlignment="Center"
+                                          Margin="5,5,0,0" IsChecked="{Binding IsRateRaceCheckboxChecked}" />
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ResourceDictionary>
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

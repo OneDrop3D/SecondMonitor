@@ -1,0 +1,259 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:track="clr-namespace:SecondMonitor.ViewModels.Track;assembly=SecondMonitor.ViewModels"
+                    xmlns:driverPosition="clr-namespace:SecondMonitor.WindowsControls.WPF.DriverPosition"
+                    xmlns:behaviors="clr-namespace:SecondMonitor.WindowsControls.WPF.Behaviors"
+                    xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+                    xmlns:situationOverview="clr-namespace:SecondMonitor.ViewModels.Track.MapView;assembly=SecondMonitor.ViewModels">
+
+    <DataTemplate DataType="{x:Type track:DriverPositionViewModel}" x:Key="DriverByCoordinatesTemplate">
+        <driverPosition:DriverByCoordinatesPositionControl
+            TextBrush="{StaticResource DriverForegroundColor}" Width="30" Height="30"
+            PlayerForegroundBrush="{StaticResource PlayerForegroundColor}"
+            PlayerBackgroundBrush="{StaticResource PlayerBackgroundColor}"
+            DriverForegroundBrush="{StaticResource DriverForegroundColor}"
+            DriverBackgroundBrush="{StaticResource DriverBackgroundColor}"
+            LappingDriverForegroundBrush="{StaticResource TimingLappingForegroundBrush}"
+            LappingDriverBackgroundBrush="{StaticResource TimingLappingBrush}"
+            LappedDriverForegroundBrush="{StaticResource TimingLappedForegroundBrush}"
+            LappedDriverBackgroundBrush="{StaticResource TimingLappedBrush}"
+            DriverPitsForegroundBrush="{StaticResource DriverPitsForegroundColor}"
+            DriverPitsBackgroundBrush="{StaticResource InPitsBrush}"
+            DriverPitsMovingBackground="{StaticResource InPitsMovingBrush}"
+            YellowSectorBrush="{StaticResource YellowSectorBrush}"
+            PlayerOutLineBrush="{StaticResource PlayerOutLineColor}"
+            DriverViewModel="{Binding}"
+            CircleBrush="{StaticResource DriverBackgroundColor}"
+            DriverFinishedBackground="{StaticResource DriverFinishedBackgroundColor}"
+            DriverFinishedForeground="{StaticResource DriverFinishedForegroundColor}"
+            Animate="{Binding DataContext.AnimateDrivers, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+            IsAxisSwapped="{Binding DataContext.TrackWithSectorsGeometryViewModel.IsAxisSwapped, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+            XCoef="{Binding DataContext.TrackWithSectorsGeometryViewModel.XCoef, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+            YCoef="{Binding DataContext.TrackWithSectorsGeometryViewModel.YCoef, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+            IsClassColorIndicationEnabled="{Binding DataContext.ShowMultiClassIndicator, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+            ScaleDriver="{Binding DataContext.AutoScaleDrivers, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+            DriverScale="{Binding DataContext.DriverScale, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type track:DriverPositionViewModel}" x:Key="SafetyCarByCoordinatesTemplate">
+        <driverPosition:SafetyCarByCoordinatesControl
+            TextBrush="{StaticResource DriverForegroundColor}" Width="30" Height="30"
+            PlayerForegroundBrush="{StaticResource Yellow01Brush}"
+            PlayerBackgroundBrush="Transparent"
+            DriverForegroundBrush="{StaticResource Yellow01Brush}"
+            DriverBackgroundBrush="Transparent"
+            LappingDriverForegroundBrush="{StaticResource Yellow01Brush}"
+            LappingDriverBackgroundBrush="Transparent"
+            LappedDriverForegroundBrush="{StaticResource Yellow01Brush}"
+            LappedDriverBackgroundBrush="Transparent"
+            DriverPitsForegroundBrush="{StaticResource Yellow01Brush}"
+            DriverPitsBackgroundBrush="Transparent"
+            DriverPitsMovingBackground="Transparent"
+            YellowSectorBrush="Transparent"
+            PlayerOutLineBrush="{StaticResource Yellow01Brush}"
+            DriverViewModel="{Binding}"
+            CircleBrush="{StaticResource Anthracite01Brush}"
+            DriverFinishedBackground="Transparent"
+            DriverFinishedForeground="Transparent"
+            Animate="{Binding DataContext.AnimateDrivers, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+            IsClassColorIndicationEnabled="False"
+            IsAxisSwapped="{Binding DataContext.TrackWithSectorsGeometryViewModel.IsAxisSwapped, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+            XCoef="{Binding DataContext.TrackWithSectorsGeometryViewModel.XCoef, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+            YCoef="{Binding DataContext.TrackWithSectorsGeometryViewModel.YCoef, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+            ScaleDriver="{Binding DataContext.AutoScaleDrivers, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+            DriverScale="{Binding DataContext.DriverScale, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type track:DriverPositionViewModel}" x:Key="SafetyCarByLapDistanceTemplate">
+        <driverPosition:SafetyCarByLapDistanceControl
+            TextBrush="{StaticResource DriverForegroundColor}" Width="30" Height="30"
+            PlayerForegroundBrush="{StaticResource Yellow01Brush}"
+            PlayerBackgroundBrush="Transparent"
+            DriverForegroundBrush="{StaticResource Yellow01Brush}"
+            DriverBackgroundBrush="Transparent"
+            LappingDriverForegroundBrush="{StaticResource Yellow01Brush}"
+            LappingDriverBackgroundBrush="Transparent"
+            LappedDriverForegroundBrush="{StaticResource Yellow01Brush}"
+            LappedDriverBackgroundBrush="Transparent"
+            DriverPitsForegroundBrush="{StaticResource Yellow01Brush}"
+            DriverPitsBackgroundBrush="Transparent"
+            DriverPitsMovingBackground="Transparent"
+            YellowSectorBrush="Transparent"
+            PlayerOutLineBrush="{StaticResource Yellow01Brush}"
+            DriverViewModel="{Binding}"
+            CircleBrush="{StaticResource Anthracite01Brush}"
+            DriverFinishedBackground="Transparent"
+            DriverFinishedForeground="Transparent"
+            Animate="{Binding DataContext.AnimateDrivers, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+            IsClassColorIndicationEnabled="False"/>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type track:DriverPositionViewModel}" x:Key="DriverByLapDistanceTemplate">
+        <driverPosition:DriverByLapDistancePositionControl ClipToBounds="False"
+            TextBrush="{StaticResource DriverForegroundColor}" Width="30" Height="30"
+            PlayerForegroundBrush="{StaticResource PlayerForegroundColor}"
+            PlayerBackgroundBrush="{StaticResource PlayerBackgroundColor}"
+            DriverForegroundBrush="{StaticResource DriverForegroundColor}"
+            DriverBackgroundBrush="{StaticResource DriverBackgroundColor}"
+            LappingDriverForegroundBrush="{StaticResource TimingLappingForegroundBrush}"
+            LappingDriverBackgroundBrush="{StaticResource TimingLappingBrush}"
+            LappedDriverForegroundBrush="{StaticResource TimingLappedForegroundBrush}"
+            LappedDriverBackgroundBrush="{StaticResource TimingLappedBrush}"
+            DriverPitsForegroundBrush="{StaticResource DriverPitsForegroundColor}"
+            DriverPitsBackgroundBrush="{StaticResource InPitsBrush}"
+            DriverPitsMovingBackground="{StaticResource InPitsMovingBrush}"
+            YellowSectorBrush="{StaticResource YellowSectorBrush}"
+            PlayerOutLineBrush="{StaticResource PlayerOutLineColor}"
+            DriverFinishedBackground="{StaticResource DriverFinishedBackgroundColor}"
+            DriverFinishedForeground="{StaticResource DriverFinishedForegroundColor}"
+            DriverViewModel="{Binding}" CircleBrush="{StaticResource DriverBackgroundColor}"
+            Animate="{Binding DataContext.AnimateDrivers, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+            IsClassColorIndicationEnabled="{Binding DataContext.ShowMultiClassIndicator, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type track:DriverPositionViewModel}" x:Key="ReturnPositionByLapDistanceTemplate">
+        <driverPosition:ReturnPositionLapDistancePositionControl
+            TextBrush="{StaticResource DriverForegroundColor}" Width="30" Height="30"
+            PlayerForegroundBrush="{StaticResource PlayerForegroundColor}"
+            PlayerBackgroundBrush="{StaticResource PlayerBackgroundColor}"
+            DriverForegroundBrush="{StaticResource DriverForegroundColor}"
+            DriverBackgroundBrush="{StaticResource DriverBackgroundColor}"
+            LappingDriverForegroundBrush="{StaticResource TimingLappingForegroundBrush}"
+            LappingDriverBackgroundBrush="{StaticResource TimingLappingBrush}"
+            LappedDriverForegroundBrush="{StaticResource TimingLappedForegroundBrush}"
+            LappedDriverBackgroundBrush="{StaticResource TimingLappedBrush}"
+            DriverPitsForegroundBrush="{StaticResource DriverPitsForegroundColor}"
+            DriverPitsBackgroundBrush="{StaticResource InPitsBrush}"
+            DriverPitsMovingBackground="{StaticResource InPitsMovingBrush}"
+            YellowSectorBrush="{StaticResource YellowSectorBrush}"
+            PlayerOutLineBrush="{StaticResource PlayerOutLineColor}"
+            DriverFinishedBackground="{StaticResource DriverFinishedBackgroundColor}"
+            DriverFinishedForeground="{StaticResource DriverFinishedForegroundColor}"
+            DriverViewModel="{Binding}" CircleBrush="{StaticResource DriverBackgroundColor}"
+            Animate="{Binding DataContext.AnimateDrivers, RelativeSource={RelativeSource AncestorType=Border}}"
+            IsClassColorIndicationEnabled="False" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type track:DriverPositionViewModel}" x:Key="ReturnPositionByCoordinatesTemplate">
+        <driverPosition:ReturnPositionByCoordinatesPositionControl
+            TextBrush="{StaticResource DriverForegroundColor}" Width="30" Height="30"
+            PlayerForegroundBrush="{StaticResource PlayerForegroundColor}"
+            PlayerBackgroundBrush="{StaticResource PlayerBackgroundColor}"
+            DriverForegroundBrush="{StaticResource DriverForegroundColor}"
+            DriverBackgroundBrush="{StaticResource DriverBackgroundColor}"
+            LappingDriverForegroundBrush="{StaticResource TimingLappingForegroundBrush}"
+            LappingDriverBackgroundBrush="{StaticResource TimingLappingBrush}"
+            LappedDriverForegroundBrush="{StaticResource TimingLappedForegroundBrush}"
+            LappedDriverBackgroundBrush="{StaticResource TimingLappedBrush}"
+            DriverPitsForegroundBrush="{StaticResource DriverPitsForegroundColor}"
+            DriverPitsBackgroundBrush="{StaticResource InPitsBrush}"
+            DriverPitsMovingBackground="{StaticResource InPitsMovingBrush}"
+            YellowSectorBrush="{StaticResource YellowSectorBrush}"
+            PlayerOutLineBrush="{StaticResource PlayerOutLineColor}"
+            DriverViewModel="{Binding}"
+            CircleBrush="{StaticResource DriverBackgroundColor}"
+            DriverFinishedBackground="{StaticResource DriverFinishedBackgroundColor}"
+            DriverFinishedForeground="{StaticResource DriverFinishedForegroundColor}"
+            Animate="{Binding DataContext.AnimateDrivers, RelativeSource={RelativeSource AncestorType=Canvas}}"
+            IsAxisSwapped="{Binding DataContext.TrackWithSectorsGeometryViewModel.IsAxisSwapped, RelativeSource={RelativeSource AncestorType=Canvas}}"
+            XCoef="{Binding DataContext.TrackWithSectorsGeometryViewModel.XCoef, RelativeSource={RelativeSource AncestorType=Canvas}}"
+            YCoef="{Binding DataContext.TrackWithSectorsGeometryViewModel.YCoef, RelativeSource={RelativeSource AncestorType=Canvas}}"
+            IsClassColorIndicationEnabled="False"
+            ScaleDriver="{Binding DataContext.AutoScaleDrivers, RelativeSource={RelativeSource AncestorType=Canvas}}"
+            DriverScale="{Binding DataContext.DriverScale, RelativeSource={RelativeSource AncestorType=Canvas}}"/>
+    </DataTemplate>
+    
+    <driverPosition:DriverTemplateSelector x:Key="DriverByLapDistanceTemplateSelector" x:Shared="False"
+                                           DefaultTemplate="{StaticResource DriverByLapDistanceTemplate }"
+                                           DriverDataTemplate="{StaticResource DriverByLapDistanceTemplate }"
+                                           SafetyCarDataTemplate="{StaticResource SafetyCarByLapDistanceTemplate }"/>
+    
+    <driverPosition:DriverTemplateSelector x:Key="DriverByPositionTemplateSelector" x:Shared="False"
+                                                     DefaultTemplate="{StaticResource DriverByCoordinatesTemplate }"
+                                                     DriverDataTemplate="{StaticResource DriverByCoordinatesTemplate }"
+                                                     SafetyCarDataTemplate="{StaticResource SafetyCarByCoordinatesTemplate }"/>
+
+    <DataTemplate DataType="{x:Type situationOverview:TrackMapSituationOverviewViewModel}">
+        <Border ClipToBounds="True" Padding="10" Background="{StaticResource BlackBrush}">
+            <Grid Margin="5" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" ClipToBounds="True"
+                  Background="Transparent">
+                <driverPosition:MapSidePanelControl HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                    Visibility="Visible" Opacity="0"
+                                                    DataContext="{Binding DataContext.MapSidePanelViewModel, RelativeSource={RelativeSource AncestorType={x:Type Grid}}}">
+                    <b:Interaction.Behaviors>
+                        <behaviors:OpacityByParentMouseOverBehavior />
+                    </b:Interaction.Behaviors>
+                </driverPosition:MapSidePanelControl>
+                <Grid VerticalAlignment="Bottom" HorizontalAlignment="Left" Height="55" Width="55">
+                    <ContentPresenter Content="{Binding WindInformationViewModel}" />
+                </Grid>
+                <Viewbox Stretch="Uniform"
+                         Visibility="{Binding TrackWithSectorsGeometryViewModel.IsGeometryFilled, Converter={StaticResource BooleanToVisibilityConverter}}"
+                         VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                    <Canvas Width="{Binding TrackWithSectorsGeometryViewModel.Width}"
+                            Height="{Binding TrackWithSectorsGeometryViewModel.Height}" x:Name="PART_DriversGrid">
+                        <Canvas>
+                            <Path Stroke="{StaticResource DarkGrey01Brush}" StrokeThickness="8"
+                                  Data="{Binding TrackWithSectorsGeometryViewModel.TrackGeometry}" />
+                            <Path
+                                Stroke="{Binding TrackWithSectorsGeometryViewModel.Sector1State, Converter={StaticResource SectorStateToBrushConverter}}"
+                                StrokeThickness="10" Data="{Binding TrackWithSectorsGeometryViewModel.Sector1Geometry}"
+                                Panel.ZIndex="2" />
+                            <Path
+                                Stroke="{Binding TrackWithSectorsGeometryViewModel.Sector2State, Converter={StaticResource SectorStateToBrushConverter}}"
+                                StrokeThickness="10" Data="{Binding TrackWithSectorsGeometryViewModel.Sector2Geometry}"
+                                Panel.ZIndex="2" />
+                            <Path
+                                Stroke="{Binding TrackWithSectorsGeometryViewModel.Sector3State, Converter={StaticResource SectorStateToBrushConverter}}"
+                                StrokeThickness="10" Data="{Binding TrackWithSectorsGeometryViewModel.Sector3Geometry}"
+                                Panel.ZIndex="2" />
+                            <Path Stroke="{StaticResource Green01Brush}" StrokeThickness="20" Panel.ZIndex="3"
+                                  Data="{Binding TrackWithSectorsGeometryViewModel.FinishLineGeometry}" />
+                            <Grid Visibility="{Binding IsPitReturnPredictionVisible, Converter={StaticResource BooleanToVisibilityConverter}}"  Grid.ZIndex="5" >
+                                <ContentPresenter Content="{Binding PitPrediction}" ContentTemplate="{StaticResource ReturnPositionByCoordinatesTemplate}" />
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding Drivers}"
+                                              VerticalAlignment="Stretch"
+                                              HorizontalAlignment="Stretch"
+                                              Grid.ZIndex="4"
+                                              ItemTemplateSelector="{StaticResource DriverByPositionTemplateSelector}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                                                  Grid.ZIndex="4" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+                            <Canvas.RenderTransform>
+                                <TranslateTransform X="{Binding TrackWithSectorsGeometryViewModel.LeftOffset}"
+                                                    Y="{Binding TrackWithSectorsGeometryViewModel.TopOffset}" />
+                            </Canvas.RenderTransform>
+                        </Canvas>
+                    </Canvas>
+                </Viewbox>
+            </Grid>
+        </Border>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type situationOverview:DefaultSituationOverviewViewModel}">
+        <Border ClipToBounds="True" Padding="10" Background="{StaticResource BlackBrush}">
+            <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="5" x:Name="PART_DriversGrid">
+                <TextBlock Name="ConnectionStatus" Style="{StaticResource SmallText}" Text="{Binding InformationText}"
+                           VerticalAlignment="Top" />
+                <Ellipse VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                         Stroke="{StaticResource DarkGrey05Brush}" StrokeThickness="3" />
+                <Line Y1="-10" Y2="10" Stroke="{StaticResource Green01Brush}" StrokeThickness="4"
+                      HorizontalAlignment="Center" />
+                <Grid Visibility="{Binding IsPitReturnPredictionVisible, Converter={StaticResource BooleanToVisibilityConverter}}"  Grid.ZIndex="5" >
+                    <ContentPresenter Content="{Binding PitPrediction}" Grid.ZIndex="4" ContentTemplate="{StaticResource ReturnPositionByLapDistanceTemplate}" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding Drivers}" Grid.ZIndex="1" ItemTemplateSelector="{StaticResource DriverByLapDistanceTemplateSelector}" ClipToBounds="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Grid />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </Grid>
+        </Border>
+    </DataTemplate>
+</ResourceDictionary>

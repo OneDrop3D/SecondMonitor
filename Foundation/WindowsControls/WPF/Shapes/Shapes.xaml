@@ -1,0 +1,9 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:shapes="clr-namespace:SecondMonitor.ViewModels.Shapes;assembly=SecondMonitor.ViewModels">
+
+    <DataTemplate DataType="{x:Type shapes:GeometryViewModel}">
+        <Path Stroke="{Binding Color, Converter={StaticResource ColorDtoToSolidBrushConverter}}" Fill="{Binding FillColor, Converter={StaticResource ColorDtoToSolidBrushConverter}}" StrokeThickness="{Binding Thickness}" Opacity="{Binding Opacity}" Visibility="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+              Data="{Binding Geometry}"/>
+    </DataTemplate>
+</ResourceDictionary>

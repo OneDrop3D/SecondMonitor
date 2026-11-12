@@ -1,0 +1,71 @@
+version: 9.39.2.{build}
+image: Visual Studio 2022
+configuration: Release
+dotnet_csproj:
+  patch: true
+  file: '**\*.csproj'
+  version: '{version}'
+  package_version: '{version}'
+  assembly_version: '{version}'
+  file_version: '{version}'
+  informational_version: '{version}'
+
+for:
+- branches:
+    except:
+    - /.*beta.*/
+  build_script:
+  - cmd: >-
+      nuget restore
+  
+      msbuild SecondMonitor.sln /t:Rebuild /p:Configuration=Release /v:m
+
+      powershell "".\generateWixGuid.ps1""
+
+      msbuild WixInstaller\WixInstaller.wixproj /t:Rebuild
+  test:
+   assemblies:
+    only:
+      - '**\*test*.dll'
+  artifacts:
+  - path: Installer\SecondMonitor.msi
+    name: Installer
+#deploy:
+#- provider: GitHub
+ # on:
+    #appveyor_repo_tag: true
+  #description: Relese Description
+  #tag: $(APPVEYOR_REPO_TAG_NAME)
+  #auth_token:
+    #secure: yhQt+R9aeo+1MaDJS5cRZnA8ZGMjlSpTu/y4U2Ity99tDyl3oqE846uvWFx5xndm
+  #artifact: Installer
+  #draft: true
+
+  # here we are going to override common configuration
+
+# override settings for `beta` branch
+- branches:
+    only:
+      - /.*beta.*/
+  version: 9.9.0.{build}
+  dotnet_csproj:
+    patch: true
+    file: '**\*.csproj'
+    version: '{version}'
+    package_version: '{version}'
+    assembly_version: '{version}'
+    file_version: '{version}'
+    informational_version: '{version}'    
+  build_script:
+  - cmd: >-
+      nuget restore
+
+      msbuild SecondMonitor.sln /t:Rebuild /p:Configuration=Release /v:m
+
+      powershell "".\generateWixGuidBeta.ps1""
+
+      msbuild WixInstallerBeta\WixInstallerBeta.wixproj /t:Rebuild
+  test: off
+  artifacts:
+  - path: Installer\SecondMonitorBeta.msi
+    name: Installer

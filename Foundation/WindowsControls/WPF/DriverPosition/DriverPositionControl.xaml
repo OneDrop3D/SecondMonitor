@@ -1,0 +1,201 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:driverPosition="clr-namespace:SecondMonitor.WindowsControls.WPF.DriverPosition"
+                    xmlns:wpf="clr-namespace:SecondMonitor.WindowsControls.WPF"
+                    xmlns:pitStop="clr-namespace:SecondMonitor.ViewModels.Track.PitStop;assembly=SecondMonitor.ViewModels">
+
+    <DataTemplate DataType="{x:Type pitStop:TextPitStopDifferenceVisualization}">
+        <TextBlock VerticalAlignment="Top" HorizontalAlignment="Center" ClipToBounds="False"
+                   Style="{StaticResource StandardText}"
+                   FontWeight="Bold"
+                   Text="{Binding Information}"
+                   Foreground="{Binding Information, Converter={StaticResource PitDifferenceToBrushConverter}}"
+                   FontSize="16" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pitStop:BlankPitStopsVisualization}">
+        <Grid/>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pitStop:PitWindowVisualization}">
+        <Grid Width="16" Height="16" Margin="4,2,0,0">
+            <wpf:ColorAbleIcon RebindOnVisibilityChange="True" StrokeBrush="{StaticResource Green01Brush}" Visibility="{Binding IsPitStopCompleted, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <ContentPresenter Content="{StaticResource OkIcon}" />
+            </wpf:ColorAbleIcon>
+            <wpf:ColorAbleIcon RebindOnVisibilityChange="True" StrokeBrush="{StaticResource LightRed01Brush}" Visibility="{Binding IsPitStopCompleted, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                <ContentPresenter Content="{StaticResource CancelIcon}" />
+            </wpf:ColorAbleIcon>
+        </Grid>
+    </DataTemplate>
+
+    <Style TargetType="driverPosition:DriverByCoordinatesPositionControl" x:Shared="False">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate  TargetType="driverPosition:DriverByLapDistancePositionControl">
+                    <Viewbox Stretch="Uniform" ClipToBounds="False">
+                        <Grid Width="30" Height="30">
+                            <Ellipse Fill="{Binding ClassIndicationBrush, RelativeSource={RelativeSource TemplatedParent}}"
+                                 Visibility="{Binding IsClassColorIndicationEnabled ,RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                 Margin="9,-8,9,27" />
+                            <Ellipse
+                                    Stroke="{Binding OutLineColor, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}"
+                                    StrokeThickness="4"
+                                    Margin="-4"
+                                    Fill="{Binding CircleBrush, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" />
+                            <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="-1" >
+                                <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center"
+                                               Style="{StaticResource StandardText}" Margin="0,-2,0,0"
+                                               FontWeight="Bold"
+                                               Text="{Binding Position, RelativeSource={RelativeSource TemplatedParent}}"
+                                               Foreground="{Binding TextBrush, RelativeSource={RelativeSource TemplatedParent}}"
+                                               FontSize="24" />
+                            </Grid>
+                            <ContentPresenter/>
+                            <Canvas VerticalAlignment="Bottom" HorizontalAlignment="Left" ClipToBounds="False" Margin="4,0,0,5">
+                                <ContentPresenter Content="{Binding PitStopsVisualization, RelativeSource={RelativeSource TemplatedParent}}"/>
+                            </Canvas>
+                        </Grid>
+                    </Viewbox>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="driverPosition:SafetyCarByCoordinatesControl" x:Shared="False">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate  TargetType="driverPosition:DriverByLapDistancePositionControl">
+                    <Viewbox Stretch="Uniform" ClipToBounds="False">
+                        <Grid Width="30" Height="30">
+                            <Ellipse
+                                Stroke="{StaticResource Yellow01Brush}" Margin="-5"
+                                StrokeThickness="2"
+                                Fill="{StaticResource Anthracite01Brush}" />
+                            <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="-3" >
+                                <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center"
+                                           Style="{StaticResource StandardText}" Margin="0,-2,0,0"
+                                           FontWeight="Bold"
+                                           Text="SC"
+                                           Foreground="{Binding TextBrush, RelativeSource={RelativeSource TemplatedParent}}"
+                                           FontSize="{StaticResource NormalFontSize}" />
+                            </Grid>
+                            <ContentPresenter />
+                        </Grid>
+                    </Viewbox>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="driverPosition:ReturnPositionByCoordinatesPositionControl" x:Shared="False">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="driverPosition:ReturnPositionByCoordinatesPositionControl">
+                    <Viewbox Stretch="Uniform" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                             ClipToBounds="False">
+                        <Grid Width="32" Height="32">
+                            <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="-3" Grid.ZIndex="5" >
+                                <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center"
+                                           Style="{StaticResource StandardText}" Margin="0,-2,0,0"
+                                           FontWeight="Bold"
+                                           Text="{Binding Position, RelativeSource={RelativeSource TemplatedParent}}"
+                                           FontSize="24" />
+                            </Grid>
+                            <wpf:ColorAbleIcon StrokeBrush="{StaticResource Green01Brush }">
+                                <ContentPresenter Content="{StaticResource DownArrow2Icon}" />
+                            </wpf:ColorAbleIcon>
+                            <ContentPresenter />
+                        </Grid>
+                    </Viewbox>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+     <Style TargetType="driverPosition:ReturnPositionLapDistancePositionControl" x:Shared="False">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="driverPosition:ReturnPositionLapDistancePositionControl">
+                    <Viewbox Stretch="Uniform" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                             ClipToBounds="False">
+                        <Grid Width="32" Height="32">
+                            <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="-3" Grid.ZIndex="5" >
+                                <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center"
+                                           Style="{StaticResource StandardText}" Margin="0,-2,0,0"
+                                           FontWeight="Bold"
+                                           Text="{Binding Position, RelativeSource={RelativeSource TemplatedParent}}"
+                                           FontSize="24" />
+                            </Grid>
+                            <wpf:ColorAbleIcon StrokeBrush="{StaticResource Green01Brush }">
+                                <ContentPresenter Content="{StaticResource DownArrow2Icon}" />
+                            </wpf:ColorAbleIcon>
+                            <ContentPresenter />
+                        </Grid>
+                    </Viewbox>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="driverPosition:SafetyCarByLapDistanceControl" x:Shared="False">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="driverPosition:DriverByLapDistancePositionControl">
+                    <Viewbox Stretch="Uniform" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                             ClipToBounds="False">
+                        <Grid Width="32" Height="32" ClipToBounds="False">
+                            <Ellipse
+                                Stroke="{StaticResource Yellow01Brush}" Margin="-5"
+                                StrokeThickness="4"
+                                Fill="{StaticResource Anthracite01Brush}" />
+                            <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="-3">
+                                <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center"
+                                           Style="{StaticResource StandardText}" Margin="0,-2,0,0"
+                                           FontWeight="Bold"
+                                           FontSize="{StaticResource ExtraBigFontSize}"
+                                           Text="SC"
+                                           Foreground="{Binding TextBrush, RelativeSource={RelativeSource TemplatedParent}}" />
+                            </Grid>
+                            <ContentPresenter />
+                        </Grid>
+
+                    </Viewbox>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Style TargetType="driverPosition:DriverByLapDistancePositionControl" x:Shared="False">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="driverPosition:DriverByLapDistancePositionControl">
+                    <Viewbox Stretch="Uniform" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                             ClipToBounds="False">
+                        <Grid Width="32" Height="32" ClipToBounds="False">
+                            <Ellipse
+                                Fill="{Binding ClassIndicationBrush, RelativeSource={RelativeSource TemplatedParent}}"
+                                Visibility="{Binding IsClassColorIndicationEnabled ,RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                Margin="9,-8,9,27" />
+                            <Ellipse
+                                Stroke="{Binding OutLineColor, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}"
+                                StrokeThickness="4"
+                                Fill="{Binding CircleBrush, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" />
+                            <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="-3">
+                                <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center"
+                                           Style="{StaticResource StandardText}" Margin="0,-2,0,0"
+                                           FontWeight="Bold"
+                                           FontSize="{StaticResource ExtraBigFontSize}"
+                                           Text="{Binding Position, RelativeSource={RelativeSource TemplatedParent}}"
+                                           Foreground="{Binding TextBrush, RelativeSource={RelativeSource TemplatedParent}}" />
+                            </Grid>
+                            <Canvas VerticalAlignment="Bottom" HorizontalAlignment="Left" ClipToBounds="False" Margin="4,0,0,5">
+                                <ContentPresenter Content="{Binding PitStopsVisualization, RelativeSource={RelativeSource TemplatedParent}}"/>
+                            </Canvas>
+                            <ContentPresenter />
+                        </Grid>
+
+                    </Viewbox>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

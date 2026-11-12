@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<item>
+    <version>9.28.1</version>
+    <url>https://ci.appveyor.com/api/buildjobs/fa15olxoidal8hjs/artifacts/Installer%2FSecondMonitor.msi</url>
+    <changelog>https://winzarten.gitlab.io/SecondMonitor/</changelog>
+    <mandatory>false</mandatory>
+</item>

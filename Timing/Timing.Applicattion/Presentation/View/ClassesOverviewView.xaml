@@ -1,0 +1,21 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:viewModel="clr-namespace:SecondMonitor.Timing.Application.ViewModel"
+                    xmlns:converters="clr-namespace:SecondMonitor.WindowsControls.WPF.Converters;assembly=WindowsControls">
+    <converters:AutoContrastConverter Brush1="{StaticResource LightGrey01Brush}" Brush2="{StaticResource BlackBrush}" x:Key="ClassViewContrastConverter"/>
+    <DataTemplate DataType="{x:Type viewModel:ClassOverviewViewModel}">
+        <Grid Background="{Binding ClassColor,Converter={StaticResource ColorDtoToSolidBrushConverter}, Mode=OneWay}">
+            <TextBlock Style="{StaticResource StandardText}" Foreground="{Binding ClassColor, Converter={StaticResource ClassViewContrastConverter}}" Text="{Binding Label}" FontSize="{StaticResource SmallFontSize}" Margin="5,0,5,0"/>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type viewModel:ClassesOverviewViewModel}">
+        <ItemsControl ItemsSource="{Binding ClassesOverview}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+    </DataTemplate>
+</ResourceDictionary>

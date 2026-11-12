@@ -1,0 +1,45 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:carStatus="clr-namespace:SecondMonitor.ViewModels.CarStatus;assembly=SecondMonitor.ViewModels"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DataTemplate DataType="{x:Type carStatus:CarAndFuelStatusViewModel}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid>
+                    <Grid Grid.Row="0" Visibility="{Binding FuelOverviewViewModel.IsVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ContentPresenter Grid.Column="0" Content="{Binding CarStatusViewModel.PlayersWheelsViewModel}" />
+                        <ContentPresenter Grid.Column="1" Content="{Binding FuelOverviewViewModel}"/>
+                    </Grid>
+                </Grid>
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ContentPresenter Grid.Column="0" Content="{Binding CarStatusViewModel.PedalsAndGearViewModel}" />
+                    <Grid Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <ContentPresenter Grid.Row="0" Content="{Binding CarStatusViewModel.CarSystemsViewModel}"/>
+                        <ContentPresenter Grid.Row="1" Content="{Binding CarStatusViewModel.DashboardViewModel}"/>
+                    </Grid>
+                </Grid>
+
+            </Grid>
+        </Grid>
+
+    </DataTemplate>
+</ResourceDictionary>

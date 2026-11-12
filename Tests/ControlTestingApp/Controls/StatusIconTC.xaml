@@ -1,0 +1,29 @@
+﻿<UserControl x:Class="ControlTestingApp.Controls.StatusIconTC"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:statusIcon="clr-namespace:SecondMonitor.WindowsControls.WPF.StatusIcon;assembly=WindowsControls"
+             xmlns:viewModels="clr-namespace:ControlTestingApp.ViewModels"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.DataContext>
+        <viewModels:StatusIconTcVm/>
+    </UserControl.DataContext>
+    <Grid Background="{StaticResource Anthracite05Brush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <Grid Column="0">
+            <statusIcon:StatusIconControl  IconMaxWidth="{StaticResource SmallIconWidth}" DataContext="{Binding StatusIconViewModel}" StatusIcon="{StaticResource EngineIcon}" Width="64" Height="64" />
+        </Grid>
+        <Grid Grid.Column="2">
+            <StackPanel Orientation="Vertical" Margin="10">
+            <Slider Minimum="0" Maximum="4" Value="{Binding IconStatusInt}" Width="100" />
+            <Slider Minimum="0" Maximum="4" Value="{Binding BorderStatusInt}" Width="100" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

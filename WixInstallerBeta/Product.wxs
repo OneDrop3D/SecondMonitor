@@ -1,0 +1,481 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <!-->Change Product Code to increase version  -->
+  <?define ProductCode = "c1953847-7671-441c-aa96-8d879484e832"?>
+  <?define UpgradeCode = "4312ddb4-9be9-48e6-a552-704e9b45363f"?>
+  <?define ProductVersion = "4.1.0.0"?>
+  <?define FirstVersion="0.0.0.1"?>
+  <Product Id="$(var.ProductCode)" Name="Second Monitor Beta" Language="1033" Version="$(var.ProductVersion)" Manufacturer="Matus Celko" UpgradeCode="$(var.UpgradeCode)">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" InstallPrivileges="elevated"  />
+
+    <Media Id="1" Cabinet="myapplication.cab" EmbedCab="yes" />
+    <WixVariable Id="WixUILicenseRtf" Value="..\Artifacts\eula.rtf" />
+    <WixVariable Id="WixUIBannerBmp" Value="..\Artifacts\banner.bmp" />
+
+    <MajorUpgrade AllowDowngrades="yes"/>
+
+    <!--<Upgrade Id='$(var.UpgradeCode)'>
+      <UpgradeVersion Minimum='$(var.ProductVersion)'
+                      IncludeMinimum='no'
+                      OnlyDetect='yes'
+                      Property='NEWPRODUCTFOUND' />
+      <UpgradeVersion Minimum='0.1.0.0'
+                      IncludeMinimum='yes'
+                      Maximum="99.0.0.0"
+                      IncludeMaximum='no'
+                      Property='UPGRADEFOUND' />
+    </Upgrade>-->
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="APPLICATIONROOTDIRECTORY" Name="SecondMonitorBeta"/>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="SecondMonitor" />
+      </Directory>
+    </Directory>
+
+    <ComponentGroup Id="DeploymentGroup">
+      <Component Id="myapplication.exe" Directory="APPLICATIONROOTDIRECTORY" Guid="ed007143-9363-467b-8d54-3a5e90709823">
+        <File Id="filemyapplication.exe" KeyPath="yes" Source="..\Deployment\SecondMonitorBeta.exe"/>
+      </Component>
+      <Component Id="telemetry.exe" Directory="APPLICATIONROOTDIRECTORY" Guid="0b37a1c2-8035-405d-b288-432224fcf05d">
+        <File Id="filetelemetry.exe" KeyPath="yes" Source="..\Deployment\TelemetryViewerBeta.exe"/>
+      </Component>
+
+      <Component Id="ManagePlugins.exe" Directory="APPLICATIONROOTDIRECTORY" Guid="de3aa268-29a0-4885-bff0-e162c908468d">
+        <File Id="filemanageplugins.exe" KeyPath="yes" Source="..\Deployment\ManagePluginsBeta.exe" />
+      </Component>
+
+      <Component Id="cmpde594ef8bef315452eaa6349f4361120f3" Directory="APPLICATIONROOTDIRECTORY" Guid="2fe6eeac-1bea-49db-bfdc-e8d9b61901d3">
+        <File Id="file594ef8bef315452eaa6349f4361120f3" KeyPath="yes" Source="..\Deployment\Colors.xaml" />
+      </Component>
+
+      <Component Id="cmpde99100c6ede24f95a5283a6739b8fa5d" Directory="APPLICATIONROOTDIRECTORY" Guid="d76635f8-cd62-4dda-826b-68fe3cd21892">
+        <File Id="file99100c6ede24f95a5283a6739b8fa5d" KeyPath="yes" Source="..\Deployment\TelemetryApplication.dll" />
+      </Component>
+      <Component Id="cmp4dcf83bb26c94ced918a7e2aabc3eeea" Directory="APPLICATIONROOTDIRECTORY" Guid="510766c2-ae97-4598-a666-19cc6cb9b59c">
+        <File Id="fil4dcf83bb26c94ced918a7e2aabc3eeea" KeyPath="yes" Source="..\Deployment\TelemetryManagement.dll" />
+      </Component>
+      <Component Id="cmpf534e533fd2a4d93b2ec8c9e4b77cd05" Directory="APPLICATIONROOTDIRECTORY" Guid="6063952f-8a5a-4389-97fc-8e0362c01ec8">
+        <File Id="filf534e533fd2a4d93b2ec8c9e4b77cd05" KeyPath="yes" Source="..\Deployment\TelemetryPresentation.dll" />
+      </Component>
+      <Component Id="cmpd263741c1e7924a5597d067825115ea25" Directory="APPLICATIONROOTDIRECTORY" Guid="8b2267b0-1736-45e0-b222-3f6682538338">
+        <File Id="fild263741c1e7924a5597d067825115ea25" KeyPath="yes" Source="..\Deployment\TelemetryViewerBeta.exe.config" />
+      </Component>
+
+      <Component Id="cmpCCAAE88E799770EF8AE745BFDB5EF53A" Directory="APPLICATIONROOTDIRECTORY" Guid="cfd1dc13-3477-4a40-a4f7-8ca499a67c9c">
+        <File Id="filF5F7C7F4EE3D85C679BF6D913B0DD645" KeyPath="yes" Source="..\Deployment\PluginsConfiguration.Application.dll" />
+      </Component>
+      <Component Id="cmp901ABE9FA2964096078944E0AD929FEC" Directory="APPLICATIONROOTDIRECTORY" Guid="16c65913-3be6-41dd-a11d-a52e8e6ec5d9">
+        <File Id="filB5D3F8D9DD54871A220F168F81EC8364" KeyPath="yes" Source="..\Deployment\PluginsConfiguration.Common.dll" />
+      </Component>
+      <Component Id="cmpABC8AF0FABA3464B8D250C2E833844BE" Directory="APPLICATIONROOTDIRECTORY" Guid="614bc0d3-f304-49f3-9a55-8ae0e27a234b">
+        <File Id="fil4E7659DB656D309BFE01F34491FFC7AC" KeyPath="yes" Source="..\Deployment\Remote.Common.dll" />
+      </Component>
+      <Component Id="cmp8AE216B3A94A464A5F568AF356BF902C" Directory="APPLICATIONROOTDIRECTORY" Guid="e1c3bcd5-74c9-4847-8cb9-3ff01dc7c626">
+        <File Id="filE077C6560D55FB7CE6BE7B79A2B8D25C" KeyPath="yes" Source="..\Deployment\ManagePluginsBeta.exe.config" />
+      </Component>
+
+      <Component Id="cmpWebView2Loader" Directory="APPLICATIONROOTDIRECTORY" Guid="38dcf72b-645e-4f3f-b16d-65a545a4fc12">
+        <File Id="fileWebView2Loader" KeyPath="yes" Source="..\Deployment\WebView2Loader.dll" />
+      </Component>
+
+      <Component Id="cmpeb4eb708fe424a11b9bb66f9b0a4573a" Directory="APPLICATIONROOTDIRECTORY" Guid="6dbc7efc-7133-4b9d-8974-53c69c1d7d56">
+        <File Id="fileb4eb708fe424a11b9bb66f9b0a4573a" KeyPath="yes" Source="..\Deployment\AutoUpdater.NET.dll" />
+      </Component>
+
+      <Component Id="cmpd70d492504ff4882bf50cece32ff71e1" Directory="APPLICATIONROOTDIRECTORY" Guid="b0d54ba5-79db-4e81-b241-86d8d74f59cf">
+        <File Id="fil5677d5f3cd364264b015461f75f2bfc9" KeyPath="yes" Source="..\Deployment\OxyPlot.dll" />
+      </Component>
+      <!--<Component Id="cmpa23fcf936528475ca4ff9d67ce8ef39d" Directory="APPLICATIONROOTDIRECTORY" Guid="ad61bf8e-a22c-4d0b-9c7a-a1a44fa8d61f">
+        <File Id="fila23fcf936528475ca4ff9d67ce8ef39d" KeyPath="yes" Source="..\Deployment\OxyPlot.WindowsForms.dll"/>
+      </Component>-->
+      <Component Id="cmpccf131b1862d4b79b8983eddb103d6a4" Directory="APPLICATIONROOTDIRECTORY" Guid="3c6932e9-fee9-4aff-b249-34ca02818a4b">
+        <File Id="filccf131b1862d4b79b8983eddb103d6a4" KeyPath="yes" Source="..\Deployment\Ninject.dll" />
+      </Component>
+      <Component Id="cmp463080ad0d6743a38a6470f14bddcb4f" Directory="APPLICATIONROOTDIRECTORY" Guid="31644ba3-f489-4bae-8d3b-c381139ca7ea">
+        <File Id="fil5463080ad0d6743a38a6470f14bddcb4f" KeyPath="yes" Source="..\Deployment\Ninject.Extensions.NamedScope.dll" />
+      </Component>
+      <Component Id="cmpA5CBA5AEBA67AF3740096B2C71AA5E30" Directory="APPLICATIONROOTDIRECTORY" Guid="ac0821d7-edda-4402-8a4e-6bbcf5577fc1">
+        <File Id="fil82C32F720D16C0F30EB4769A24E1D5A1" KeyPath="yes" Source="..\Deployment\DataModel.dll" />
+      </Component>
+
+      <Component Id="cmpConnectorsDll" Directory="APPLICATIONROOTDIRECTORY" Guid="4239e578-2737-499b-bd31-c400b569644b">
+        <File Id="filConnectorsDll" KeyPath="yes" Source="..\Deployment\Connectors.dll" />
+      </Component>
+
+      <Component Id="cmpK4osCompressionDll" Directory="APPLICATIONROOTDIRECTORY" Guid="712619ff-1a0f-4aad-94bd-c06e7e78da94">
+        <File Id="fileK4osCompressionDll" KeyPath="yes" Source="..\Deployment\K4os.Compression.LZ4.dll" />
+      </Component>
+
+      <Component Id="cmp2BE70F4303347811DB70BB7ED092F617" Directory="APPLICATIONROOTDIRECTORY" Guid="8baf2b0c-80ec-48f8-9dcc-e466223fb34a">
+        <File Id="filFEF582307CF918B5B695B3D806851C75" KeyPath="yes" Source="..\Deployment\Newtonsoft.Json.dll" />
+      </Component>
+      <Component Id="cmp53bf961ea84945248b0a7eb8dc273476" Directory="APPLICATIONROOTDIRECTORY" Guid="cefd15a9-e7aa-4acb-bc50-4288d6847ba6">
+        <File Id="fil53bf961ea84945248b0a7eb8dc273476" KeyPath="yes" Source="..\Deployment\GongSolutions.WPF.DragDrop.dll" />
+      </Component>
+      <Component Id="cmp30C9FAC1385E8ED4A45BF3A6B19E9487" Directory="APPLICATIONROOTDIRECTORY" Guid="c49f973f-cbae-47d1-91c6-8237d90a90ad">
+        <File Id="filCCF2F64CAEA0D317721E9C63A20A2AC8" KeyPath="yes" Source="..\Deployment\NLog.config" />
+      </Component>
+      <Component Id="cmp1cc1df9483394256a7290b70d2d81615" Directory="APPLICATIONROOTDIRECTORY" Guid="145b6eaa-a03b-462d-8bfa-41ae5bb76a30">
+        <File Id="fil1cc1df9483394256a7290b70d2d81615" KeyPath="yes" Source="..\Deployment\NLogTelemetry.config" />
+      </Component>
+      <Component Id="cmp2059A26546D649AB1050653DE68CB3F2" Directory="APPLICATIONROOTDIRECTORY" Guid="79a09481-0faa-47ce-b548-b7d98a7a824b">
+        <File Id="fil354BA4A043162DBE3EAD15EDEC3036D8" KeyPath="yes" Source="..\Deployment\NLog.dll" />
+      </Component>
+      <Component Id="cmpA1FC9EC3991DE249BC5D4B6B86612376" Directory="APPLICATIONROOTDIRECTORY" Guid="b07b4f10-8230-44fa-aef2-5505b7864ed6">
+        <File Id="fil0789929666268B2E394FC6E7182639D4" KeyPath="yes" Source="..\Deployment\PluginManager.dll" />
+      </Component>
+      <Component Id="cmpBF276D04790C4EA6EAA0D4906CCF8782" Directory="APPLICATIONROOTDIRECTORY" Guid="b440714c-e252-4883-8c60-ec0c81aca91e">
+        <File Id="filFD7A7C4C272CCAF2F7343286DC5B80B5" KeyPath="yes" Source="..\Deployment\SecondMonitorBeta.exe.config" />
+      </Component>
+      <Component Id="cmpB166FB7BF3EEA0A0A49BA3ADC2CFEC38" Directory="APPLICATIONROOTDIRECTORY" Guid="ae39d88a-b9f9-4958-9db2-e41450fbc39d">
+        <File Id="fil97545F8961B4711D742F55DF31B887D9" KeyPath="yes" Source="..\Deployment\WindowsControls.dll" />
+      </Component>
+      <Component Id="cmp6BD68D5FC864E8490172D609DD696672" Directory="APPLICATIONROOTDIRECTORY" Guid="edb8bafb-4ba6-41c2-a12e-4c050c254253">
+        <File Id="filB4677748F9834FAF0208AB97B0FBC456" KeyPath="yes" Source="..\Deployment\Xceed.Wpf.Toolkit.dll" />
+      </Component>
+      <Component Id="cmp470147a68b2348fe9bc849378834b911" Directory="APPLICATIONROOTDIRECTORY" Guid="474ff541-247f-4de7-ac9f-f3d9252723f7">
+        <File Id="fil39b779fc6b9c4a2088557bee57d37aa7" KeyPath="yes" Source="..\Deployment\SecondMonitor.ViewModels.dll" />
+      </Component>
+      <Component Id="cmp399fbd789a3e4a529fb2423f5ef75714" Directory="APPLICATIONROOTDIRECTORY" Guid="d5217020-5c18-4064-ac71-bb73514146d6">
+        <File Id="fil318150619963408b90e5b3d68b13586b" KeyPath="yes" Source="..\Deployment\LiveCharts.Wpf.dll" />
+      </Component>
+      <Component Id="cf532cddba34649d481c5f606485bcc5c" Directory="APPLICATIONROOTDIRECTORY" Guid="0837fca4-a089-463e-89dc-4366ad09cf58">
+        <File Id="f1bc6c4fb211540aaa7551b65163f5ed6" KeyPath="yes" Source="..\Deployment\LiveCharts.dll" />
+      </Component>
+      <Component Id="f1853a54996cc4b51aabf75b3e13bdc8d" Directory="APPLICATIONROOTDIRECTORY" Guid="a2100cc4-2db1-4550-bdcb-2f905abb5188">
+        <File Id="fbf87d8eff4164edbba246da72aee44da" KeyPath="yes" Source="..\Deployment\Microsoft.Xaml.Behaviors.dll" />
+      </Component>
+      <Component Id="c74f8cc9acda845fca611e26870f7cb1e" Directory="APPLICATIONROOTDIRECTORY" Guid="3ba04fe7-348f-451d-b55f-6c80baf55d53">
+        <File Id="f128a6330a922457597bdbfa636a51b2" KeyPath="yes" Source="..\Deployment\SimdataManagement.dll" />
+      </Component>
+      <Component Id="cc8c1c81d226648f1a7eb0ddb8959910d" Directory="APPLICATIONROOTDIRECTORY" Guid="e3deacdc-6d9c-46cf-89f4-3f14576832b5">
+        <File Id="fc8c1c81d226648f1a7eb0ddb8959910d" KeyPath="yes" Source="..\Deployment\Contracts.dll" />
+      </Component>
+      <Component Id="cfee84c142b6743a4a6f64b5aa97972a2" Directory="APPLICATIONROOTDIRECTORY" Guid="a5cd01b2-c8ff-4c17-ab56-3f44cbb7901e">
+        <File Id="ffee84c142b6743a4a6f64b5aa97972a2" KeyPath="yes" Source="..\Deployment\Rating.Application.dll" />
+      </Component>
+      <Component Id="c22168358761841228257fbcbdfaf0d6e" Directory="APPLICATIONROOTDIRECTORY" Guid="c4b3f90f-fc8b-4c56-ac9c-f0a824f4687d">
+        <File Id="f22168358761841228257fbcbdfaf0d6e" KeyPath="yes" Source="..\Deployment\Rating.Common.dll" />
+      </Component>
+      <Component Id="c4b0392c949134aeea6b9e652433c3678" Directory="APPLICATIONROOTDIRECTORY" Guid="d9d4cb3a-a985-469d-be72-73f0b7b6c82d">
+        <File Id="f4b0392c949134aeea6b9e652433c3678" KeyPath="yes" Source="..\Deployment\Rating.Presentation.dll" />
+      </Component>
+
+      <Component Id="c2f8051749a9347ee89f1c2a9a3a925ea" Directory="APPLICATIONROOTDIRECTORY" Guid="2006f530-2a5b-4d8e-bc53-97bfc3fdcd98">
+        <File Id="f2f8051749a9347ee89f1c2a9a3a925ea" KeyPath="yes" Source="..\Deployment\protobuf-net.dll" />
+      </Component>
+      <Component Id="c8d41516ff108426bbf5dc864e660bf73" Directory="APPLICATIONROOTDIRECTORY" Guid="38290d9b-0e4e-4b8e-a72b-d9536d54eb01">
+        <File Id="f8d41516ff108426bbf5dc864e660bf73" KeyPath="yes" Source="..\Deployment\protobuf-net.Core.dll" />
+      </Component>
+      <Component Id="c5f44f0c1ae1c4ce9936a2d7517c25952" Directory="APPLICATIONROOTDIRECTORY" Guid="5e8cf54b-1b67-45de-a39b-247930edc328">
+        <File Id="f5f44f0c1ae1c4ce9936a2d7517c25952" KeyPath="yes" Source="..\Deployment\System.Collections.Immutable.dll" />
+      </Component>
+      <Component Id="FileOxyPlotSkiaSharpdll" Directory="APPLICATIONROOTDIRECTORY" Guid="c98ceb14-f7dd-47fb-bcec-c981241f73d0">
+        <File Id="FileOxyPlotSkiaSharpdll" KeyPath="yes" Source="..\Deployment\OxyPlot.SkiaSharp.dll" />
+      </Component>
+      <Component Id="FileOxyPlotSkiaSharpwpfdll" Directory="APPLICATIONROOTDIRECTORY" Guid="a7cea9c2-02a4-4624-86ee-ee7f47d89a43">
+        <File Id="FileOxyPlotSkiaSharpwpfdll" KeyPath="yes" Source="..\Deployment\OxyPlot.SkiaSharp.Wpf.dll" />
+      </Component>
+
+      <Component Id="FileOxyPlotWpfSharedDll" Directory="APPLICATIONROOTDIRECTORY" Guid="4059d08d-9823-432a-b9c6-ac0d551cc96d">
+        <File Id="FileOxyPlotWpfSharedDll" KeyPath="yes" Source="..\Deployment\OxyPlot.Wpf.Shared.dll" />
+      </Component>
+
+      <Component Id="FileSkiaSharpdll" Directory="APPLICATIONROOTDIRECTORY" Guid="313ec068-c09f-4e87-8d6d-317ab0a3aecd">
+        <File Id="FileSkiaSharpdll" KeyPath="yes" Source="..\Deployment\SkiaSharp.dll" />
+      </Component>
+      <Component Id="FileSkiaSharpHarfBuzzdll" Directory="APPLICATIONROOTDIRECTORY" Guid="56064691-1725-439e-aa86-f7c555f34f11">
+        <File Id="FileSkiaSharpHarfBuzzdll" KeyPath="yes" Source="..\Deployment\SkiaSharp.HarfBuzz.dll" />
+      </Component>
+      <Component Id="FileSkiaSharpCommondll" Directory="APPLICATIONROOTDIRECTORY" Guid="be29a13b-2a94-4d3a-a7e3-4ba8bebde841">
+        <File Id="FileSkiaSharpCommondll" KeyPath="yes" Source="..\Deployment\SkiaSharp.Views.Desktop.Common.dll" />
+      </Component>
+      <Component Id="comp6f07b52d83e54a559017970664626099" Directory="APPLICATIONROOTDIRECTORY" Guid="86f579ce-a4cc-4904-befc-e8d0df47dcb2">
+        <File Id="file6f07b52d83e54a559017970664626099" KeyPath="yes" Source="..\Deployment\libHarfBuzzSharp.dll" />
+      </Component>
+      <Component Id="comp6e836d5716af4aefb9ceadf364029286" Directory="APPLICATIONROOTDIRECTORY" Guid="909c6af9-02de-45a1-860b-9e4a091c702d">
+        <File Id="file6e836d5716af4aefb9ceadf364029286" KeyPath="yes" Source="..\Deployment\HarfBuzzSharp.dll" />
+      </Component>
+      <Component Id="comp9d49e2f197fa47d9b9953ce7d4be250e" Directory="APPLICATIONROOTDIRECTORY" Guid="c2802c81-bb4e-4d2d-9873-667344d3f2b9">
+        <File Id="file9d49e2f197fa47d9b9953ce7d4be250e" KeyPath="yes" Source="..\Deployment\libSkiaSharp.dll" />
+      </Component>
+      <Component Id="compd12770c372094075a7c5968df53f368b" Directory="APPLICATIONROOTDIRECTORY" Guid="2315e7b4-6b8e-4a34-a027-2ff1495c97c4">
+        <File Id="filed12770c372094075a7c5968df53f368b" KeyPath="yes" Source="..\Deployment\System.Memory.dll" />
+      </Component>
+      <Component Id="com75bcfeb5547949279be792d67d1e819c" Directory="APPLICATIONROOTDIRECTORY" Guid="ec728f4c-ee8f-48bc-84e3-5d6986d4d832">
+        <File Id="file75bcfeb5547949279be792d67d1e819c" KeyPath="yes" Source="..\Deployment\System.Runtime.CompilerServices.Unsafe.dll" />
+      </Component>
+      <Component Id="c3d9f3ffce7f04c7189c0257a820442ee" Directory="APPLICATIONROOTDIRECTORY" Guid="c9c386f7-7008-46ce-a9c4-e1a464f8f06f">
+        <File Id="f3d9f3ffce7f04c7189c0257a820442ee" KeyPath="yes" Source="..\Deployment\System.Buffers.dll" />
+      </Component>
+      <Component Id="cc245615c310149d7b4bf8a436cfc60dd" Directory="APPLICATIONROOTDIRECTORY" Guid="dfc7468f-6177-400e-a6a1-a8b9e426fc8f">
+        <File Id="fc245615c310149d7b4bf8a436cfc60dd" KeyPath="yes" Source="..\Deployment\System.Numerics.Vectors.dll" />
+      </Component>
+
+      <Component Id="cmp148fb760d43840ab96681c7ae452e01d" Directory="APPLICATIONROOTDIRECTORY" Guid="b84f6990-bc89-45c0-ac9b-aedd66f5c289">
+        <File Id="fil148fb760d43840ab96681c7ae452e01d" KeyPath="yes" Source="..\Deployment\Timing.Common.dll" />
+      </Component>
+      <Component Id="cmp2F067665D606D44C0110C848F1A4C5E3" Directory="APPLICATIONROOTDIRECTORY" Guid="8dda1925-d65e-40a9-8c14-2b992179c112">
+        <File Id="fil0D82207ADFB2905835CDB48585F0CB5A" KeyPath="yes" Source="..\Deployment\LiteNetLib.dll" />
+      </Component>
+      <!--<Component Id="id75be878de1e94455aeecb8d6771dbae9" Directory="APPLICATIONROOTDIRECTORY" Guid="e9b5c91c-cd91-4f61-b340-dedd85bd3846">
+        <File Id="file75be878de1e94455aeecb8d6771dbae9" KeyPath="yes" Source="..\Deployment\System.Runtime.InteropServices.RuntimeInformation.dll" />
+      </Component>-->
+      <Component Id="cmpCE0B948FB3A1396EC1B07D453C2D7BEF" Directory="dirF09AC222E5E846B669ECCC3285BC0D7B" Guid="44b81b14-ced1-4fe8-9ba6-cad3dd0a6285">
+        <File Id="filC5770A7C732AB6E9B75256BDAC22C5D6" KeyPath="yes" Source="..\Deployment\Connectors\Pcars\PCarsConnector.dll" />
+      </Component>
+      <Component Id="cmp6468344C577FF92207D7E17BD6BA1891" Directory="dir96FE386770022CE1F8679CB1A2875FE0" Guid="16acd22a-2c65-4fe0-be00-19913c4d167c">
+        <File Id="fil147E14539226BA6D83432417F3A46D33" KeyPath="yes" Source="..\Deployment\Connectors\R3E\r3e-data.json" />
+      </Component>
+      <Component Id="cmp1455472C77F0F8A00F5331F0387A95E3" Directory="dir96FE386770022CE1F8679CB1A2875FE0" Guid="0db710c5-0e75-4a29-97b3-a0383dc46c67">
+        <File Id="fil79143611C2CADB725A9F374B99FD6957" KeyPath="yes" Source="..\Deployment\Connectors\R3E\R3EConnector.dll" />
+      </Component>
+      <Component Id="cmp0D63D3874720241B51B7BBF3A4190E62" Directory="TimingApplicationDirectory" Guid="421d052b-ffd9-4403-8ee8-900623cfdc0c">
+        <File Id="filC5739C76B912710700AA88AC8C075019" KeyPath="yes" Source="..\Deployment\plugins\Timing.Application\Timing.Application.dll" />
+      </Component>
+      <Component Id="cmpEE11F1BABBB66738F0BA8D9F67178FEF" Directory="RemoteApplicationDirectory" Guid="ebf85603-45dd-449d-a158-343a93b6b6ba">
+        <File Id="fil05D0C118B45A21424917CEA803146000" KeyPath="yes" Source="..\Deployment\plugins\Remote.Application\Remote.Application.dll" />
+      </Component>
+
+      <Component Id="cmp2e7a7ec67268446686ff3c3bd786ea48" Directory="XslxExportDirectory" Guid="fe520257-1852-4e47-ba22-f3d543d31ec7">
+        <File Id="fil6ec4cdff09084e3f8c0d7edd99f3882f" KeyPath="yes" Source="..\Deployment\plugins\XslxExport\XslxExport.dll" />
+      </Component>
+      <Component Id="cmp0253b072d27a4258bb3fc69c13343256" Directory="APPLICATIONROOTDIRECTORY" Guid="c322e8b2-c731-4de6-8568-15e6af8bd265">
+        <File Id="fil0253b072d27a4258bb3fc69c13343256" KeyPath="yes" Source="..\Deployment\EPPlus.dll" />
+      </Component>
+      <Component Id="cmpEPPlusInterfaces" Directory="APPLICATIONROOTDIRECTORY" Guid="d1267eb4-f5e0-488b-a3a0-a84fbd748193">
+        <File Id="fileEPPlusInterfaces" KeyPath="yes" Source="..\Deployment\EPPlus.Interfaces.dll" />
+      </Component>
+      <Component Id="cmpEppPlusDrawing" Directory="APPLICATIONROOTDIRECTORY" Guid="a60bcc7c-5c15-4e93-8292-9ee0e662e678">
+        <File Id="fileEppPlusDrawing" KeyPath="yes" Source="..\Deployment\EPPlus.System.Drawing.dll" />
+      </Component>
+      <Component Id="cmpMicrosoftRecyclableStream" Directory="APPLICATIONROOTDIRECTORY" Guid="6ba72556-586b-467b-8c87-6ce897de6c66">
+        <File Id="fileMicrosoftRecyclableStream" KeyPath="yes" Source="..\Deployment\Microsoft.IO.RecyclableMemoryStream.dll" />
+      </Component>
+
+      <Component Id="cmpSystemDrawingCommon" Directory="APPLICATIONROOTDIRECTORY" Guid="2ed43906-9889-4073-b544-f2b07c2af5d9">
+        <File Id="fileSystemDrawingCommon" KeyPath="yes" Source="..\Deployment\System.Drawing.Common.dll" />
+      </Component>
+      <Component Id="cmpSystemReflectionMetadata" Directory="APPLICATIONROOTDIRECTORY" Guid="a9de195e-4575-4207-8bcd-54b8ff6a7952">
+        <File Id="fileSystemReflectionMetadata" KeyPath="yes" Source="..\Deployment\System.Reflection.Metadata.dll" />
+      </Component>
+      <Component Id="cmpSystemTextEncodingCodePages" Directory="APPLICATIONROOTDIRECTORY" Guid="e5a75c18-e0dc-49b3-8d9d-84768cb431c2">
+        <File Id="fileSystemTextEncodingCodePages" KeyPath="yes" Source="..\Deployment\System.Text.Encoding.CodePages.dll" />
+      </Component>
+      <Component Id="cmpSystemThreadingTaskExtension" Directory="APPLICATIONROOTDIRECTORY" Guid="53b262b4-a4b5-4031-b642-afbb281a94ee">
+        <File Id="fileSystemThreadingTaskExtension" KeyPath="yes" Source="..\Deployment\System.Threading.Tasks.Extensions.dll" />
+      </Component>
+      
+      <Component Id="cmpad1bc2985c384aceb265ebec29d36042" Directory="XslxExportDirectory" Guid="8151a500-e76f-4ee6-9a64-277772ac4949">
+        <File Id="filad1bc2985c384aceb265ebec29d36042" KeyPath="yes" Source="..\Deployment\plugins\XslxExport\ICSharpCode.SharpZipLib.dll" />
+      </Component>
+      <Component Id="cmp7f75611e33f94a10b57f428694c45415" Directory="dir0b6902e3f28f41e92329d0f61641a602" Guid="35597b56-6ee0-4196-acf3-4ea0531cb918">
+        <File Id="file7f75611e33f94a10b57f428694c45415" KeyPath="yes" Source="..\Deployment\Connectors\RFactor\RFactorConnector.dll" />
+      </Component>
+      <Component Id="cmp295d14efef0b4430a05d3219519a0631" Directory="dir0b6902e3f28f41e92329d0f61641a602" Guid="1de2678e-54dd-4a77-9da8-fb4b65c1baf9">
+        <File Id="file57e7d8e568754cd3aebdc4d684407c8f" KeyPath="yes" Source="..\Deployment\Connectors\RFactor\rFactorSharedMemoryMap.dll" />
+      </Component>
+      <Component Id="cmp6d7ce167f46d402bb458a007d9114824" Directory="dir3360ab9bfb6540e093d7c5f9d14d27ca" Guid="71d9cb7e-9301-42ed-a6f0-396e6f97832e">
+        <File Id="file2dcd02ca4ed7488890e52f190d85ea4f" KeyPath="yes" Source="..\Deployment\Connectors\RFactor2\RF2Connector.dll" />
+      </Component>
+      <Component Id="cmpd3199132b45547b0809e8efeb213c521" Directory="dir3360ab9bfb6540e093d7c5f9d14d27ca" Guid="efd62030-740e-4d2b-a51c-18e00dcdc650">
+        <File Id="file8c12ce9ad1504877a625afe87cf98120" KeyPath="yes" Source="..\Deployment\Connectors\RFactor2\rFactor2SharedMemoryMapPlugin64.dll" />
+      </Component>
+      <Component Id="cmp71be5f609c8f4adfac3a83a07ec503bc" Directory="dirb781d9a060914609a4d5b9fe2684ed60" Guid="94c6b86a-788d-4cf7-a5e9-8774a27ba40a">
+        <File Id="file37c8b28b15b046739c09ac706aa2bf76" KeyPath="yes" Source="..\Deployment\Connectors\AssettoCorsa\AssettoCorsaConnector.dll" />
+      </Component>
+      <Component Id="cmpddc8dc92ea764d90a2d889ed2ade1c85" Directory="dirb781d9a060914609a4d5b9fe2684ed60" Guid="3b3110dc-6b03-48c0-93f8-f7de3d174a4f">
+        <File Id="filee33380c39d5c410980a5a0a53171d214" KeyPath="yes" Source="..\Deployment\Connectors\AssettoCorsa\SecondMonitor.py" />
+      </Component>
+      <Component Id="cmpda66f178cf2ba46cc80752b6dac1283bf" Directory="dirb781d9a060914609a4d5b9fe2684ed60" Guid="56f1ef19-663e-4a12-80bf-51510a50da36">
+        <File Id="filea66f178cf2ba46cc80752b6dac1283bf" KeyPath="yes" Source="..\Deployment\Connectors\AssettoCorsa\config.txt" />
+      </Component>
+      <Component Id="cmpcbd241843a4b42039d487ecb57545183" Directory="dirb781d9a060914609a4d5b9fe2684ed60" Guid="ab29ce7d-4171-46d4-821a-df3c69b4790a">
+        <File Id="file03639ea9ff044766835841526dce7577" KeyPath="yes" Source="..\Deployment\Connectors\AssettoCorsa\smshared_mem.py" />
+      </Component>
+
+      <Component Id="cmpf3783b93fb24440a88505983feb57901b" Directory="dirb23951d081d2d4c08bd3b17738ec2d216" Guid="ec4aba42-a925-4c41-aea9-ca86600561f7">
+        <File Id="file3783b93fb24440a88505983feb57901b" KeyPath="yes" Source="..\Deployment\Connectors\F12019\F12019.dll" />
+      </Component>
+
+
+      <Component Id="cmpF12020dll" Directory="dirF12020" Guid="b3fe0f39-593f-44b7-9f17-ddbf84b02728">
+        <File Id="fileF12020dll" KeyPath="yes" Source="..\Deployment\Connectors\F12020\F12020.dll" />
+      </Component>
+
+      <Component Id="cmpF12021dll" Directory="dirF12021" Guid="de368f67-2759-4db3-86fb-56d8c2f865d9">
+        <File Id="fileF12021dll" KeyPath="yes" Source="..\Deployment\Connectors\F12021\F12021.dll" />
+      </Component>
+
+
+
+      <Component Id="cmpdirAcStdLibctypes" Directory="dirAcStdLib" Guid="72dea5f0-4aeb-415a-b6b1-ed2d1b28b89d">
+        <File Id="fileAcStdLibctypes" KeyPath="yes" Source="..\Deployment\Connectors\AssettoCorsa\stdLib\_ctypes.pyd" />
+      </Component>
+      <Component Id="cmpdirAcStdLib64ctypes" Directory="dirAcStdLib64" Guid="39cca420-d319-4ce9-bb08-a003e892d043">
+        <File Id="fileAcStdLib64ctypes" KeyPath="yes" Source="..\Deployment\Connectors\AssettoCorsa\stdLib64\_ctypes.pyd" />
+      </Component>
+      <Component Id="cmpdbdf7e2e372f8452792ce86c234d57d7d" Directory="dirAcStdLib64" Guid="ac06c6cf-54c9-49df-8782-9e0be67ca367">
+        <File Id="filebdf7e2e372f8452792ce86c234d57d7d" KeyPath="yes" Source="..\Deployment\Connectors\AssettoCorsa\stdLib64\ACInternalMemoryReader.dll" />
+      </Component>
+
+      <Component Id="cmp05dfa7d6fd9b4c94be8e616fbc5af02e" Directory="dir3a3ca7e20acc447f910d122db59aa6d1" Guid="82ba7e26-aec8-4b72-a52c-62aab300c950">
+        <File Id="file05dfa7d6fd9b4c94be8e616fbc5af02e" KeyPath="yes" Source="..\Deployment\Connectors\Acc\AccConnector.dll" />
+      </Component>
+
+
+      <Component Id="cmp1fd9e7536d834f9f997536cd4151b612" Directory="dir7b3810dbde9e4b2ea6f7551a8b724d8b" Guid="e72d3141-1e80-4736-988e-d2ed3225e579">
+        <File Id="file1fd9e7536d834f9f997536cd4151b612" KeyPath="yes" Source="..\Deployment\Connectors\AMS2\AMS2Connector.dll" />
+      </Component>
+
+      <Component Id="cmp6263c4e9fe334bb19cfb5bf8fdcee9f8" Directory="dir700ab31efeba489c8f7985492bbbf109" Guid="b683d97f-9e40-4049-b786-2bad853f0c96">
+        <File Id="filedbb78ec26f024183855fc84a5409cf02" KeyPath="yes" Source="..\Deployment\Connectors\PCars2\PCars2Connector.dll" />
+      </Component>
+
+      <Component Id="cmp22EB3340F9263A09AA9DF8903EEE18CD" Directory="dir77863955766C658BE4B8389A0ECFC377" Guid="8912f619-2c22-41ae-9f32-a4a45c862a4a">
+        <File Id="fil007088D4365D571597ED82F99B5AE423" KeyPath="yes" Source="..\Deployment\Connectors\Remote\Remote.Connector.dll" />
+      </Component>
+      <Component Id="cmpbb19a871eb9b41899c36a4ed10970a39" Directory="APPLICATIONROOTDIRECTORY" Guid="af7725e3-f7ae-4a24-a5d0-2269bab68ac0">
+        <File Id="filbb19a871eb9b41899c36a4ed10970a39" KeyPath="yes" Source="..\Deployment\Ninject.Extensions.Factory.dll" />
+      </Component>
+      <Component Id="cmpcaa006f3a7754ad4b4ad0aee06896735" Directory="APPLICATIONROOTDIRECTORY" Guid="6bde484f-7252-4c5c-a7f7-cfa34296da31">
+        <File Id="filcaa006f3a7754ad4b4ad0aee06896735" KeyPath="yes" Source="..\Deployment\Castle.Core.dll" />
+      </Component>
+      <Component Id="cmp23d3a4e06b404b64bbf0d4f0cc38a972" Directory="APPLICATIONROOTDIRECTORY" Guid="30043a9a-940c-4d6d-973b-aeb5c7c4af23">
+        <File Id="fil23d3a4e06b404b64bbf0d4f0cc38a972" KeyPath="yes" Source="..\Deployment\SecondMonitor.Bootstrapping.dll" />
+      </Component>
+      <Component Id="cmp05421927a1324efabc1f94613c076294" Directory="APPLICATIONROOTDIRECTORY" Guid="8035f256-d089-475a-87b5-a9f13e2169c5">
+        <File Id="fil05421927a1324efabc1f94613c076294" KeyPath="yes" Source="..\Deployment\Ninject.Extensions.Conventions.dll" />
+      </Component>
+    </ComponentGroup>
+
+    <DirectoryRef Id="APPLICATIONROOTDIRECTORY">
+      <Directory Id="dir10609BC54973A60FEA796FF193DD15AB" Name="Connectors" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="APPLICATIONROOTDIRECTORY">
+      <Directory Id="dir23D60FD22D95374E6F8B798C0D1A009B" Name="plugins" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="APPLICATIONROOTDIRECTORY">
+      <Directory Id="dir663302E9CFD7647C1B14AA38991E5CF3" Name="Disabled" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir23D60FD22D95374E6F8B798C0D1A009B">
+      <Directory Id="TimingApplicationDirectory" Name="Timing.Application" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir23D60FD22D95374E6F8B798C0D1A009B">
+      <Directory Id="RemoteApplicationDirectory" Name="Remote.Application" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir23D60FD22D95374E6F8B798C0D1A009B">
+      <Directory Id="XslxExportDirectory" Name="XslxExport" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir10609BC54973A60FEA796FF193DD15AB">
+      <Directory Id="dir96FE386770022CE1F8679CB1A2875FE0" Name="R3E" />
+    </DirectoryRef>
+
+
+    <DirectoryRef Id="dir10609BC54973A60FEA796FF193DD15AB">
+      <Directory Id="dirF09AC222E5E846B669ECCC3285BC0D7B" Name="Pcars" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir10609BC54973A60FEA796FF193DD15AB">
+      <Directory Id="dir0b6902e3f28f41e92329d0f61641a602" Name="RFactor" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir10609BC54973A60FEA796FF193DD15AB">
+      <Directory Id="dir3360ab9bfb6540e093d7c5f9d14d27ca" Name="RFactor2" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir10609BC54973A60FEA796FF193DD15AB">
+      <Directory Id="dirb781d9a060914609a4d5b9fe2684ed60" Name="AssettoCorsa" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir10609BC54973A60FEA796FF193DD15AB">
+      <Directory Id="dirb23951d081d2d4c08bd3b17738ec2d216" Name="F12019" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir10609BC54973A60FEA796FF193DD15AB">
+      <Directory Id="dirF12020" Name="F12020" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir10609BC54973A60FEA796FF193DD15AB">
+      <Directory Id="dirF12021" Name="F12021" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dirb781d9a060914609a4d5b9fe2684ed60">
+      <Directory Id="dirAcStdLib" Name="stdlib" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dirb781d9a060914609a4d5b9fe2684ed60">
+      <Directory Id="dirAcStdLib64" Name="stdlib64" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir10609BC54973A60FEA796FF193DD15AB">
+      <Directory Id="dir700ab31efeba489c8f7985492bbbf109" Name="PCars2" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir10609BC54973A60FEA796FF193DD15AB">
+      <Directory Id="dir7b3810dbde9e4b2ea6f7551a8b724d8b"
+                 Name="AMS2" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir10609BC54973A60FEA796FF193DD15AB">
+      <Directory Id="dir3a3ca7e20acc447f910d122db59aa6d1"
+                 Name="Acc" />
+    </DirectoryRef>
+
+    <DirectoryRef Id="dir10609BC54973A60FEA796FF193DD15AB">
+      <Directory Id="dir77863955766C658BE4B8389A0ECFC377" Name="Remote" />
+    </DirectoryRef>
+
+
+
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id ="ApplicationShortcut" Guid="0ad2f58c-8d15-4cb5-bb9e-e45492325e31">
+        <Shortcut Id="SecondMonitorShortcut" Target="[!filemyapplication.exe]" Directory="ApplicationProgramsFolder" Name="Second Monitor Beta" WorkingDirectory='APPLICATIONROOTDIRECTORY' Icon="SecondMonitorBeta.exe" Show="normal">
+          <Icon Id="SecondMonitorBeta.exe" SourceFile="..\Deployment\SecondMonitorBeta.exe" />
+        </Shortcut>
+        <Shortcut Id="TelemetryViewerShortCut" Target="[!filetelemetry.exe]" Directory="ApplicationProgramsFolder" Name="Telemetry Viewer Beta" WorkingDirectory='APPLICATIONROOTDIRECTORY' Icon="TelemetryViewerBeta.exe" Show="normal">
+          <Icon Id="TelemetryViewerBeta.exe" SourceFile="..\Deployment\TelemetryViewerBeta.exe" />
+        </Shortcut>
+        <Shortcut Id="ManagePluginsShortCut" Target="[!filemanageplugins.exe]" Directory="ApplicationProgramsFolder" Name="Manage Plugins Beta" WorkingDirectory='APPLICATIONROOTDIRECTORY' Icon="ManagePluginsBeta.exe" Show="normal">
+          <Icon Id="ManagePluginsBeta.exe" SourceFile="..\Deployment\ManagePluginsBeta.exe" />
+        </Shortcut>
+        <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall"/>
+        <RegistryValue Root="HKCU" Key="Software\SecondMonitorBeta" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="ProductFeature" Title="Installation" Level="1">
+      <ComponentGroupRef Id="DeploymentGroup" />
+      <!--<ComponentRef Id="StartMenuDirectory"/>-->
+      <ComponentRef Id="ApplicationShortcut"/>
+    </Feature>
+
+    <Property Id="WIXUI_INSTALLDIR" Value="APPLICATIONROOTDIRECTORY" />
+    <Property Id="MSIUSEREALADMINDETECTION" Value="1" />
+
+    <UI>
+      <UIRef Id="WixUI_InstallDir" />
+      <!--<UIRef Id="WixUI_Minimal" />-->
+      <Publish Dialog="ExitDialog"
+               Control="Finish"
+               Event="DoAction"
+               Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
+    </UI>
+
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1"/>
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch Second Monitor" />
+
+    <Property Id="WixShellExecTarget" Value="[#filemyapplication.exe]" />
+    <CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec" Impersonate="yes" />
+
+  </Product>
+</Wix>

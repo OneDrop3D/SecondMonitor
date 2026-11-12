@@ -1,0 +1,203 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="clr-namespace:SecondMonitor.WindowsControls.WPF.TabControl"
+                    xmlns:tabs="clr-namespace:SecondMonitor.ViewModels.Tabs;assembly=SecondMonitor.ViewModels">
+
+   
+
+    <Style x:Key="StandardTabControl" TargetType="{x:Type TabControl}">
+        <Setter Property="ItemTemplate">
+            <Setter.Value>
+                <DataTemplate DataType="{x:Type tabs:TabItemViewModel}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition SharedSizeGroup="TabItemSharedSize" Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ContentPresenter Content="{Binding Title}"/>
+                    </Grid>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ContentTemplate">
+            <Setter.Value>
+                <DataTemplate DataType="{x:Type tabs:TabItemViewModel}">
+                    <ScrollViewer CanContentScroll="False" VerticalScrollBarVisibility="Auto">
+                        <ContentPresenter Content="{Binding TabContent}" />
+                    </ScrollViewer>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Resources>
+            <Style TargetType="{x:Type TabPanel}">
+                <Setter Property="Background" Value="{StaticResource Anthracite01Brush}" />
+            </Style>
+            <Style TargetType="{x:Type TabItem}">
+                <Setter Property="Background" Value="{StaticResource Anthracite01Brush}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type TabItem}">
+                            <Grid>
+                                <Border
+                                    Name="Border"
+                                    Margin="0,0,-4,0"
+                                    Background="{StaticResource Anthracite01Brush}"
+                                    BorderBrush="{StaticResource  DarkGrey05Brush}"
+                                    BorderThickness="1,1,1,1"
+                                    CornerRadius="2">
+                                    <ContentPresenter x:Name="ContentSite"
+                                                      VerticalAlignment="Center"
+                                                      HorizontalAlignment="Center"
+                                                      ContentSource="Header"
+                                                      Margin="2"
+                                                      RecognizesAccessKey="True" />
+                                </Border>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Panel.ZIndex" Value="100" />
+                                    <Setter TargetName="Border" Property="Background" Value="{StaticResource LightGrey02Brush}" />
+                                    <Setter TargetName="Border" Property="BorderThickness" Value="1,1,1,1" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+        </Style.Resources>
+    </Style>
+
+    <Style x:Key="StandardTabControlNoScrollViewer" TargetType="{x:Type TabControl}" BasedOn="{StaticResource StandardTabControl}">
+        <Setter Property="ContentTemplate">
+            <Setter.Value>
+                <DataTemplate DataType="{x:Type tabs:TabItemViewModel}">
+                    <ContentPresenter Content="{Binding TabContent}" />
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Resources>
+            <Style TargetType="{x:Type TabPanel}">
+                <Setter Property="Background" Value="{StaticResource Anthracite01Brush}" />
+            </Style>
+            <Style TargetType="{x:Type TabItem}">
+                <Setter Property="Background" Value="{StaticResource Anthracite01Brush}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type TabItem}">
+                            <Grid>
+                                <Border
+                                    Name="Border"
+                                    Margin="0,0,-4,0"
+                                    Background="{StaticResource Anthracite01Brush}"
+                                    BorderBrush="{StaticResource  DarkGrey05Brush}"
+                                    BorderThickness="1,1,1,1"
+                                    CornerRadius="2">
+                                    <ContentPresenter x:Name="ContentSite"
+                                                      VerticalAlignment="Center"
+                                                      HorizontalAlignment="Center"
+                                                      ContentSource="Header"
+                                                      Margin="2"
+                                                      RecognizesAccessKey="True" />
+                                </Border>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Panel.ZIndex" Value="100" />
+                                    <Setter TargetName="Border" Property="Background" Value="{StaticResource LightGrey02Brush}" />
+                                    <Setter TargetName="Border" Property="BorderThickness" Value="1,1,1,1" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+        </Style.Resources>
+    </Style>
+
+
+    <Style x:Name="TabContrtolEx" x:Key="TabControlEx" TargetType="{x:Type controls:TabControlEx}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TabControl}">
+                    <Grid Background="{TemplateBinding Background}" ClipToBounds="True" KeyboardNavigation.TabNavigation="Local" SnapsToDevicePixels="True">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="ColumnDefinition0" />
+                            <ColumnDefinition x:Name="ColumnDefinition1" Width="0" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition x:Name="RowDefinition0" Height="Auto" />
+                            <RowDefinition x:Name="RowDefinition1" Height="*" />
+                        </Grid.RowDefinitions>
+                        <DockPanel Margin="2,2,0,0" LastChildFill="False">
+                            <TabPanel x:Name="HeaderPanel" Margin="0,0,0,-1" VerticalAlignment="Bottom" Panel.ZIndex="1" DockPanel.Dock="Left"
+                                      IsItemsHost="True" KeyboardNavigation.TabIndex="1" />
+                        </DockPanel>
+                        <Border x:Name="ContentPanel" Grid.Row="1" Grid.Column="0"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                KeyboardNavigation.DirectionalNavigation="Contained" KeyboardNavigation.TabIndex="2" KeyboardNavigation.TabNavigation="Local">
+                            <Grid x:Name="PART_ItemsHolder" Margin="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Resources>
+                        <Style TargetType="{x:Type TabPanel}">
+                                <Setter Property="Background" Value="{StaticResource Anthracite01Brush}"/>
+                            </Style>
+                            <Style TargetType="{x:Type TabItem}">
+                                <Setter Property="Background" Value="{StaticResource Anthracite01Brush}"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="{x:Type TabItem}">
+                                            <Grid>
+                                                <Border
+                                                    Name="Border"
+                                                    Margin="0,0,-4,0"
+                                                    Background="{StaticResource Anthracite01Brush}"
+                                                    BorderBrush="{StaticResource  DarkGrey05Brush}"
+                                                    BorderThickness="1,1,1,1"
+                                                    CornerRadius="2">
+                                                    <ContentPresenter x:Name="ContentSite"
+                                                                      VerticalAlignment="Center"
+                                                                      HorizontalAlignment="Center"
+                                                                      ContentSource="Header"
+                                                                      Margin="2"
+                                                                       RecognizesAccessKey="True" />
+                                                </Border>
+                                            </Grid>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter Property="Panel.ZIndex" Value="100" />
+                                                    <Setter TargetName="Border" Property="Background" Value="{StaticResource LightGrey02Brush}" />
+                                                    <Setter TargetName="Border" Property="BorderThickness" Value="1,1,1,1" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                    </ControlTemplate.Resources>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemTemplate">
+            <Setter.Value>
+                <DataTemplate DataType="{x:Type tabs:TabItemViewModel}">
+                    <ContentPresenter Content="{Binding Title}"/>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ContentTemplate">
+            <Setter.Value>
+                <DataTemplate DataType="{x:Type tabs:TabItemViewModel}">
+                    <ScrollViewer CanContentScroll="False" VerticalScrollBarVisibility="Auto">
+                        <ContentPresenter Content="{Binding TabContent}" />
+                    </ScrollViewer>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="{x:Type controls:TabControlEx}" BasedOn="{StaticResource TabControlEx}" />
+</ResourceDictionary>

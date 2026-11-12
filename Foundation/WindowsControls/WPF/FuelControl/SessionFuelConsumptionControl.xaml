@@ -1,0 +1,116 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:quantityText="clr-namespace:SecondMonitor.WindowsControls.WPF.QuantityText"
+                    xmlns:fuelStatus="clr-namespace:SecondMonitor.ViewModels.CarStatus.FuelStatus;assembly=SecondMonitor.ViewModels"
+                    xmlns:wpf="clr-namespace:SecondMonitor.WindowsControls.WPF">
+    
+    <DataTemplate DataType="{x:Type fuelStatus:SessionFuelConsumptionViewModel}">
+        <Grid>
+            <Border BorderThickness="2" BorderBrush="{StaticResource DarkGrey01Brush}" CornerRadius="2">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Border BorderThickness="0" BorderBrush="{StaticResource DarkGrey05Brush}">
+                        <StackPanel>
+                            <TextBlock Margin="5,0,5,0" Style="{StaticResource StandardText}"
+                                       FontSize="{StaticResource BigFontSize}" VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       Text="{Binding TrackName}" />
+                            <TextBlock Margin="5,0,5,0" Style="{StaticResource StandardText}"
+                                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                                       Text="{Binding SessionType}" />
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal">
+                        <TextBlock Margin="2,0,0,0" Style="{StaticResource StandardText}" Text="Running Time: " />
+                        <TextBlock Style="{StaticResource StandardText}"
+                                   Text="{Binding FuelConsumption.ElapsedTime, Mode=OneWay, Converter={StaticResource TimespanToHoursMinutesSecondsUnitSuffixConverter }}" />
+                        <TextBlock Style="{StaticResource StandardText}" Text="Total Distance: " Margin="15,0,0,0" />
+
+
+                        <quantityText:DistanceText Foreground="{StaticResource LightGrey01Brush}"
+                                                   FontSize="{StaticResource NormalFontSize}"
+                                                   Quantity="{Binding FuelConsumption.TraveledDistance, Mode=OneWay}"
+                                                   DistanceUnits="{Binding DistanceUnits, Mode=OneWay}"
+                                                   ShowUnitSymbol="True" />
+
+                    </StackPanel>
+                    <Border Grid.Row="2" BorderThickness="1" Padding="3" BorderBrush="{StaticResource DarkGrey05Brush}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid Grid.Column="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,5,0,5" Grid.Column="0">
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
+                                        <TextBlock Style="{StaticResource StandardText}" Text="Fuel Consumed: "
+                                                   Margin="0,0,0,0" />
+                                        <quantityText:VolumeQuantityText Foreground="{StaticResource LightGrey01Brush}"
+                                                                         FontSize="{StaticResource NormalFontSize}"
+                                                                         Quantity="{Binding FuelConsumption.ConsumedFuel, Mode=OneWay}"
+                                                                         VolumeUnits="{Binding VolumeUnits, Mode=OneWay}"
+                                                                         ShowUnitSymbol="True" />
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource StandardText}" Text="Fuel Economy:" />
+                                        <quantityText:FuelPerDistanceText
+                                            Foreground="{StaticResource LightGrey01Brush}"
+                                            FontSize="{StaticResource NormalFontSize}"
+                                            Quantity="{Binding FuelConsumption.Consumption, Mode=OneWay}"
+                                            FuelPerDistanceUnits="{Binding FuelPerDistanceUnits, Mode=OneWay}"
+                                            ShowUnitSymbol="True" Margin="5,0,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <StackPanel Margin="0,5,0,5" Grid.Column="2">
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource StandardText}" Text="Avg Per Lap:" />
+                                        <quantityText:VolumeQuantityText Foreground="{StaticResource LightGrey01Brush}"
+                                                                         FontSize="{StaticResource NormalFontSize}"
+                                                                         Quantity="{Binding AvgPerLap, Mode=OneWay}"
+                                                                         VolumeUnits="{Binding VolumeUnits, Mode=OneWay}"
+                                                                         ShowUnitSymbol="True" Margin="5,0,0,0" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
+                                        <TextBlock Style="{StaticResource StandardText}" Text="Avg Per Minute:" />
+                                        <quantityText:VolumeQuantityText Foreground="{StaticResource LightGrey01Brush}"
+                                                                         FontSize="{StaticResource NormalFontSize}"
+                                                                         Quantity="{Binding AvgPerMinute, Mode=OneWay}"
+                                                                         VolumeUnits="{Binding VolumeUnits, Mode=OneWay}"
+                                                                         ShowUnitSymbol="True" Margin="5,0,0,0" />
+                                    </StackPanel>
+                                    <TextBlock Visibility="{Binding HasFuelCoef, Converter={StaticResource BooleanToVisibilityConverter}}" Style="{StaticResource StandardText}" Text="{Binding FuelCoef, Converter={StaticResource DoubleToScalableDecimalsConverter}, StringFormat={}Fuel Ratio: {0}}" />
+                                </StackPanel>
+                            </Grid>
+                            <Button Height="55" Margin="5" Grid.Column="1"
+                                    Command="{Binding DeleteCommand}"
+                                    Style="{StaticResource StandardButton}" Width="48" HorizontalAlignment="Left"
+                                    ToolTip="Removes this consumption entry"
+                                    Visibility="{Binding IsDeleteButtonVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Button.Content>
+                                    <wpf:ColorAbleIcon
+                                        StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                        <ContentPresenter Content="{StaticResource TrashIcon}" />
+                                    </wpf:ColorAbleIcon>
+                                </Button.Content>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+        </Grid>
+    </DataTemplate>
+
+</ResourceDictionary>

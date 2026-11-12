@@ -1,0 +1,36 @@
+﻿<UserControl x:Class="ControlTestingApp.Controls.CarSettingsTestControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:viewModels="clr-namespace:ControlTestingApp.ViewModels"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.DataContext>
+        <viewModels:CarStatusTestVm/>
+    </UserControl.DataContext>
+    <Grid Background="{StaticResource Anthracite01Brush}">
+            <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="100" />
+            <ColumnDefinition Width="200" />
+            </Grid.ColumnDefinitions>
+        <Grid Grid.Column="0" />
+        <Grid Grid.Column="2">
+            <StackPanel>
+                <Button Content="Change Temp Units" Height="50" Command="{Binding ChangeTemperatureUnitsCommand}" />
+                <Button Content="Change Pressure Units" Height="50" Command="{Binding ChangePressureUnitsCommand}" />
+                <ComboBox Style="{DynamicResource StandardComboBoxStyle}"/>
+            </StackPanel>
+        </Grid>
+        <Grid Grid.Column="3">
+            <StackPanel>
+                <Label Content="Ideal Brake Temperature" Foreground="{StaticResource LightGrey01Brush}" />
+                <Slider Value="{Binding TyreCoreRawTemperature, Mode=OneWayToSource}" Minimum="30" Maximum="140" />
+                <Label Content="Brake Temperature Window" Foreground="{StaticResource LightGrey01Brush}" />
+                <Slider  Value="{Binding BrakeRawTemperature}" Minimum="0" Maximum="600" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

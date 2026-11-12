@@ -1,0 +1,347 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:checks="clr-namespace:SecondMonitor.Telemetry.TelemetryApplication.Checks;assembly=TelemetryApplication"
+                    xmlns:behaviors="clr-namespace:SecondMonitor.WindowsControls.WPF.Behaviors;assembly=WindowsControls"
+                    xmlns:lapSummary="clr-namespace:SecondMonitor.Telemetry.TelemetryApplication.Checks.Evaluators.LapSummary;assembly=TelemetryApplication"
+                    xmlns:evaluators="clr-namespace:SecondMonitor.Telemetry.TelemetryApplication.Checks.Evaluators;assembly=TelemetryApplication"
+                    xmlns:wpf="clr-namespace:SecondMonitor.WindowsControls.WPF;assembly=WindowsControls"
+                    xmlns:checks1="clr-namespace:SecondMonitor.TelemetryPresentation.Checks"
+                    xmlns:brakeTemperatures="clr-namespace:SecondMonitor.Telemetry.TelemetryApplication.Checks.Evaluators.BrakeTemperatures;assembly=TelemetryApplication"
+                    xmlns:result="clr-namespace:SecondMonitor.Telemetry.TelemetryApplication.Checks.Evaluators.Result;assembly=TelemetryApplication"
+                    xmlns:tyreTemperatures="clr-namespace:SecondMonitor.Telemetry.TelemetryApplication.Checks.Evaluators.TyreTemperatures;assembly=TelemetryApplication"
+                    xmlns:tyrePressures="clr-namespace:SecondMonitor.Telemetry.TelemetryApplication.Checks.Evaluators.TyrePressures;assembly=TelemetryApplication"
+                    xmlns:helpButton="clr-namespace:SecondMonitor.WindowsControls.WPF.HelpButton;assembly=WindowsControls"
+                    xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+                    xmlns:rideHeight="clr-namespace:SecondMonitor.Telemetry.TelemetryApplication.Checks.Evaluators.RideHeight;assembly=TelemetryApplication">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="../TelemetryPresentation.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+    <checks1:EvaluationToBrushConverter x:Key="EvaluationToBrushConverter"/>
+
+
+    <DataTemplate DataType="{x:Type brakeTemperatures:BrakeTemperaturesViewModel}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <ContentPresenter Grid.Column="0" Grid.Row="0" Content="{Binding FrontLeftResult}"/>
+            <ContentPresenter Grid.Column="1" Grid.Row="0" Content="{Binding FrontRightResult}"/>
+            <ContentPresenter Grid.Column="0" Grid.Row="1" Content="{Binding RearLeftResult}"/>
+            <ContentPresenter Grid.Column="1" Grid.Row="1" Content="{Binding RearRightResult}"/>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type tyrePressures:TyrePressuresViewModel}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <ContentPresenter Grid.Column="0" Grid.Row="0" Content="{Binding FrontLeftResult}"/>
+            <ContentPresenter Grid.Column="1" Grid.Row="0" Content="{Binding FrontRightResult}"/>
+            <ContentPresenter Grid.Column="0" Grid.Row="1" Content="{Binding RearLeftResult}"/>
+            <ContentPresenter Grid.Column="1" Grid.Row="1" Content="{Binding RearRightResult}"/>
+        </Grid>
+    </DataTemplate>
+    
+    <DataTemplate DataType="{x:Type rideHeight:RideHeightViewModel}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <ContentPresenter Grid.Column="0" Grid.Row="0" Content="{Binding FrontLeftResult}"/>
+            <ContentPresenter Grid.Column="1" Grid.Row="0" Content="{Binding FrontRightResult}"/>
+            <ContentPresenter Grid.Column="0" Grid.Row="1" Content="{Binding RearLeftResult}"/>
+            <ContentPresenter Grid.Column="1" Grid.Row="1" Content="{Binding RearRightResult}"/>
+            <ContentPresenter Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="2" Content="{Binding RakeEvaluationResults}"/>
+        </Grid>
+    </DataTemplate>
+    
+    <DataTemplate DataType="{x:Type result:GenericResultViewModel}">
+        <ContentPresenter Content="{Binding EvaluationResult}"/>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type tyreTemperatures:TyreTemperaturesViewModel}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <ContentPresenter Grid.Column="0" Grid.Row="0" Content="{Binding FrontLeftResult}"/>
+            <ContentPresenter Grid.Column="1" Grid.Row="0" Content="{Binding FrontRightResult}"/>
+            <ContentPresenter Grid.Column="0" Grid.Row="1" Content="{Binding RearLeftResult}"/>
+            <ContentPresenter Grid.Column="1" Grid.Row="1" Content="{Binding RearRightResult}"/>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type result:EvaluationResult}">
+        <GroupBox Header="{Binding Title}" Foreground="{StaticResource LightGrey01Brush}" Padding="5" >
+            <StackPanel Orientation="Vertical">
+                <ItemsControl ItemsSource="{Binding Groups}"/>
+                <ItemsControl ItemsSource="{Binding Items}"/>
+            </StackPanel>
+        </GroupBox>
+    </DataTemplate>
+
+    <DataTemplate  DataType="{x:Type result:EvaluationSeparatorItem}">
+        <Grid Margin="10" />
+    </DataTemplate>
+
+
+
+    <DataTemplate  DataType="{x:Type result:EvaluationResultItem}">
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Style="{StaticResource StandardText}"
+                       Text="{Binding Label}" />
+            <TextBlock Style="{StaticResource StandardText}" Margin="5,0,0,0"
+                       Text="{Binding Value}" Foreground="{Binding ItemResultKind, Converter={StaticResource EvaluationToBrushConverter}}" />
+        </StackPanel>
+    </DataTemplate>
+    
+    <DataTemplate  DataType="{x:Type result:EvaluationResultGroup}">
+        <GroupBox Header="{Binding Title}" Foreground="{StaticResource LightGrey01Brush}" Padding="5" >
+            <StackPanel Orientation="Vertical">
+                <ItemsControl ItemsSource="{Binding Items}"/>
+            </StackPanel>
+        </GroupBox>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type evaluators:EvaluationTitleViewModel}">
+        <Grid Background="{StaticResource Anthracite01Brush}" HorizontalAlignment="Stretch">
+            <DockPanel HorizontalAlignment="Stretch">
+                <wpf:ColorAbleIcon Margin="5" Width="24" Height="24" DockPanel.Dock="Left"
+                                   StrokeBrush="{Binding EvaluationResultKind, Converter={StaticResource EvaluationToBrushConverter}}">
+                    <ContentPresenter Content="{StaticResource CircleLight2}" />
+                </wpf:ColorAbleIcon>
+                <TextBlock DockPanel.Dock="Right" Style="{StaticResource StandardText}" VerticalAlignment="Center" Margin="5,0,10,0" HorizontalAlignment="Stretch"
+                           Text="{Binding Title}"/>
+            </DockPanel>
+        </Grid>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type evaluators:EvaluatorResultViewModel}">
+        <Grid Background="{StaticResource Anthracite01Brush}" Margin="5,0,5,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <ContentPresenter Content="{Binding EvaluationViewModel}" Grid.Column="0" />
+            </ScrollViewer>
+            <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Issues}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="2" Padding="2" DockPanel.Dock="Bottom"
+                                    BorderBrush="{Binding SummarySeverity, Converter={StaticResource EvaluationToBrushConverter}}"
+                                    BorderThickness="1.5">
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Style="{StaticResource StandardText}" Text="{Binding Header}"
+                                               FontSize="{StaticResource BigFontSize}" />
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="{Binding Summary, Mode=OneWay}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type lapSummary:LapSummaryViewModel}">
+        <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="2" DockPanel.Dock="Top" Padding="5" CornerRadius="5">
+            <DockPanel Background="{StaticResource Anthracite01Brush}" LastChildFill="False">
+                <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="1" DockPanel.Dock="Top"
+                        Padding="5">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource StandardText}" FontSize="{StaticResource BigFontSize}"
+                                   Text="Lap Time: " />
+                        <TextBlock Style="{StaticResource StandardText}" FontSize="{StaticResource BigFontSize}"
+                                   Text="{Binding LapTime}" />
+                    </StackPanel>
+                </Border>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <DockPanel Grid.Column="0" LastChildFill="False">
+                        <GroupBox BorderThickness=".5" BorderBrush="{StaticResource LightGrey01Brush}"
+                                  DockPanel.Dock="Top"
+                                  Header="Weather" Foreground="{StaticResource LightGrey01Brush}">
+                            <StackPanel Orientation="Vertical">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="Air Temperature: " />
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="{Binding AirTemperature}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="Track Temperature: " />
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="{Binding TrackTemperature}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="Rain Level: " />
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="{Binding RainLevel}" />
+                                </StackPanel>
+                            </StackPanel>
+
+                        </GroupBox>
+                        <GroupBox BorderThickness=".5" BorderBrush="{StaticResource LightGrey01Brush}"
+                                  DockPanel.Dock="Top"
+                                  Header="Speed" Foreground="{StaticResource LightGrey01Brush}">
+                            <StackPanel Orientation="Vertical">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="Top Speed: " />
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="{Binding TopSpeed}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="Average Speed: " />
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="{Binding AverageSpeed}" />
+                                </StackPanel>
+                            </StackPanel>
+
+                        </GroupBox>
+                        <GroupBox BorderThickness=".5" BorderBrush="{StaticResource LightGrey01Brush}"
+                                  DockPanel.Dock="Top"
+                                  Header="Fuel" Foreground="{StaticResource LightGrey01Brush}">
+                            <StackPanel Orientation="Vertical">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="Start of Lap: " />
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="{Binding TotalFuel}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="Consumed: " />
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="{Binding TotalFuelConsumed}" />
+                                </StackPanel>
+                            </StackPanel>
+
+                        </GroupBox>
+                        <GroupBox BorderThickness=".5" BorderBrush="{StaticResource LightGrey01Brush}"
+                                  DockPanel.Dock="Top"
+                                  Header="Tyre Wear" Foreground="{StaticResource LightGrey01Brush}">
+                            <StackPanel Orientation="Horizontal">
+                                <StackPanel Orientation="Vertical">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource StandardText}"
+                                                   Text="Front Left: " />
+                                        <TextBlock Style="{StaticResource StandardText}"
+                                                   Text="{Binding FrontLeftTyreWear}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource StandardText}"
+                                                   Text="Rear Left: " />
+                                        <TextBlock Style="{StaticResource StandardText}"
+                                                   Text="{Binding RearLeftTyreWear}" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <StackPanel Orientation="Vertical" Margin="40,0,0,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource StandardText}"
+                                                   Text="Front Right: " />
+                                        <TextBlock Style="{StaticResource StandardText}"
+                                                   Text="{Binding FrontRightTyreWear}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource StandardText}"
+                                                   Text="Rear Right: " />
+                                        <TextBlock Style="{StaticResource StandardText}"
+                                                   Text="{Binding RearRightTyreWear}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                    </DockPanel>
+                    <DockPanel Grid.Column="1" LastChildFill="False">
+                        <GroupBox BorderThickness="0.5" BorderBrush="{StaticResource LightGrey01Brush}"
+                                  DockPanel.Dock="Top"
+                                  Header="Inputs" Foreground="{StaticResource LightGrey01Brush}">
+                            <StackPanel Orientation="Vertical">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="On Throttle: " />
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="{Binding TimeSpentOnThrottle}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="On Full Throttle: " />
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="{Binding TimeSpentOnFullThrottle}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="On Brake: " />
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               Text="{Binding TimeSpentOnBrake}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource StandardText}" Foreground="{Binding BrakeEvaluationResultKind, Converter={StaticResource EvaluationToBrushConverter}}"
+                                               Text="On Full Brake: " />
+                                    <TextBlock Style="{StaticResource StandardText}" Foreground="{Binding BrakeEvaluationResultKind, Converter={StaticResource EvaluationToBrushConverter}}"
+                                               Text="{Binding TimeSpentOnFullBrake}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource StandardText}" Foreground="{Binding BrakeEvaluationResultKind, Converter={StaticResource EvaluationToBrushConverter}}"
+                                               Text="% of Braking on Full Brake: " />
+                                    <TextBlock Style="{StaticResource StandardText}" Foreground="{Binding BrakeEvaluationResultKind, Converter={StaticResource EvaluationToBrushConverter}}"
+                                               Text="{Binding FullBrakePercentage}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                    </DockPanel>
+                </Grid>
+            </DockPanel>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type checks:TelemetryCheckWindowViewModel}">
+        <Grid Background="{StaticResource Anthracite01Brush}" VerticalAlignment="Stretch" Width="1200">
+            <TabControl TabStripPlacement="Left" ItemsSource="{Binding TabItems}"  Background="{StaticResource Anthracite01Brush}" BorderThickness="0"
+                         Style="{StaticResource StandardTabControlNoScrollViewer}" Grid.IsSharedSizeScope="True">
+                <b:Interaction.Behaviors>
+                    <behaviors:AutoSelectFirstBehavior />
+                </b:Interaction.Behaviors>
+            </TabControl>
+            <helpButton:HelpButton HelpUrl="https://gitlab.com/winzarten/SecondMonitor/-/wikis/Car-Setup-Checks" Width="48" VerticalAlignment="Bottom" HorizontalAlignment="Left"/>
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>

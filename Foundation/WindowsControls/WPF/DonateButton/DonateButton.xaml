@@ -1,0 +1,18 @@
+﻿<UserControl x:Class="SecondMonitor.WindowsControls.WPF.DonateButton.DonateButton"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+        <Button
+            Click="HelpButtonClick"
+            Style="{StaticResource StandardButton}"
+            ToolTip="Opens link to donation.">
+            <Button.Content>
+                <TextBlock Style="{StaticResource StandardText}" Text="Donate to support development" FontSize="{StaticResource SmallFontSize}" />
+            </Button.Content>
+        </Button>
+    </Grid>
+</UserControl>

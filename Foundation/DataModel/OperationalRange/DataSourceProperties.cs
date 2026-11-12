@@ -1,0 +1,86 @@
+﻿namespace SecondMonitor.DataModel.OperationalRange
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using BasicProperties;
+
+    [Serializable]
+    public sealed class DataSourceProperties
+    {
+        public DataSourceProperties()
+        {
+            TyreCompoundsProperties = new List<TyreCompoundProperties>();
+            CarModelsProperties = new List<CarModelProperties>();
+        }
+
+        public List<TyreCompoundProperties> TyreCompoundsProperties { get; set; }
+        public List<CarModelProperties> CarModelsProperties { get; set; }
+        public string SourceName { get; set; }
+        public bool ContainsRearTyres { get; set; }
+
+        public void OverrideWith(DataSourceProperties overridingProperties)
+        {
+            if (overridingProperties == null)
+            {
+                return;
+            }
+
+            SourceName = overridingProperties.SourceName;
+
+            TyreCompoundsProperties.RemoveAll(x => overridingProperties.TyreCompoundsProperties.Any(f => f.CompoundName == x.CompoundName));
+            TyreCompoundsProperties.AddRange(overridingProperties.TyreCompoundsProperties);
+            CarModelsProperties.RemoveAll(x => overridingProperties.CarModelsProperties.Any(f => f.Name == x.Name));
+            CarModelsProperties.AddRange(overridingProperties.CarModelsProperties);
+        }
+
+        public CarModelProperties GetCarModel(string modelName)
+        {
+            return CarModelsProperties.FirstOrDefault(x => x.Name == modelName);
+        }
+
+        public void AddCarModel(CarModelProperties newCarModel)
+        {
+           CarModelsProperties.Add(newCarModel);
+        }
+
+        public void ReplaceCarModel(CarModelProperties replaceCarModelProperties)
+        {
+            CarModelsProperties.RemoveAll(x => x.Name == replaceCarModelProperties.Name);
+            CarModelsProperties.Add(replaceCarModelProperties);
+        }
+
+        public TyreCompoundProperties GetTyreCompound(string compoundName)
+        {
+            return TyreCompoundsProperties.FirstOrDefault(x => x.CompoundName == compoundName);
+        }
+
+        public void AddTyreCompound(TyreCompoundProperties newCompound)
+        {
+            TyreCompoundsProperties.RemoveAll(x => x.CompoundName == newCompound.CompoundName);
+            TyreCompoundsProperties.Add(newCompound);
+        }
+
+        public void MigrateUp()
+        {
+            if (!ContainsRearTyres)
+            {
+                foreach (TyreCompoundProperties tyreCompound in TyreCompoundsProperties.Concat(CarModelsProperties.SelectMany(x => x.TyreCompoundsProperties)))
+                {
+                    tyreCompound.RearIdealPressure = Pressure.FromKiloPascals(tyreCompound.FrontIdealPressure.InKpa);
+                    tyreCompound.RearIdealPressureWindow = Pressure.FromKiloPascals(tyreCompound.FrontIdealPressureWindow.InKpa);
+
+                    if (tyreCompound.FrontIdealTemperature == null)
+                    {
+                        continue;
+                    }
+
+                    tyreCompound.RearIdealTemperature = Temperature.FromCelsius(tyreCompound.FrontIdealTemperature.InCelsius);
+                    tyreCompound.RearIdealTemperatureWindow = Temperature.FromCelsius(tyreCompound.FrontIdealTemperatureWindow.InCelsius);
+                }
+
+                ContainsRearTyres = true;
+            }
+        }
+    }
+}

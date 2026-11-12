@@ -1,0 +1,49 @@
+﻿namespace SecondMonitor.ViewModels.Colors.Extensions
+{
+    using System.Windows.Media;
+
+    using DataModel.BasicProperties;
+    using OxyPlot;
+
+    public static class MediaColorExtension
+    {
+        public static System.Drawing.Color ToDrawingColor(this Color color)
+        {
+            return System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B);
+        }
+
+        public static Color ToMediaColor(this System.Drawing.Color drawingColor)
+        {
+            return new Color() { A = drawingColor.A, B = drawingColor.B, G = drawingColor.G, R = drawingColor.R };
+        }
+
+        public static Color InterpolateHslColor(Color color1, Color color2, double lambda)
+        {
+            HslColor hslColor1 = HslColor.FromColor(color1.ToDrawingColor());
+            HslColor hslColor2 = HslColor.FromColor(color2.ToDrawingColor());
+            return HslColor.Interpolate(hslColor1, hslColor2, lambda).ToColor().ToMediaColor();
+        }
+
+        public static OxyColor ToOxyColor(this Color color)
+        {
+            return OxyColor.FromArgb(color.A, color.R, color.G, color.B);
+        }
+
+        public static ColorDto FromOxyColor(this OxyColor color)
+        {
+            return new ColorDto(color.A, color.R, color.G, color.B);
+        }
+
+        public static Color InterpolateRGB(Color a, Color b, double t)
+        {
+            Color computedColor = new Color()
+                                      {
+                                          R = (byte)(a.R + ((b.R - a.R) * t)),
+                                          G = (byte)(a.G + ((b.G - a.G) * t)),
+                                          B = (byte)(a.B + ((b.B - a.B) * t)),
+                                          A = (byte)(a.A + ((b.A - a.A) * t))
+                                      };
+            return computedColor;
+        }
+    }
+}

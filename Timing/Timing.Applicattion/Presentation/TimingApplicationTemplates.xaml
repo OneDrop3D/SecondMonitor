@@ -1,0 +1,13 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="View/CombinedLapPortionComparatorsView.xaml"/>
+        <ResourceDictionary Source="View/ClassesOverviewView.xaml"/>
+        <ResourceDictionary Source="View/SessionInfoTemplate.xaml"/>
+        <ResourceDictionary Source="View/TimingGridView.xaml"/>
+        <ResourceDictionary Source="View/SidebarView.xaml"/>
+        <ResourceDictionary Source="../CarSettings/CarSettingsResources.xaml"/>
+        <ResourceDictionary Source="LapTimings/DriverLaps.xaml"/>
+        <ResourceDictionary Source="TelemetryChecker/LapListViewModel.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

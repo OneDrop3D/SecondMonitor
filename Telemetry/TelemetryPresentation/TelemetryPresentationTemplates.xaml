@@ -1,0 +1,22 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="TelemetryPresentation.xaml"/>
+        <ResourceDictionary Source="Charts/GraphDataTemplates.xaml"/>
+        <ResourceDictionary Source="AggregatedCharts/WheelHistorgramControl.xaml"/>
+        <ResourceDictionary Source="AggregatedCharts/HistogramChartControl.xaml"/>
+        <ResourceDictionary Source="AggregatedCharts/AggregatedChartSelectorControl.xaml"/>
+        <ResourceDictionary Source="AggregatedCharts/CompositeChartControl.xaml"/>
+        <ResourceDictionary Source="AggregatedCharts/ScatterPlotChartControl.xaml"/>
+        <ResourceDictionary Source="AggregatedCharts/LineSeriesChartControl.xaml"/>
+        <ResourceDictionary Source="SettingsWindow/AggregatedChartSettingsView.xaml"/>
+        <ResourceDictionary Source="Map/Map.xaml"/>
+        <ResourceDictionary Source="Workspace/Workspace.xaml"/>
+        <ResourceDictionary Source="SettingsWindow/SettingsWindow.xaml"/>
+        <ResourceDictionary Source="SettingsWindow/WorkspacesSettings.xaml"/>
+        <ResourceDictionary Source="SettingsWindow/CarPropertiesView.xaml"/>
+        <ResourceDictionary Source="Checks/TelemetryChecksView.xaml"/>
+        <ResourceDictionary Source="LapsChart/LapsChartsPresentation.xaml"/>
+        <ResourceDictionary Source="pack://application:,,,/WindowsControls;component/WPF/Layouts/Layouts.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

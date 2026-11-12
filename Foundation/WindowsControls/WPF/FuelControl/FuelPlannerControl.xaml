@@ -1,0 +1,98 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:SecondMonitor.WindowsControls.WPF.FuelControl"
+                    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    mc:Ignorable="d"
+                    xmlns:wpf="clr-namespace:SecondMonitor.WindowsControls.WPF"
+                    xmlns:fuelStatus="clr-namespace:SecondMonitor.ViewModels.CarStatus.FuelStatus;assembly=SecondMonitor.ViewModels">
+    <ResourceDictionary.MergedDictionaries>
+    <ResourceDictionary Source="SessionFuelConsumptionControl.xaml" />
+    <ResourceDictionary Source="FuelCalculatorControl.xaml" />
+    <ResourceDictionary Source="FuelStrategyView.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+    <Style TargetType="local:FuelPlannerControl">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:FuelPlannerControl">
+                    <Border BorderBrush="{StaticResource DarkGrey01Brush}" Background="{StaticResource Anthracite05Brush}" BorderThickness="2" CornerRadius="2" Padding="10" MaxHeight="500" d:DataContext="{d:DesignInstance Type=fuelStatus:FuelOverviewViewModel, IsDesignTimeCreatable=True}">
+                        <Grid >
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                            <Grid Grid.Column="0"  Grid.RowSpan="2" >
+                                <Grid>
+                                    <Grid Grid.ZIndex="3" Visibility="{Binding FuelPlannerViewModel.HasAnySession, Mode=OneWay, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                        <TextBlock Style="{StaticResource StandardText}" Margin="50"
+                                                   Text="No Sessions Logged" VerticalAlignment="Center"
+                                                   HorizontalAlignment="Center" />
+                                    </Grid>
+                                        <ListBox Foreground="{StaticResource LightGrey01Brush}"
+                                                 Background="{StaticResource Anthracite01Brush}" SelectionMode="Single"
+                                                 SelectedItem="{Binding FuelPlannerViewModel.SelectedSession, Mode=TwoWay}"
+                                                 ItemsSource="{Binding FuelPlannerViewModel.Sessions}" Grid.IsSharedSizeScope="True"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Visible">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" SharedSizeGroup="FuelSessionsGroup" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Margin="5" BorderBrush="{StaticResource DarkGrey01Brush}"
+                                                            BorderThickness="1" CornerRadius="3" Padding="3">
+                                                        <StackPanel >
+                                                            <TextBlock Style="{StaticResource StandardText}"
+                                                                       Text="{Binding TrackName}" VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Center" />
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                            <TextBlock Style="{StaticResource StandardText}"
+                                                                       Text="{Binding SessionType}" VerticalAlignment="Center"
+                                                                       FontSize="{StaticResource SmallFontSize}"
+                                                                       HorizontalAlignment="Center" Margin="0,0,10,0" />
+                                                            <TextBlock Style="{StaticResource StandardText}"
+                                                                       Text="{Binding FuelConsumption.ElapsedTime, Mode=OneWay, Converter={StaticResource TimespanToHoursMinutesSecondsUnitSuffixConverter }}" VerticalAlignment="Center"
+                                                                       FontSize="{StaticResource SmallFontSize}"
+                                                                       HorizontalAlignment="Center" />
+                                                            </StackPanel>
+                                                            <CheckBox IsChecked="{Binding IsChecked}"
+                                                                      HorizontalAlignment="Left"
+                                                                      Foreground="{StaticResource LightGrey01Brush}" Margin="5,0,0,0" Content="Add to Avg." Visibility="{Binding IsCheckedVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Grid>
+                            </Grid>
+                            <ContentPresenter Grid.Column="1" Grid.Row="0" Content="{Binding FuelPlannerViewModel.SelectedSession}" />
+                            <ContentPresenter Grid.Column="1" Grid.Row="1" Content="{Binding FuelStrategiesViewModel}" />
+                            <Grid Grid.Column="2" Grid.Row="0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <local:FuelCalculatorControl Grid.Row="0" DataContext="{Binding FuelPlannerViewModel.CalculatorForSelectedSession}"/>
+                            </Grid>
+                            <Button Grid.Column="2" Grid.Row="1" VerticalAlignment="Bottom" Style="{StaticResource StandardButton}" Command="{Binding HideFuelCalculatorCommand}" HorizontalAlignment="Right" MaxWidth="50" ToolTip="Close the Fuel Calculator">
+                                <Button.Content>
+                                    <wpf:ColorAbleIcon StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button},Mode=OneWay}">
+                                        <ContentPresenter Content="{StaticResource CancelIcon}"/>
+                                    </wpf:ColorAbleIcon>
+                                </Button.Content>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

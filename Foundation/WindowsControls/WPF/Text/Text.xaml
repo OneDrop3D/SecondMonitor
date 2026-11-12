@@ -1,0 +1,11 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:text="clr-namespace:SecondMonitor.ViewModels.Text;assembly=SecondMonitor.ViewModels">
+    <DataTemplate DataType="{x:Type text:TitleViewModel}">
+        <!--<Border BorderThickness="1" BorderBrush="{StaticResource DarkGrey05Brush}">-->
+            <Grid Background="{StaticResource Anthracite01Brush}">
+                <TextBlock Style="{StaticResource StandardText}" FontSize="{StaticResource NormalFontSize}" Text="{Binding Title}" Margin="5,0,10,0" DockPanel.Dock="Left"/>
+            </Grid>
+        <!--</Border>-->
+    </DataTemplate>
+</ResourceDictionary>

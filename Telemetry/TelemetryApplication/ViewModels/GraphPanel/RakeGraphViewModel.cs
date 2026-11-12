@@ -1,0 +1,58 @@
+﻿namespace SecondMonitor.Telemetry.TelemetryApplication.ViewModels.GraphPanel
+{
+    using System;
+    using System.Collections.Generic;
+    using DataExtractor;
+    using DataModel.BasicProperties;
+    using DataModel.Telemetry;
+    using TelemetryManagement.Settings;
+
+    public class RakeGraphViewModel : AbstractSingleSeriesGraphViewModel
+    {
+        private double _maxRake;
+
+        public RakeGraphViewModel(IEnumerable<ISingleSeriesDataExtractor> dataExtractors) : base(dataExtractors)
+        {
+            _maxRake = 0;
+        }
+
+        public override string Title => "Rake";
+        protected override string YUnits => Distance.GetUnitsSymbol(UnitsCollection.DistanceUnitsVerySmall);
+        protected override double YTickInterval => Math.Round(Distance.FromMeters(0.01).GetByUnit(UnitsCollection.DistanceUnitsVerySmall), 2);
+        protected override bool CanYZoom => true;
+
+        /*protected override void UpdateYMaximum(LapTelemetryDto lapTelemetry)
+        {
+            if (_maxRake != 0)
+            {
+                YMaximum = _maxRake;
+            }
+
+            if (_minRake < double.MaxValue)
+            {
+                YMinimum = _minRake;
+            }
+        }*/
+
+        protected override double GetYValue(TimedTelemetrySnapshot value, CarPropertiesDto carPropertiesDto)
+        {
+            double frontHeight = 0;
+            double rearHeight = 0;
+            if (value.PlayerData.CarInfo.WheelsInfo?.FrontLeft?.RideHeight != null)
+            {
+                DataModel.Snapshot.Systems.Wheels wheels = value.PlayerData.CarInfo.WheelsInfo;
+                frontHeight = (wheels.FrontLeft.RideHeight.GetByUnit(UnitsCollection.DistanceUnitsVerySmall) + wheels.FrontRight.RideHeight.GetByUnit(UnitsCollection.DistanceUnitsVerySmall)) / 2;
+                rearHeight = (wheels.RearLeft.RideHeight.GetByUnit(UnitsCollection.DistanceUnitsVerySmall) + wheels.RearRight.RideHeight.GetByUnit(UnitsCollection.DistanceUnitsVerySmall)) / 2;
+            }
+            else if (value.PlayerData.CarInfo.FrontHeight != null && value.PlayerData.CarInfo.RearHeight != null && !value.PlayerData.CarInfo.FrontHeight.IsZero)
+            {
+                rearHeight = value.PlayerData.CarInfo.RearHeight.GetByUnit(UnitsCollection.DistanceUnitsVerySmall);
+                frontHeight = value.PlayerData.CarInfo.FrontHeight.GetByUnit(UnitsCollection.DistanceUnitsVerySmall);
+            }
+
+            double rake = rearHeight - frontHeight;
+            _maxRake = Math.Max(_maxRake, rake);
+            return rake;
+        }
+    }
+}

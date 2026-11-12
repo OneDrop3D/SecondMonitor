@@ -1,0 +1,773 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:behaviors="clr-namespace:SecondMonitor.WindowsControls.WPF.Behaviors;assembly=WindowsControls"
+                    xmlns:dataGrid="clr-namespace:SecondMonitor.WindowsControls.WPF.DataGrid;assembly=WindowsControls"
+                    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                    xmlns:viewModel="clr-namespace:SecondMonitor.Timing.Application.SessionTiming.Drivers.Presentation.ViewModel"
+                    xmlns:timingGridControl="clr-namespace:SecondMonitor.Timing.Application.Presentation.Controls.TimingGridControl"
+                    xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+                    xmlns:wpf="clr-namespace:SecondMonitor.WindowsControls.WPF;assembly=WindowsControls"
+                    xmlns:text="clr-namespace:SecondMonitor.WindowsControls.WPF.Text;assembly=WindowsControls"
+                    xmlns:converters="clr-namespace:SecondMonitor.WindowsControls.WPF.Converters;assembly=WindowsControls"
+                    xmlns:pitStatistics="clr-namespace:SecondMonitor.Contracts.PitStatistics;assembly=Contracts"
+                    xmlns:pitStops="clr-namespace:SecondMonitor.Timing.Application.SessionTiming.Drivers.Presentation.ViewModel.PitStops"
+                    xmlns:tyres="clr-namespace:SecondMonitor.Timing.Application.SessionTiming.Drivers.Presentation.ViewModel.Tyres"
+                    xmlns:carSystems="clr-namespace:SecondMonitor.WindowsControls.WPF.CarSystems;assembly=WindowsControls"
+                    mc:Ignorable="d">
+
+    <converters:AutoContrastConverter Brush1="{StaticResource LightGrey01Brush}" Brush2="{StaticResource BlackBrush}" x:Key="ContrastConverter" />
+    <converters:ValueConverterGroup x:Key="TyreCompoundToForegroundConverter">
+        <converters:TyreCompoundToBrushConverter/>
+        <converters:BrushToColorDtoConverter/>
+        <converters:AutoContrastConverter Brush1="{StaticResource LightGrey01Brush}" Brush2="{StaticResource BlackBrush}"/>
+    </converters:ValueConverterGroup>
+
+    <Style x:Key="TextBoxStyleBestLap" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource LightGrey01Brush}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsLastLapBestLap}" Value="True">
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsLastLapBestClassSessionLap}" Value="True">
+                <Setter Property="Background" Value="{StaticResource PurpleClassTimingBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsLastLapBestSessionLap}" Value="True">
+                <Setter Property="Background" Value="{StaticResource PurpleTimingBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsLastLapTrackRecord}" Value="True">
+                <Setter Property="Background" Value="{StaticResource TrackRecordBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsCausingYellow}" Value="True">
+                <Setter Property="Background" Value="{StaticResource YellowSectorBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource DarkGrey01Brush}" />
+            </DataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsCausingYellow}" Value="False" />
+                    <Condition Binding="{Binding IsLapped}" Value="True" />
+                    <Condition Binding="{Binding InPits}" Value="False" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Foreground" Value="{StaticResource TimingLappedForegroundBrush}" />
+            </MultiDataTrigger>
+            <DataTrigger Binding="{Binding IsLapping, Mode=OneWay}" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource LightRed02Brush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TextBoxStylePosition" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource LightGrey01Brush}" />
+        <Setter Property="FontSize" Value="{Binding FontSize, RelativeSource={RelativeSource AncestorType=dataGrid:TextCellItem}, Mode=OneTime}" />
+        <Setter Property="FontWeight" Value="{Binding FontWeight, RelativeSource={RelativeSource AncestorType=dataGrid:TextCellItem}, Mode=OneTime}" />
+        <Setter Property="FontStyle" Value="{Binding FontStyle, RelativeSource={RelativeSource AncestorType=dataGrid:TextCellItem}, Mode=OneTime}" />
+        <Style.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding   IsPlayer, Mode=OneWay}" Value="True" />
+                    <Condition Binding="{Binding HighlightPlayer, Mode=OneWay, RelativeSource={RelativeSource AncestorType=timingGridControl:TimingGrid}}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <MultiDataTrigger.Setters>
+                    <Setter Property="FontSize" Value="{Binding PlayerFontSize, RelativeSource={RelativeSource AncestorType= timingGridControl:TimingGrid}}" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                </MultiDataTrigger.Setters>
+            </MultiDataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="OutlinedTextBoxStylePosition" TargetType="text:OutlinedTextBlock">
+        <Setter Property="Fill" Value="{StaticResource LightGrey01Brush}" />
+        <Setter Property="Stroke" Value="{StaticResource Anthracite01Brush}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="FontSize" Value="{Binding FontSize, RelativeSource={RelativeSource AncestorType=dataGrid:TextCellItem}, Mode=OneTime}" />
+        <Setter Property="FontWeight" Value="{Binding FontWeight, RelativeSource={RelativeSource AncestorType=dataGrid:TextCellItem}, Mode=OneTime}" />
+        <Setter Property="FontStyle" Value="{Binding FontStyle, RelativeSource={RelativeSource AncestorType=dataGrid:TextCellItem}, Mode=OneTime}" />
+        <Style.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding   IsPlayer, Mode=OneWay}" Value="True" />
+                    <Condition Binding="{Binding HighlightPlayer, Mode=OneWay, RelativeSource={RelativeSource AncestorType=timingGridControl:TimingGrid}}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <MultiDataTrigger.Setters>
+                    <Setter Property="FontSize" Value="{Binding PlayerFontSize, RelativeSource={RelativeSource AncestorType= timingGridControl:TimingGrid}}" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                </MultiDataTrigger.Setters>
+            </MultiDataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="StandardTimingGridText" TargetType="TextBlock" BasedOn="{StaticResource StandardText}">
+        <Setter Property="FontSize" Value="{Binding FontSize, RelativeSource={RelativeSource AncestorType=dataGrid:TextCellItem}, Mode=OneTime}" />
+        <Setter Property="FontWeight" Value="{Binding FontWeight, RelativeSource={RelativeSource AncestorType=dataGrid:TextCellItem}, Mode=OneTime}" />
+        <Setter Property="FontStyle" Value="{Binding FontStyle, RelativeSource={RelativeSource AncestorType=dataGrid:TextCellItem}, Mode=OneTime}" />
+        <Style.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsPlayer, Mode=OneWay}" Value="True" />
+                    <Condition Binding="{Binding HighlightPlayer, Mode=OneWay, RelativeSource={RelativeSource AncestorType=timingGridControl:TimingGrid}}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <MultiDataTrigger.Setters>
+                    <Setter Property="FontSize" Value="{Binding PlayerFontSize, RelativeSource={RelativeSource AncestorType= timingGridControl:TimingGrid}}" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                </MultiDataTrigger.Setters>
+            </MultiDataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TextBoxStyleSector1" TargetType="TextBlock">
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsLastSector1PersonalBest}" Value="True">
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsLastSector1ClassSessionBest}" Value="True">
+                <Setter Property="Background" Value="{StaticResource PurpleClassTimingBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsLastSector1SessionBest}" Value="True">
+                <Setter Property="Background" Value="{StaticResource PurpleTimingBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TextBoxStyleSector1PlayerRelative" TargetType="TextBlock">
+        <d:Style.DataContext>
+            <x:Type Type="viewModel:DriverTimingViewModel" />
+        </d:Style.DataContext>
+        <Style.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsLastSector1PersonalBest}" Value="True" />
+                    <Condition Binding="{Binding IsPlayer}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsLastSector1ClassSessionBest}" Value="True" />
+                    <Condition Binding="{Binding IsPlayer}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource PurpleClassTimingBrush}" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsLastSector1SessionBest}" Value="True" />
+                    <Condition Binding="{Binding IsPlayer}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource PurpleTimingBrush}" />
+            </MultiDataTrigger>
+
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding SectorRelativeViewModel.IsSector1InProgress}" Value="False" />
+                    <Condition Binding="{Binding IsPlayer}" Value="False" />
+                    <Condition Binding="{Binding SectorRelativeViewModel.IsLastSector1BetterThanPlayer}" Value="False" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </MultiDataTrigger>
+
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding SectorRelativeViewModel.IsSector1InProgress}" Value="False" />
+                    <Condition Binding="{Binding IsPlayer}" Value="False" />
+                    <Condition Binding="{Binding SectorRelativeViewModel.IsLastSector1BetterThanPlayer}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource DarkRed01Brush}" />
+            </MultiDataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TextBoxStyleLapDeltaCombined" TargetType="TextBlock">
+        <d:Style.DataContext>
+            <x:Type Type="viewModel:DriverTimingViewModel" />
+        </d:Style.DataContext>
+        <Style.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding LapTimeDeltaViewModel.IsCurrentlyPersonalBest}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding LapTimeDeltaViewModel.IsCurrentlySessionClassBest}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource PurpleClassTimingBrush}" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding LapTimeDeltaViewModel.IsCurrentlySessionBest}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource PurpleTimingBrush}" />
+            </MultiDataTrigger>
+
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TextBoxStyleSector2PlayerRelative" TargetType="TextBlock">
+        <d:Style.DataContext>
+            <x:Type Type="viewModel:DriverTimingViewModel" />
+        </d:Style.DataContext>
+        <Style.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsLastSector2PersonalBest}" Value="True" />
+                    <Condition Binding="{Binding IsPlayer}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsLastSector2ClassSessionBest}" Value="True" />
+                    <Condition Binding="{Binding IsPlayer}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource PurpleClassTimingBrush}" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsLastSector2SessionBest}" Value="True" />
+                    <Condition Binding="{Binding IsPlayer}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource PurpleTimingBrush}" />
+            </MultiDataTrigger>
+
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding SectorRelativeViewModel.IsSector2InProgress}" Value="False" />
+                    <Condition Binding="{Binding IsPlayer}" Value="False" />
+                    <Condition Binding="{Binding SectorRelativeViewModel.IsLastSector2BetterThanPlayer}" Value="False" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </MultiDataTrigger>
+
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding SectorRelativeViewModel.IsSector2InProgress}" Value="False" />
+                    <Condition Binding="{Binding IsPlayer}" Value="False" />
+                    <Condition Binding="{Binding SectorRelativeViewModel.IsLastSector2BetterThanPlayer}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource DarkRed01Brush}" />
+            </MultiDataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TextBoxStyleSector3PlayerRelative" TargetType="TextBlock">
+        <d:Style.DataContext>
+            <x:Type Type="viewModel:DriverTimingViewModel" />
+        </d:Style.DataContext>
+        <Style.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsLastSector3PersonalBest}" Value="True" />
+                    <Condition Binding="{Binding IsPlayer}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsLastSector3ClassSessionBest}" Value="True" />
+                    <Condition Binding="{Binding IsPlayer}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource PurpleClassTimingBrush}" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsLastSector3SessionBest}" Value="True" />
+                    <Condition Binding="{Binding IsPlayer}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource PurpleTimingBrush}" />
+            </MultiDataTrigger>
+
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding SectorRelativeViewModel.IsSector3InProgress}" Value="False" />
+                    <Condition Binding="{Binding IsPlayer}" Value="False" />
+                    <Condition Binding="{Binding SectorRelativeViewModel.IsLastSector3BetterThanPlayer}" Value="False" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </MultiDataTrigger>
+
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding SectorRelativeViewModel.IsSector3InProgress}" Value="False" />
+                    <Condition Binding="{Binding IsPlayer}" Value="False" />
+                    <Condition Binding="{Binding SectorRelativeViewModel.IsLastSector3BetterThanPlayer}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource DarkRed01Brush}" />
+            </MultiDataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TextBoxStyleLastLap" TargetType="TextBlock" BasedOn="{StaticResource TextBoxStyleBestLap}">
+        <Style.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsLastPlayerLapBetter}" Value="True" />
+                    <Condition Binding="{Binding ColorLapsColumns}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Foreground" Value="{StaticResource LightGrey01Brush}" />
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsLastPlayerLapBetter}" Value="False" />
+                    <Condition Binding="{Binding ColorLapsColumns}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Foreground" Value="{StaticResource LightGrey01Brush}" />
+                <Setter Property="Background" Value="{StaticResource DarkRed01Brush}" />
+            </MultiDataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TextBoxStyleRating" TargetType="TextBlock" BasedOn="{StaticResource TextBoxStyleBestLap}">
+        <Style.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsPlayersRatingBetter}" Value="True" />
+                    <Condition Binding="{Binding IsRatingSet}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsPlayersRatingBetter}" Value="False" />
+                    <Condition Binding="{Binding IsRatingSet}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource DarkRed01Brush}" />
+            </MultiDataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TextBoxStylePace" TargetType="TextBlock" BasedOn="{StaticResource TextBoxStyleBestLap}">
+        <Style.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsPlayersPaceBetter}" Value="True" />
+                    <Condition Binding="{Binding ColorLapsColumns}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Foreground" Value="{StaticResource LightGrey01Brush}" />
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsPlayersPaceBetter}" Value="False" />
+                    <Condition Binding="{Binding ColorLapsColumns}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Foreground" Value="{StaticResource LightGrey01Brush}" />
+                <Setter Property="Background" Value="{StaticResource DarkRed01Brush}" />
+            </MultiDataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TextBoxStyleSector2" TargetType="TextBlock">
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsLastSector2PersonalBest}" Value="True">
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsLastSector2ClassSessionBest}" Value="True">
+                <Setter Property="Background" Value="{StaticResource PurpleClassTimingBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsLastSector2SessionBest}" Value="True">
+                <Setter Property="Background" Value="{StaticResource PurpleTimingBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TextBoxStyleSector3" TargetType="TextBlock">
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsLastSector3PersonalBest}" Value="True">
+                <Setter Property="Background" Value="{StaticResource Green01Brush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsLastSector3ClassSessionBest}" Value="True">
+                <Setter Property="Background" Value="{StaticResource PurpleClassTimingBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsLastSector3SessionBest}" Value="True">
+                <Setter Property="Background" Value="{StaticResource PurpleTimingBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TimingGridRowStyle" TargetType="{x:Type DataGridRow}">
+        <Setter Property="Background" Value="{StaticResource Anthracite01Brush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource LightGrey02Brush}" />
+        <Setter Property="BorderThickness" Value="0.5" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type DataGridRow}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0" Height="{Binding DataContext.DriverTimingAdditionalVisualizationViewModel.MarkerBeforeSize, RelativeSource={RelativeSource TemplatedParent}}"
+                              Visibility="{Binding DataContext.DriverTimingAdditionalVisualizationViewModel.IsMarkerBeforeEnabled, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid Height="2" Background="{StaticResource Bronze01Brush}" />
+                        </Grid>
+                        <Border x:Name="DGR_Border" Grid.Row="1"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Background="{TemplateBinding Background}"
+                                SnapsToDevicePixels="True">
+                            <DataGridCellsPresenter
+                                ItemsPanel="{TemplateBinding ItemsPanel}"
+                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </Border>
+                        <Grid Grid.Row="2" Height="{Binding DataContext.DriverTimingAdditionalVisualizationViewModel.MarkerAfterSize, RelativeSource={RelativeSource TemplatedParent}}"
+                              Visibility="{Binding DataContext.DriverTimingAdditionalVisualizationViewModel.IsMarkerAfterEnabled, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid Height="2" Background="{StaticResource Bronze01Brush}" />
+                        </Grid>
+                        <Grid Grid.Row="3" Background="{StaticResource Anthracite01Brush}" Height="{Binding DataContext.GapHeight, RelativeSource={RelativeSource TemplatedParent}}">
+                            <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center" FontWeight="Bold" Style="{StaticResource StandardText}" Text="{Binding DataContext.GapToNextDriver, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource DoubleToScalableDecimalsConverter}}">
+                                <b:Interaction.Behaviors>
+                                    <behaviors:FontSizeByHeightBehavior />
+                                </b:Interaction.Behaviors>
+                            </TextBlock>
+                        </Grid>
+
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{StaticResource BlackBrush}" />
+            </Trigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsPlayer, Mode=OneWay}" Value="True" />
+                    <Condition Binding="{Binding HighlightPlayer, Mode=OneWay, RelativeSource={RelativeSource AncestorType=timingGridControl:TimingGrid}}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <MultiDataTrigger.Setters>
+                    <Setter Property="Background" Value="{StaticResource DarkGrey05Brush}" />
+                    <Setter Property="Foreground" Value="{StaticResource LightGrey01Brush}" />
+                    <Setter Property="FontSize" Value="{Binding PlayerFontSize, RelativeSource={RelativeSource AncestorType= timingGridControl:TimingGrid}}" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                    <Setter Property="BorderBrush" Value="{StaticResource PlayerOutLineColor}" />
+                    <Setter Property="BorderThickness" Value="3" />
+                </MultiDataTrigger.Setters>
+            </MultiDataTrigger>
+            <DataTrigger Binding="{Binding HasCustomOutline, Mode=OneWay}" Value="True">
+                <Setter Property="BorderBrush" Value="{Binding OutLineColor, Converter={StaticResource ColorDtoToSolidBrushConverter}, Mode=OneWay}" />
+                <Setter Property="BorderThickness" Value="3" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsLapped, Mode=OneWay}" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource TimingLappedForegroundBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsLapping, Mode=OneWay}" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource LightRed02Brush}" />
+            </DataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding InPitsMoving}" Value="False" />
+                    <Condition Binding="{Binding InPits}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource InPitsBrush}" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding InPitsMoving}" Value="True" />
+                    <Condition Binding="{Binding InPits}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource InPitsMovingBrush}" />
+            </MultiDataTrigger>
+        </Style.Triggers>
+        <Style.Resources>
+            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent" />
+            <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="Transparent" />
+            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="{StaticResource LightGrey01Color}" />
+            <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="{StaticResource Anthracite01Color}" />
+        </Style.Resources>
+    </Style>
+
+
+    <Style x:Key="DataGridHeaderStyle" TargetType="{x:Type DataGridColumnHeader}">
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{StaticResource LightGrey01Brush}" />
+        <Setter Property="Background" Value="{StaticResource DarkGrey01Brush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource DarkGrey01Brush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+
+    <Style TargetType="timingGridControl:TimingGrid">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="{StaticResource Anthracite01Brush}" />
+        <Setter Property="AutoGenerateColumns" Value="False" />
+        <Setter Property="CanUserSortColumns" Value="False" />
+        <Setter Property="CanUserReorderColumns" Value="False" />
+        <Setter Property="Foreground" Value="{StaticResource LightGrey01Brush}" />
+        <Setter Property="ColumnHeaderStyle" Value="{StaticResource DataGridHeaderStyle}" />
+        <Setter Property="HeadersVisibility" Value="Column" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="SelectionMode" Value="Single" />
+        <Setter Property="SelectionUnit" Value="FullRow" />
+        <Setter Property="FontSize" Value="{StaticResource TimingGridFontSize}" />
+        <Setter Property="RowStyle" Value="{StaticResource TimingGridRowStyle}" />
+    </Style>
+    
+    <DataTemplate DataType="{x:Type tyres:SingleCompoundViewModel}">
+        <Grid Background="{Binding TyreCompound, Converter={StaticResource TyreCompoundToBrushConverter}, Mode=OneWay}"
+              ToolTip="Tyre Compound">
+            <TextBlock Text="{Binding TyreCompound, Mode=OneWay, Converter={StaticResource TyreCompoundToAbbreviationConverter}}" Margin="0,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Style="{StaticResource StandardTimingGridText}"
+                       Foreground="{Binding TyreCompound, Converter={StaticResource TyreCompoundToForegroundConverter}}" />
+        </Grid>
+    </DataTemplate>
+    
+    <DataTemplate DataType="{x:Type tyres:MixedCompoundsViewModel}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <Grid Grid.Row="0" Grid.Column="0" Background="{Binding FrontLeftTyreCompound, Converter={StaticResource TyreCompoundToBrushConverter}, Mode=OneWay}"
+                  ToolTip="Tyre Compound">
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="1" Background="{Binding FrontRightTyreCompound, Converter={StaticResource TyreCompoundToBrushConverter}, Mode=OneWay}"
+                  ToolTip="Tyre Compound">
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="0" Background="{Binding RearLeftTyreCompound, Converter={StaticResource TyreCompoundToBrushConverter}, Mode=OneWay}"
+                  ToolTip="Tyre Compound">
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="1" Background="{Binding RearRightTyreCompound, Converter={StaticResource TyreCompoundToBrushConverter}, Mode=OneWay}"
+                  ToolTip="Tyre Compound">
+            </Grid>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="TyreKindRibbon" DataType="{x:Type viewModel:DriverTimingViewModel}">
+        <ContentPresenter Content="{Binding TyresViewModel}"/>
+    </DataTemplate>
+    
+    <DataTemplate x:Key="VirtualEnergyTemplate" DataType="{x:Type viewModel:DriverTimingViewModel}">
+        <carSystems:VirtualEnergyControl VirtualEnergyPercentage="{Binding VirtualEnergy}"/>
+    </DataTemplate>
+
+    <DataTemplate x:Key="PositionColumnTemplate" DataType="{x:Type viewModel:DriverTimingViewModel}">
+        <Grid>
+            <Grid Visibility="{Binding IsClassIndicationEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
+                  Background="{Binding ClassIndicationBrush, Converter={StaticResource ColorDtoToSolidBrushConverter}, Mode=OneWay}" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="4*" />
+                </Grid.ColumnDefinitions>
+                <Grid Grid.Column="0" Visibility="{Binding IsFinished, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Background="{StaticResource Anthracite01Brush}">
+                    <Rectangle VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                        <Rectangle.Fill>
+                            <DrawingBrush TileMode="Tile" Viewport="0,0,10,10" ViewportUnits="Absolute">
+                                <DrawingBrush.Drawing>
+                                    <GeometryDrawing Geometry="M0,0 H1 V1 H2 V2 H1 V1 H0Z" Brush="White"/>
+                                </DrawingBrush.Drawing>
+                            </DrawingBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+                </Grid>
+                <Grid Grid.Column="0" Visibility="{Binding DriverTimingAdditionalVisualizationViewModel.ShowPositionGainedArrow, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <wpf:ColorAbleIcon Grid.Column="0" Margin="0" HorizontalAlignment="Left" VerticalAlignment="Stretch" Stretch="Fill" StrokeBrush="{StaticResource Green01Brush}" MaxWidth="20" MaxHeight="25">
+                        <ContentPresenter Content="{StaticResource UpArrow2IconStroked}" />
+                    </wpf:ColorAbleIcon>
+                </Grid>
+                <Grid Grid.Column="0" Visibility="{Binding DriverTimingAdditionalVisualizationViewModel.ShowPositionLostArrow, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <wpf:ColorAbleIcon Grid.Column="0" Margin="0" HorizontalAlignment="Left" VerticalAlignment="Stretch" Stretch="Fill" StrokeBrush="{StaticResource LightRed01Brush}" MaxWidth="20" MaxHeight="25">
+                        <ContentPresenter Content="{StaticResource DownArrow2IconStroked}" />
+                    </wpf:ColorAbleIcon>
+                </Grid>
+                <Grid Grid.Column="1">
+                    <TextBlock Text="{Binding PositionInClass, Mode=OneWay}" Margin="5,0,0,0" Visibility="{Binding IsClassIndicationEnabled, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                               VerticalAlignment="Center" HorizontalAlignment="Left"
+                               Style="{StaticResource TextBoxStylePosition}" />
+                    <TextBlock Text="{Binding PositionInClass, Mode=OneWay}"
+                               Foreground="{Binding ClassIndicationBrush, Converter={StaticResource ContrastConverter}}"
+                               Margin="5,0,0,0" Visibility="{Binding IsClassIndicationEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
+                               VerticalAlignment="Center" HorizontalAlignment="Left"
+                               Style="{StaticResource TextBoxStylePosition}" />
+                </Grid>
+            </Grid>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pitStops:NoPitWindowPitViewModel}">
+        <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0">
+                <TextBlock Text="{Binding LastPitInfo, Mode=OneWay}" Margin="0,0,10,0" VerticalAlignment="Center"
+                           Style="{StaticResource StandardTimingGridText}" />
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.None}">
+                                <Setter Property="Background" Value="Transparent" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.TyresYoungerThanPlayers}">
+                                <Setter Property="Background" Value="Transparent" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.TyresOlderThanPlayer}">
+                                <Setter Property="Background" Value="Transparent" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.PitStopFasterThanPlayer}">
+                                <Setter Property="Background"
+                                        Value="{StaticResource DarkRed01Brush}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.PitStopSlowerThanPlayer}">
+                                <Setter Property="Background"
+                                        Value="{StaticResource Green01Brush}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.PitEntry}">
+                                <Setter Property="Background"
+                                        Value="{StaticResource PitEntryBackground}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.InPits}">
+                                <Setter Property="Background"
+                                        Value="{StaticResource InPitsBackground}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.PitExit}">
+                                <Setter Property="Background"
+                                        Value="{StaticResource PitExitBackground}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+            </Grid>
+            <Grid Grid.Column="2" Visibility="{Binding IsPitStopCountShown, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="{Binding PitStopCount, Mode=OneWay}" HorizontalAlignment="Right" Margin="5,0,5,0" Style="{StaticResource StandardTimingGridText}"
+                           VerticalAlignment="Center" />
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding PitStopCountGeneralization}"
+                                         Value="{x:Static viewModel:PitStopCountGeneralizationKind.None}">
+                                <Setter Property="Background" Value="Transparent" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitStopCountGeneralization}"
+                                         Value="{x:Static viewModel:PitStopCountGeneralizationKind.SameAsPlayer}">
+                                <Setter Property="Background" Value="{StaticResource PitCountEqualPlayers}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitStopCountGeneralization}"
+                                         Value="{x:Static viewModel:PitStopCountGeneralizationKind.LessThanPlayer}">
+                                <Setter Property="Background" Value="{StaticResource PitCountLessThanPlayers}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitStopCountGeneralization}"
+                                         Value="{x:Static viewModel:PitStopCountGeneralizationKind.MoreThanPLayer}">
+                                <Setter Property="Background" Value="{StaticResource PitCountMoreThanPlayers}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+            </Grid>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pitStops:PitWindowPitViewModel}">
+        <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0">
+                <TextBlock Text="{Binding LastPitInfo, Mode=OneWay}" Margin="0,0,10,0" VerticalAlignment="Center"
+                           Style="{StaticResource StandardTimingGridText}" />
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.None}">
+                                <Setter Property="Background" Value="Transparent" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.TyresYoungerThanPlayers}">
+                                <Setter Property="Background" Value="Transparent" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.TyresOlderThanPlayer}">
+                                <Setter Property="Background" Value="Transparent" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.PitStopFasterThanPlayer}">
+                                <Setter Property="Background"
+                                        Value="{StaticResource DarkRed01Brush}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.PitStopSlowerThanPlayer}">
+                                <Setter Property="Background"
+                                        Value="{StaticResource Green01Brush}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.PitEntry}">
+                                <Setter Property="Background"
+                                        Value="{StaticResource PitEntryBackground}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.InPits}">
+                                <Setter Property="Background"
+                                        Value="{StaticResource InPitsBackground}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitInfoBriefDescription}"
+                                         Value="{x:Static pitStatistics:PitInfoBriefDescriptionKind.PitExit}">
+                                <Setter Property="Background"
+                                        Value="{StaticResource PitExitBackground}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+            </Grid>
+            <Grid Grid.Column="2" Visibility="{Binding IsPitStopCountShown, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="{Binding PitStopCount, Mode=OneWay}" HorizontalAlignment="Right" Margin="5,0,5,0" Style="{StaticResource StandardTimingGridText}"
+                           VerticalAlignment="Center" />
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding PitStopCountGeneralization}"
+                                         Value="{x:Static viewModel:PitStopCountGeneralizationKind.None}">
+                                <Setter Property="Background" Value="Transparent" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitStopCountGeneralization}"
+                                         Value="{x:Static viewModel:PitStopCountGeneralizationKind.SameAsPlayer}">
+                                <Setter Property="Background" Value="{StaticResource PitCountEqualPlayers}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitStopCountGeneralization}"
+                                         Value="{x:Static viewModel:PitStopCountGeneralizationKind.LessThanPlayer}">
+                                <Setter Property="Background" Value="{StaticResource PitCountLessThanPlayers}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding PitStopCountGeneralization}"
+                                         Value="{x:Static viewModel:PitStopCountGeneralizationKind.MoreThanPLayer}">
+                                <Setter Property="Background" Value="{StaticResource NoPitWindowStop}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+            </Grid>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ClassIndication" DataType="{x:Type viewModel:DriverTimingViewModel}">
+        <Grid
+            Visibility="{Binding IsClassIndicationEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
+            Background="{Binding ClassIndicationBrush, Converter={StaticResource ColorDtoToSolidBrushConverter}, Mode=OneWay}" />
+    </DataTemplate>
+
+    <DataTemplate x:Key="PitStopInformation" DataType="{x:Type viewModel:DriverTimingViewModel}">
+        <ContentPresenter Content="{Binding PitStopInfo}" />
+    </DataTemplate>
+
+</ResourceDictionary>

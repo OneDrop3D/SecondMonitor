@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<item>
+    <version>9.7.2.0</version>
+	<url>https://onedrive.live.com/download?cid&#61;6B07C2E12E3F7B36&amp;resid&#61;6b07c2e12e3f7b36%2165434&amp;authkey&#61;ADMkiDWlBcSeBIU</url>
+    <!--<url>https://onedrive.live.com/download?cid&#61;6B07C2E12E3F7B36&amp;resid&#61;6B07C2E12E3F7B36%2147557&amp;authkey&#61;AMGITjOLRlKPnE8</url>-->
+    <changelog>https://winzarten.gitlab.io/SecondMonitor/index_beta.html</changelog>
+    <mandatory>false</mandatory>
+</item>

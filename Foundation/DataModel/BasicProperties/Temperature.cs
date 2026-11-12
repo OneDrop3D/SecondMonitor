@@ -1,0 +1,255 @@
+﻿namespace SecondMonitor.DataModel.BasicProperties
+{
+    using System;
+    using System.Xml.Serialization;
+    using Newtonsoft.Json;
+    using ProtoBuf;
+
+    [Serializable]
+    [ProtoContract]
+    public sealed class Temperature : IQuantity
+    {
+        private bool _isZero;
+        private double _inCelsius;
+
+        public Temperature()
+        {
+            InCelsius = -1;
+            _isZero = true;
+        }
+
+        private Temperature(double valueInCelsius)
+        {
+            InCelsius = valueInCelsius;
+        }
+
+        public static Temperature Zero => new Temperature();
+
+        [XmlAttribute]
+        [ProtoMember(1, IsRequired = true)]
+        public double InCelsius
+        {
+            get => _inCelsius;
+            set
+            {
+                _inCelsius = value;
+                _isZero = false;
+            }
+        }
+
+        [JsonIgnore]
+        [XmlIgnore]
+        public double InFahrenheit
+        {
+            get => ((InCelsius * 9) / 5) + 32;
+            set => InCelsius = (value - 32) * 0.5556;
+        }
+
+        [JsonIgnore]
+        [XmlIgnore]
+        public double InKelvin
+        {
+            get => InCelsius + 273.15;
+            set => InCelsius = value - 273.15;
+        }
+
+        [JsonIgnore]
+        [XmlIgnore]
+        public bool IsZero => _isZero;
+
+        [JsonIgnore]
+        [XmlIgnore]
+        public double RawValue => InCelsius;
+
+        public static Temperature operator -(Temperature t1, Temperature t2)
+        {
+            return FromCelsius(t1.InCelsius - t2.InCelsius);
+        }
+
+        public static Temperature operator +(Temperature t1, Temperature t2)
+        {
+            return FromCelsius(t1.InCelsius + t2.InCelsius);
+        }
+
+        public static bool operator <(Temperature temp1, Temperature temp2)
+        {
+            return Comparison(temp1, temp2) < 0;
+        }
+
+        public static bool operator >(Temperature temp1, Temperature temp2)
+        {
+            return Comparison(temp1, temp2) > 0;
+        }
+
+        public static bool operator ==(Temperature temp1, Temperature temp2)
+        {
+            if (ReferenceEquals(temp1, temp2))
+            {
+                return true;
+            }
+
+            if (ReferenceEquals(temp1, null))
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(temp2, null))
+            {
+                return false;
+            }
+
+            return temp1._isZero == temp2._isZero && Comparison(temp1, temp2) == 0;
+        }
+
+        public static bool operator <=(Temperature temp1, Temperature temp2)
+        {
+            return Comparison(temp1, temp2) <= 0;
+        }
+
+        public static bool operator >=(Temperature temp1, Temperature temp2)
+        {
+            return Comparison(temp1, temp2) >= 0;
+        }
+
+        public static bool operator !=(Temperature temp1, Temperature temp2)
+        {
+            return Comparison(temp1, temp2) != 0;
+        }
+
+        public static Temperature FrontUnits(double value, TemperatureUnits unit)
+        {
+            return unit switch
+            {
+                TemperatureUnits.Celsius => FromCelsius(value),
+                TemperatureUnits.Fahrenheit => FromFahrenheit(value),
+                TemperatureUnits.Kelvin => FromKelvin(value),
+                _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, null)
+            };
+        }
+
+        public static string GetUnitSymbol(TemperatureUnits units)
+        {
+            return units switch
+            {
+                TemperatureUnits.Celsius => "°C",
+                TemperatureUnits.Fahrenheit => "°F",
+                TemperatureUnits.Kelvin => "K",
+                _ => throw new ArgumentException("Unable to return symbol fir" + units.ToString())
+            };
+        }
+
+        public static Temperature FromCelsius(double temperatureInCelsius)
+        {
+            return new Temperature(temperatureInCelsius);
+        }
+
+        public static Temperature FromKelvin(double temperatureInKelvin)
+        {
+            return new Temperature(temperatureInKelvin - 273.15);
+        }
+
+        public static Temperature FromFahrenheit(double temperature)
+        {
+            return new Temperature((temperature - 32) * 0.5556);
+        }
+
+        public static int Comparison(Temperature temp1, Temperature temp2)
+        {
+            if (temp1 == null || temp2 == null)
+            {
+                return -1;
+            }
+
+            if (temp1.InCelsius < temp2.InCelsius)
+            {
+                return -1;
+            }
+
+            if (temp1.InCelsius == temp2.InCelsius)
+            {
+                return 0;
+            }
+
+            if (temp1.InCelsius > temp2.InCelsius)
+            {
+                return 1;
+            }
+
+            return 0;
+        }
+
+        public void UpdateValue(double value, TemperatureUnits temperatureUnits)
+        {
+            switch (temperatureUnits)
+            {
+                case TemperatureUnits.Celsius:
+                    InCelsius = value;
+                    return;
+                case TemperatureUnits.Fahrenheit:
+                    InFahrenheit = value;
+                    return;
+                case TemperatureUnits.Kelvin:
+                    InKelvin = value;
+                    return;
+            }
+
+            throw new ArgumentException("Unable to return value in" + temperatureUnits.ToString());
+        }
+
+        public double GetValueInUnits(TemperatureUnits units)
+        {
+            return units switch
+            {
+                TemperatureUnits.Celsius => InCelsius,
+                TemperatureUnits.Fahrenheit => InFahrenheit,
+                TemperatureUnits.Kelvin => InKelvin,
+                _ => throw new ArgumentException("Unable to return value in" + units.ToString())
+            };
+        }
+
+        public string GetValueInUnits(TemperatureUnits units, int decimalPlaces)
+        {
+            return units switch
+            {
+                TemperatureUnits.Celsius => InCelsius.ToString($"F{decimalPlaces}"),
+                TemperatureUnits.Fahrenheit => InFahrenheit.ToString($"F{decimalPlaces}"),
+                TemperatureUnits.Kelvin => InKelvin.ToString($"F{decimalPlaces}"),
+                _ => throw new ArgumentException("Unable to return value in" + units.ToString())
+            };
+        }
+
+        public string GetFormattedWithUnits(int decimalPlaces, TemperatureUnits temperatureUnits)
+        {
+            return GetValueInUnits(temperatureUnits).ToString($"F{decimalPlaces}") + " " + GetUnitSymbol(temperatureUnits);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (!(obj is Temperature))
+            {
+                return false;
+            }
+
+            return this == (Temperature)obj;
+        }
+
+        public bool Equals(IQuantity other, IQuantity tolerance)
+        {
+            if (other.GetType() != GetType())
+            {
+                return false;
+            }
+
+            return Math.Abs(RawValue - other.RawValue) < tolerance.RawValue;
+        }
+
+        public override int GetHashCode()
+        {
+            int hashCode = 1054699813;
+            hashCode = (hashCode * -1521134295) + InCelsius.GetHashCode();
+            hashCode = (hashCode * -1521134295) + InCelsius.GetHashCode();
+            hashCode = (hashCode * -1521134295) + InFahrenheit.GetHashCode();
+            return hashCode;
+        }
+    }
+}

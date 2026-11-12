@@ -1,0 +1,484 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:converters="clr-namespace:SecondMonitor.WindowsControls.WPF.Converters"
+                    xmlns:pitBoard="clr-namespace:SecondMonitor.ViewModels.PitBoard;assembly=SecondMonitor.ViewModels"
+                    xmlns:wpf="clr-namespace:SecondMonitor.WindowsControls.WPF"
+                    xmlns:statusIcon="clr-namespace:SecondMonitor.WindowsControls.WPF.StatusIcon"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+    <converters:PitInfoBriefDescriptionKindToBrushConverter
+        DefaultBrush="{StaticResource LightGrey01Brush}"
+        FasterThanPlayerBrush="{StaticResource DarkRed01Brush}"
+        SlowerThanPlayerBrush="{StaticResource Green01Brush}"
+        x:Key="PitInfoBriefDescriptionKindToBrushConverter"/>
+    <converters:DoubleToScalableDecimalsConverter x:Key="DoubleConverter" />
+    <converters:StatusIconStateToBrushConverter x:Key="StatusIconStateToBrushConverter"
+                                                UnlitBrush="{StaticResource IconUnlitBrush}"
+                                                OkBrush="{StaticResource Green01Brush}"
+                                                WarningBrush="{StaticResource Yellow01Brush}"
+                                                ErrorBrush="{StaticResource IconErrorBrush}"
+                                                InformationBrush="{StaticResource IconInformationBrush}" />
+    <system:Double x:Key="PitBoardFontLarge">65</system:Double>
+    <system:Double x:Key="PitBoardFontSize">45</system:Double>
+    <system:Double x:Key="PitBoardFontSmall">35</system:Double>
+    <system:Double x:Key="PitBoardFontSmallest">25</system:Double>
+    <DataTemplate DataType="{x:Type pitBoard:DriverDistanceViewModel}">
+        <Grid Visibility="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="50"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Margin="15,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Left"
+                       Style="{StaticResource StandardText}"
+                       FontWeight="Bold"
+                       Text="{Binding Distance}" />
+            <TextBlock Grid.Column="1" Margin="15,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Left"
+                       Style="{StaticResource StandardText}"
+                       FontWeight="Bold"
+                       Text="{Binding DriverName}" />
+        </Grid>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type pitBoard:ClearToRejoinBoardViewModel}">
+        <Border BorderBrush="{Binding IsClearToRejoin, Converter={StaticResource BoolToYellowGreenConverter}}" BorderThickness="5" CornerRadius="10"
+                Padding="5"
+                Background="{StaticResource Anthracite01Brush}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid Row="0">
+                    <wpf:ColorAbleIcon RebindOnVisibilityChange="True" HorizontalAlignment="Stretch"
+                                       VerticalAlignment="Stretch" Stretch="Uniform"
+                                       Margin="{Binding IconMargin, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                       MaxWidth="{Binding IconMaxWidth, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                       StrokeBrush="{Binding IsClearToRejoin, Converter={StaticResource BoolToYellowGreenConverter}}" Width="92">
+                        <ContentPresenter
+                            Content="{StaticResource MergeIcon}" />
+                    </wpf:ColorAbleIcon>
+                </Grid>
+                <Grid Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <wpf:ColorAbleIcon RebindOnVisibilityChange="True" HorizontalAlignment="Left" Grid.Column="0"
+                                           VerticalAlignment="Stretch" Stretch="Fill"
+                                           StrokeBrush="{Binding IsClearToRejoin, Converter={StaticResource BoolToYellowGreenConverter}}">
+                        <ContentPresenter
+                                Content="{StaticResource DownArrow2Icon}" />
+                    </wpf:ColorAbleIcon>
+                    <StackPanel Orientation="Vertical" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                       Style="{StaticResource StandardText}"
+                                       FontWeight="Bold"
+                                       FontSize="{StaticResource ExtraBigFontSize}" Text="{Binding DriverName}" />
+                        <TextBlock Margin="15,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                       Style="{StaticResource StandardText}"
+                                       FontWeight="Bold"
+                                       FontSize="{StaticResource PitBoardFontSize}"
+                                       Text="{Binding Distance}" />
+                    </StackPanel>
+                </Grid>
+                <Grid Row="2">
+                    <ItemsControl ItemsSource="{Binding DriverDistances}" BorderThickness="0"
+                             Background="{StaticResource Anthracite01Brush}"/>
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type pitBoard:SafetyCarPitBoardViewModel}">
+        <Border BorderBrush="{Binding SafetyCarIconState, Converter={StaticResource StatusIconStateToBrushConverter}}" BorderThickness="5" CornerRadius="10"
+                Padding="5"
+                Background="{StaticResource Anthracite01Brush}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid Row="0">
+                    <wpf:ColorAbleIcon RebindOnVisibilityChange="True" HorizontalAlignment="Stretch"
+                                       VerticalAlignment="Stretch" Stretch="Uniform"
+                                       StrokeBrush="{Binding SafetyCarIconState, Converter={StaticResource StatusIconStateToBrushConverter}}" Width="92">
+                        <ContentPresenter
+                            Content="{StaticResource SafetyCarIcon}" />
+                    </wpf:ColorAbleIcon>
+                </Grid>
+                <Grid Row="1">
+                    <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Center"
+                               Style="{StaticResource StandardText}"
+                               FontWeight="Bold"
+                               Foreground="{Binding AdditionalTextState, Converter={StaticResource StatusIconStateToBrushConverter}}"
+                               FontSize="{StaticResource PitBoardFontSize}" Text="{Binding AdditionalText}" />
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type pitBoard:DriverWithClassModelViewModel}" x:Key="DriverWithClassBigFont">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"  SharedSizeGroup="DriverClassColumns"/>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="DriverPositionColumns"/>
+                <ColumnDefinition Width="Auto"/>
+
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0" Margin="5,0,5,0" Visibility="{Binding IsClassInfoShown, Converter={StaticResource BooleanToVisibilityConverter}}" Width="15" Background="{Binding ClassRibbonColor, Converter={StaticResource ColorDtoToSolidBrushConverter}}" />
+            <TextBlock Grid.Column="1" Margin="5,0,5,0"
+                       Style="{StaticResource StandardText}"
+                       FontWeight="Bold" TextAlignment="Right"
+                       FontSize="{StaticResource ExtraBigFontSize}" Text="{Binding Position, StringFormat='P{0}'}" />
+            <TextBlock Grid.Column="2" Margin="5,0,0,0" TextAlignment="Left"
+                       Style="{StaticResource StandardText}"
+                       FontWeight="Bold"
+                       FontSize="{StaticResource ExtraBigFontSize}" Text="{Binding DriveName}" />
+        </Grid>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type pitBoard:YellowAheadPitBoardViewModel}">
+        <Border BorderBrush="{StaticResource Yellow01Brush}" BorderThickness="5" CornerRadius="10"
+                Padding="5"
+                Background="{StaticResource Anthracite01Brush}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid Row="0">
+                    <wpf:ColorAbleIcon RebindOnVisibilityChange="True" HorizontalAlignment="Stretch"
+                                       VerticalAlignment="Stretch" Stretch="Uniform"
+                                       StrokeBrush="{StaticResource Yellow01Brush}" Width="92">
+                        <ContentPresenter
+                            Content="{StaticResource FlagIcon}" />
+                    </wpf:ColorAbleIcon>
+                </Grid>
+                <Grid Row="1" Visibility="{Binding ShowDriverInformation, Converter={StaticResource InvertedBooleanToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid Column="0" Visibility="{Binding IsSectorAheadArrowShown, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <wpf:ColorAbleIcon RebindOnVisibilityChange="True" HorizontalAlignment="Left"
+                                           Visibility="{Binding IsSectorAhead, Converter={StaticResource InvertedBooleanToVisibilityConverter}}"
+                                           VerticalAlignment="Stretch" Stretch="Fill"
+                                           Margin="{Binding IconMargin, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                           MaxWidth="{Binding IconMaxWidth, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                           StrokeBrush="{StaticResource Green01Brush}">
+                            <ContentPresenter
+                                Content="{StaticResource DownArrow2Icon}" />
+                        </wpf:ColorAbleIcon>
+                        <wpf:ColorAbleIcon RebindOnVisibilityChange="True" HorizontalAlignment="Left"
+                                           Visibility="{Binding IsSectorAhead, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                           VerticalAlignment="Stretch" Stretch="Fill"
+                                           Margin="{Binding IconMargin, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                           MaxWidth="{Binding IconMaxWidth, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                           StrokeBrush="{StaticResource Yellow01Brush}">
+                            <ContentPresenter
+                                Content="{StaticResource UpArrow2Icon}" />
+                        </wpf:ColorAbleIcon>
+                    </Grid>
+                    <Grid Grid.Column="1" IsSharedSizeScope="True">
+                        <StackPanel Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Margin="5,0,5,0" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                       Style="{StaticResource StandardText}"
+                                       FontWeight="Bold"
+                                       FontSize="{StaticResource PitBoardFontSize}" Text="{Binding SectorInformation}" />
+                            <ItemsControl ItemsSource="{Binding SecondaryDrivers}" ItemTemplate="{StaticResource DriverWithClassBigFont}"/>
+                        </StackPanel>
+                    </Grid>
+
+                </Grid>
+                <Grid Row="1" Visibility="{Binding ShowDriverInformation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <wpf:ColorAbleIcon RebindOnVisibilityChange="True" HorizontalAlignment="Left" Grid.Column="0"
+                                           VerticalAlignment="Stretch" Stretch="Fill"
+                                           Margin="{Binding IconMargin, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                           MaxWidth="{Binding IconMaxWidth, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                           StrokeBrush="{StaticResource Yellow01Brush}">
+                        <ContentPresenter
+                                Content="{StaticResource UpArrow2Icon}" />
+                    </wpf:ColorAbleIcon>
+                    <StackPanel Orientation="Vertical" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <ContentPresenter Content="{Binding PrimaryDriver}" ContentTemplate="{StaticResource DriverWithClassBigFont}" />
+                        <TextBlock Margin="15,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                   Style="{StaticResource StandardText}"
+                                   FontWeight="Bold"
+                                   FontSize="{StaticResource PitBoardFontSize}"
+                                   Text="{Binding Distance}" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type pitBoard:RacePitBoardViewModel}">
+        <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="2" CornerRadius="10"
+                Padding="5"
+                Background="{StaticResource Anthracite01Brush}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource StandardText}" FontWeight="Bold"
+                               Foreground="{StaticResource Yellow01Brush}"
+                               FontSize="{StaticResource PitBoardFontSize}"
+                               Text="{Binding Position}" />
+                    <TextBlock Grid.Column="2" Style="{StaticResource StandardText}" FontWeight="Bold"
+                               Foreground="{StaticResource Yellow01Brush}"
+                               FontSize="{StaticResource PitBoardFontSize}"
+                               Text="{Binding Lap}" />
+                </Grid>
+                <Grid Row="1">
+                    <StackPanel Orientation="Horizontal">
+                        <wpf:ColorAbleIcon RebindOnVisibilityChange="True" HorizontalAlignment="Stretch"
+                                           VerticalAlignment="Stretch" Stretch="Uniform"
+                                           Margin="{Binding IconMargin, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                           MaxWidth="{Binding IconMaxWidth, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                           StrokeBrush="{StaticResource Yellow01Brush}">
+                            <ContentPresenter
+                                Content="{StaticResource UpArrow2Icon}" />
+                        </wpf:ColorAbleIcon>
+                        <TextBlock Margin="5,0,0,0" VerticalAlignment="Center"
+                                   Style="{StaticResource StandardText}"
+                                   FontWeight="Bold" Foreground="{StaticResource Yellow01Brush}"
+                                   FontSize="{StaticResource PitBoardFontSize}" Text="{Binding GapAhead}" />
+                        <TextBlock Margin="15,0,0,0" VerticalAlignment="Center"
+                                   Style="{StaticResource StandardText}"
+                                   FontWeight="Bold"
+                                   Foreground="{Binding GapAheadChange, Converter={StaticResource FormattedTimeToBrushConverter}, ConverterParameter=false}"
+                                   FontSize="{StaticResource PitBoardFontSize}"
+                                   Text="{Binding GapAheadChange}" />
+                    </StackPanel>
+                </Grid>
+                <Grid Row="2" Margin="0,10,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <wpf:ColorAbleIcon RebindOnVisibilityChange="True" HorizontalAlignment="Stretch"
+                                           VerticalAlignment="Stretch" Stretch="Uniform"
+                                           Margin="{Binding IconMargin, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                           MaxWidth="{Binding IconMaxWidth, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                           StrokeBrush="{StaticResource Yellow01Brush}">
+                            <ContentPresenter
+                                Content="{StaticResource DownArrow2Icon}" />
+                        </wpf:ColorAbleIcon>
+                        <TextBlock Margin="5,0,0,0" VerticalAlignment="Center"
+                                   Style="{StaticResource StandardText}"
+                                   FontWeight="Bold" Foreground="{StaticResource Yellow01Brush}"
+                                   FontSize="{StaticResource PitBoardFontSize}" Text="{Binding GapBehind}" />
+                        <TextBlock Margin="15,0,0,0" VerticalAlignment="Center"
+                                   Style="{StaticResource StandardText}"
+                                   FontWeight="Bold"
+                                   Foreground="{Binding GapBehindChange, Converter={StaticResource FormattedTimeToBrushConverter}, ConverterParameter=true}"
+                                   FontSize="{StaticResource PitBoardFontSize}"
+                                   Text="{Binding GapBehindChange}" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type pitBoard:PitReturnBoardViewModel}">
+        <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="2" CornerRadius="10"
+                Padding="5"
+                Background="{StaticResource Anthracite01Brush}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*" MinWidth="60"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid Grid.Column="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid Row="0">
+                        <TextBlock Style="{StaticResource StandardText}" FontWeight="Bold"
+                                   Foreground="{StaticResource Yellow01Brush}"
+                                   FontSize="{StaticResource PitBoardFontSize}"
+                                   Text="Pit:" />
+                    </Grid>
+                    <Grid Row="1">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Margin="5,0,0,0" VerticalAlignment="Center"
+                                       Style="{StaticResource StandardText}"
+                                       FontWeight="Bold" Foreground="{StaticResource Yellow01Brush}"
+                                       FontSize="{StaticResource PitBoardFontSize}" Text="T: " />
+                            <TextBlock Margin="15,0,0,0" VerticalAlignment="Center"
+                                       Style="{StaticResource StandardText}"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource Yellow01Brush}"
+                                       FontSize="{StaticResource PitBoardFontSize}"
+                                       Text="{Binding PitTime}" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid Row="2" Margin="0,10,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Margin="5,0,0,0" VerticalAlignment="Center"
+                                       Style="{StaticResource StandardText}"
+                                       FontWeight="Bold" Foreground="{StaticResource Yellow01Brush}"
+                                       FontSize="{StaticResource PitBoardFontSize}" Text="Pos: " />
+                            <TextBlock Margin="15,0,0,0" VerticalAlignment="Center"
+                                       Style="{StaticResource StandardText}"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource Green01Brush}"
+                                       FontSize="{StaticResource PitBoardFontSize}"
+                                       Text="{Binding ReturnPosition}" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" MinHeight="10" />
+                        <RowDefinition Height="Auto" MinHeight="40" />
+                        <RowDefinition Height="*" MinHeight="40" />
+                        <RowDefinition Height="*" MinHeight="10" />
+                        <RowDefinition Height="*" MinHeight="40" />
+                        <RowDefinition Height="Auto" MinHeight="40" />
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="1"
+                          Visibility="{Binding DriverAhead, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                        <TextBlock Margin="5,0,0,0" VerticalAlignment="Center"
+                                   Style="{StaticResource StandardText}"
+                                   FontWeight="Bold" Foreground="{StaticResource Yellow01Brush}"
+                                   FontSize="{StaticResource PitBoardFontSmall}" Text="{Binding DriverAhead}" />
+                    </Grid>
+                    <Grid Grid.Row="2">
+                        <StackPanel Orientation="Horizontal"
+                                    Visibility="{Binding GapAhead, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                            <wpf:ColorAbleIcon RebindOnVisibilityChange="True" HorizontalAlignment="Stretch"
+                                               VerticalAlignment="Stretch" Stretch="Uniform"
+                                               Margin="{Binding IconMargin, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                               MaxWidth="{Binding IconMaxWidth, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                               StrokeBrush="{StaticResource Yellow01Brush}">
+                                <ContentPresenter
+                                    Content="{StaticResource UpArrow2Icon}" />
+                            </wpf:ColorAbleIcon>
+                            <TextBlock Margin="5,0,0,0" VerticalAlignment="Center"
+                                       Style="{StaticResource StandardText}"
+                                       FontWeight="Bold" Foreground="{Binding  GapAheadStatus, Converter={StaticResource StatusIconStateToBrushConverter}}"
+                                       FontSize="{StaticResource PitBoardFontSize}" Text="{Binding GapAhead}" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid Grid.Row="4">
+                        <StackPanel Orientation="Horizontal"
+                                    Visibility="{Binding GapBehind, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                            <wpf:ColorAbleIcon RebindOnVisibilityChange="True" HorizontalAlignment="Stretch"
+                                               VerticalAlignment="Stretch" Stretch="Uniform"
+                                               Margin="{Binding IconMargin, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                               MaxWidth="{Binding IconMaxWidth, RelativeSource={RelativeSource AncestorType=statusIcon:StatusIconControl}}"
+                                               StrokeBrush="{StaticResource Yellow01Brush}">
+                                <ContentPresenter
+                                    Content="{StaticResource DownArrow2Icon}" />
+                            </wpf:ColorAbleIcon>
+                            <TextBlock Margin="5,0,0,0" VerticalAlignment="Center"
+                                       Style="{StaticResource StandardText}"
+                                       FontWeight="Bold" Foreground="{Binding  GapBehindStatus, Converter={StaticResource StatusIconStateToBrushConverter}}"
+                                       FontSize="{StaticResource PitBoardFontSize}" Text="{Binding GapBehind}" />
+                        </StackPanel>
+
+                    </Grid>
+                    <Grid Grid.Row="5"
+                          Visibility="{Binding DriverBehind, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                        <TextBlock Margin="5,0,0,0" VerticalAlignment="Center"
+                                   Style="{StaticResource StandardText}"
+                                   FontWeight="Bold" Foreground="{StaticResource Yellow01Brush}"
+                                   FontSize="{StaticResource PitBoardFontSmall}" Text="{Binding DriverBehind}" />
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pitBoard:PitEntrySpeedBoardViewModel}">
+        <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="2" CornerRadius="10"
+                Padding="5"
+                Background="{StaticResource Anthracite01Brush}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid Row="0">
+                    <TextBlock Style="{StaticResource StandardText}" FontWeight="Bold"
+                               Foreground="{StaticResource Yellow01Brush}"
+                               FontSize="{StaticResource PitBoardFontSize}"
+                               HorizontalAlignment="Center"
+                               Text="Pit Entry Speed" />
+                </Grid>
+                <Grid Row="1">
+                    <TextBlock Margin="5,0,0,0" VerticalAlignment="Center"
+                               Style="{StaticResource StandardText}"
+                               HorizontalAlignment="Center"
+                               FontWeight="Bold"
+                               FontSize="{StaticResource PitBoardFontSize}" Text="{Binding SpeedFormatted}" />
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pitBoard:PitDurationBoardViewModel}">
+        <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="2" CornerRadius="10"
+                Padding="5"
+                Background="{StaticResource Anthracite01Brush}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid Row="0">
+                    <TextBlock Style="{StaticResource StandardText}" FontWeight="Bold"
+                               Foreground="{StaticResource Yellow01Brush}"
+                               FontSize="{StaticResource PitBoardFontSize}"
+                               HorizontalAlignment="Center"
+                               Text="Pit Stop Duration" />
+                </Grid>
+                <Grid Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid Column="0">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Style="{StaticResource StandardText}"  FontSize="{StaticResource PitBoardFontSmallest}" Text="Pit" HorizontalAlignment="Center"/>
+                            <TextBlock Style="{StaticResource StandardText}" Text="{Binding PitStopDuration}"
+                                       Foreground="{Binding PitStopDurationStatus, Converter={StaticResource PitInfoBriefDescriptionKindToBrushConverter}}"
+                                       HorizontalAlignment="Center" FontWeight="Bold"
+                                       FontSize="{StaticResource PitBoardFontSmall}"/>
+                            <TextBlock Visibility="{Binding AveragePitStopDuration, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
+                                       Style="{StaticResource StandardText}" Text="{Binding AveragePitStopDuration}" FontSize="{StaticResource PitBoardFontSmallest}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+                    <Separator Grid.Column="1" Margin="15,0,15,0" Width="5" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Background="{StaticResource DarkGrey01Brush}" IsHitTestVisible="False" />
+                    <Grid Column="2" Visibility="{Binding PitStallDuration, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Style="{StaticResource StandardText}" Text="{Binding PitStallDuration}" HorizontalAlignment="Center" FontWeight="Bold"
+                                   Foreground="{Binding PitStallDurationStatus, Converter={StaticResource PitInfoBriefDescriptionKindToBrushConverter}}"
+                                   FontSize="{StaticResource PitBoardFontLarge}"/>
+                        <TextBlock Visibility="{Binding AveragePitStallDuration, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
+                                   Grid.Row="1" Style="{StaticResource StandardText}" Text="{Binding AveragePitStallDuration}" FontSize="{StaticResource PitBoardFontSmallest}" HorizontalAlignment="Center"/>
+                    </Grid>
+
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pitBoard:PitBoardViewModel}">
+        <Grid Visibility="{Binding IsPitBoardVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ItemsControl ItemsSource="{Binding PitBoards, Mode=OneWay}"/>
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>

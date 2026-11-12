@@ -1,0 +1,78 @@
+﻿<UserControl x:Class="SecondMonitor.Connectors.Remote.View.ConnectorOptionRow"
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+            xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+            xmlns:ViewModels="clr-namespace:SecondMonitor.Connectors.Remote.ViewModels"
+            mc:Ignorable="d"
+            d:DataContext="{d:DesignInstance Type=ViewModels:ServerPeerViewModel}"
+            Padding="5" >
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="RemoteConnectorApplication.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <UserControl.Background>
+        <StaticResource ResourceKey="Anthracite01Brush"/>
+    </UserControl.Background>
+    <Grid Background="{StaticResource Anthracite01Brush}"
+          Margin="5">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="150"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Style="{StaticResource StandardText}" >
+            <TextBlock.Text>
+                <MultiBinding StringFormat="{}{0} - {1}">
+                    <Binding Path="SimulatorSource"/>
+                    <Binding Path="EndPoint"/>
+                </MultiBinding>
+            </TextBlock.Text>
+        </TextBlock>
+        <TextBlock Grid.Row="1" Grid.Column="0"
+                   Style="{StaticResource StandardText}"
+                   Margin="0, 0, 0, 5">
+            <TextBlock.Text>
+                <MultiBinding StringFormat="{}{0} - {1}">
+                    <Binding Path="TrackName"/>
+                    <Binding Path="DriverName"/>
+                </MultiBinding>
+            </TextBlock.Text>
+        </TextBlock>
+        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="0, 0, 0, 5">
+            <StackPanel.Background>
+                <SolidColorBrush Color="{Binding ConnectionState, Converter={StaticResource ConnectionStateToColourConverter}}"/>
+            </StackPanel.Background>
+            <TextBlock Style="{StaticResource StandardText}"
+                       Padding="5, 0, 0, 0">
+                ↑
+            </TextBlock>
+            <TextBlock Style="{StaticResource StandardText}"
+                       Width="60" Padding="5, 0"
+                       Text="{Binding NetworkStats.UploadSpeed}"
+                       HorizontalAlignment="Right" />
+            <TextBlock Style="{StaticResource StandardText}">
+                | ↓
+            </TextBlock>
+            <TextBlock Style="{StaticResource StandardText}"
+                       Width="60" Padding="5, 0"
+                       Text="{Binding NetworkStats.DownloadSpeed}"
+                       HorizontalAlignment="Right"/>
+        </StackPanel>
+        <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" Style="{StaticResource StandardButton}"
+                Command ="{Binding MakeActiveCommand}"
+                IsEnabled="{Binding CanSwitchToSource}"
+                VerticalAlignment="Bottom">
+            Make Active Source
+        </Button>
+    </Grid>
+</UserControl>

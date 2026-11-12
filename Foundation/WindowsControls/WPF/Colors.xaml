@@ -1,0 +1,194 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--Color definitions, these aren't directly used by the app, but are referenced in the brushes definition below. Consider adding new colors instead of changing existing.-->
+    
+    <Color x:Key="Black">Black</Color>
+    <Color x:Key="Gray">Gray</Color>
+
+    <Color x:Key="Yellow01Color">#bdbd28</Color>
+    <Color x:Key="Yellow02Color">#7e7e1b</Color>
+    <Color x:Key="Orange01Color">#ff8c1a</Color>
+    <Color x:Key="Orange02Color">#994d00</Color>
+    <Color x:Key="Orange03Color">#e67300</Color>
+
+
+    <Color x:Key="LightRed01Color">#ff4d4d</Color>
+    <Color x:Key="LightRed02Color">#ff0000</Color>
+    <Color x:Key="DarkRed01Color">DarkRed</Color>
+    <Color x:Key="Purple01Color">#9e2e9e</Color>
+    <Color x:Key="Purple02Color">#631c63</Color>
+
+    <Color x:Key="LightBlue01Color">#668cff</Color>
+    <Color x:Key="DarkBlue01Color">#264d73</Color>
+    <Color x:Key="DarkBlue02Color">#132639</Color>
+    <Color x:Key="Blue01Color">#FF0071B9</Color>
+    <Color x:Key="Blue02Color">#FFA1DAE1</Color>
+    <Color x:Key="Blue03Color">#FF0010FF</Color>
+    <Color x:Key="Blue04Color">#FF008CE8</Color>
+    <Color x:Key="Blue05Color">#99b3ff</Color>
+    <Color x:Key="InPitsColor">#3F996600</Color>
+    <Color x:Key="InPitsMovingColor">#FF996600</Color>
+
+    <Color x:Key="Gold01Color">#D4AF37</Color>
+    <Color x:Key="Silver01Color">#C0C0C0</Color>
+    <Color x:Key="Bronze01Color">#cd7f32</Color>
+
+    <Color x:Key="Green01Color">#0c8d37</Color>
+    <Color x:Key="Green02Color">#FFC2FF00</Color>
+    <Color x:Key="Green03Color">#FF00FF1D</Color>
+    <Color x:Key="Green04Color">#FF77FFD7</Color>
+    <Color x:Key="Green05Color">#33cc33</Color>
+    <Color x:Key="Green06Color">#80ffcc</Color>
+
+    <Color x:Key="LightGrey01Color">#F1E9DB</Color>
+    <Color x:Key="LightGrey02Color">#BFACB5</Color>
+    <Color x:Key="LightGrey05Color">#FFE4E4E4</Color>
+    <Color x:Key="LightGrey03Color">#FFC9C9C9</Color>
+    <Color x:Key="LightGrey04Color">#FFD6D6D6</Color>
+
+    <Color x:Key="DarkGrey01Color">#464239</Color>
+    <Color x:Key="DarkGrey05Color">#FF7F7F7F</Color>
+
+    <Color x:Key="Anthracite01Color">#181818</Color>
+    <Color x:Key="Anthracite02Color">#282828</Color>
+    <Color x:Key="Anthracite03Color">#2B292E</Color>
+    <Color x:Key="Anthracite04Color">#212121</Color>
+    <Color x:Key="Anthracite05Color">#080808</Color>
+
+
+    <Color x:Key="Sector1Color">#666699</Color>
+    <Color x:Key="Sector2Color">#669999</Color>
+    <Color x:Key="Sector3Color">#999966</Color>
+
+    <!--Brushes definitions. These are used by the app, referencing the "Key" value. Changing the color of the brush will change the color everywhere the brush is used.-->
+
+    <SolidColorBrush x:Key="Green02Brush" Color="{StaticResource Green02Color}" />
+
+    <!-- Brushes used on light elements, i.e. text, or borders -->
+    <SolidColorBrush x:Key="LightGrey01Brush" Color="{StaticResource LightGrey01Color}" />
+    <SolidColorBrush x:Key="LightGrey02Brush" Color="{StaticResource LightGrey02Color}" />
+
+    <!-- Brushes used on dark elements, i.e. borders and backgrounds -->
+    <SolidColorBrush x:Key="DarkGrey01Brush" Color="{StaticResource DarkGrey01Color}" />
+    <SolidColorBrush x:Key="DarkGrey05Brush" Color="{StaticResource DarkGrey05Color}" />
+
+    <!-- Brushes used on darkes elements, mostly backgrounds -->
+    <SolidColorBrush x:Key="Anthracite01Brush" Color="{StaticResource Anthracite01Color}" />
+    <SolidColorBrush x:Key="Anthracite02Brush" Color="{StaticResource Anthracite02Color}" />
+    <SolidColorBrush x:Key="Anthracite03Brush" Color="{StaticResource Anthracite03Color}" />
+    <SolidColorBrush x:Key="Anthracite04Brush" Color="{StaticResource Anthracite04Color}" />
+    <SolidColorBrush x:Key="Anthracite05Brush" Color="{StaticResource Anthracite05Color}" />
+
+    <SolidColorBrush x:Key="LightRed01Brush" Color="{StaticResource LightRed01Color}" />
+    <SolidColorBrush x:Key="LightRed02Brush" Color="{StaticResource LightRed02Color}" />
+    <SolidColorBrush x:Key="DarkRed01Brush" Color="{StaticResource DarkRed01Color}" />
+
+    <SolidColorBrush x:Key="Green01Brush" Color="{StaticResource Green01Color}" />
+    <SolidColorBrush x:Key="Green05Brush" Color="{StaticResource Green05Color}" />
+
+    <SolidColorBrush x:Key="Yellow01Brush" Color="{StaticResource Yellow01Color}" />
+
+    <SolidColorBrush x:Key="YellowSectorBrush" Color="{StaticResource Yellow01Color}" />
+    <SolidColorBrush x:Key="ClutchPedalColor" Color="{StaticResource Yellow01Color}" />
+    <SolidColorBrush x:Key="ClutchPedalBorderColor" Color="{StaticResource Yellow02Color}" />
+
+    <!-- Brushes used in timing grid and map -->
+    <SolidColorBrush x:Key="PurpleTimingBrush" Color="{StaticResource Purple01Color}" />
+    <SolidColorBrush x:Key="PurpleClassTimingBrush" Color="{StaticResource Purple02Color}" />
+    <SolidColorBrush x:Key="LightBlueBrush" Color="{StaticResource LightBlue01Color}" />
+    <SolidColorBrush x:Key="Blue03Brush" Color="{StaticResource Blue03Color}" />
+
+    <SolidColorBrush x:Key="TimingLappedBrush" Color="{StaticResource DarkGrey01Color}" />
+    <SolidColorBrush x:Key="TimingLappedForegroundBrush" Color="{StaticResource Blue05Color}" />
+
+    <SolidColorBrush x:Key="TimingLappingBrush" Color="{StaticResource DarkRed01Color}" />
+    <SolidColorBrush x:Key="TimingLappingForegroundBrush" Color="{StaticResource LightGrey01Color}" />
+
+    <SolidColorBrush x:Key="PlayerForegroundColor" Color="{StaticResource Anthracite01Color}" />
+    <SolidColorBrush x:Key="PlayerBackgroundColor" Color="{StaticResource LightGrey01Color}" />
+    <SolidColorBrush x:Key="PlayerOutLineColor" Color="{StaticResource Green02Color}" />
+
+    <SolidColorBrush x:Key="DriverForegroundColor" Color="{StaticResource LightGrey01Color}" />
+    <SolidColorBrush x:Key="DriverBackgroundColor" Color="{StaticResource DarkGrey01Color}" />
+
+    <SolidColorBrush x:Key="DriverPitsForegroundColor" Color="{StaticResource Anthracite01Color}" />
+    <SolidColorBrush x:Key="DriverPitsBackgroundColor" Color="{StaticResource Yellow01Color}" />
+
+    <SolidColorBrush x:Key="DriverFinishedForegroundColor" Color="{StaticResource LightGrey01Color}" />
+    <SolidColorBrush x:Key="DriverFinishedBackgroundColor" Color="{StaticResource Green01Color}" />
+
+    <SolidColorBrush x:Key="InPitsBrush" Color="{StaticResource InPitsColor}" />
+    <SolidColorBrush x:Key="InPitsMovingBrush" Color="{StaticResource InPitsMovingColor}" />
+
+    <SolidColorBrush x:Key="Sector1Brush" Color="{StaticResource Sector1Color}" />
+    <SolidColorBrush x:Key="Sector2Brush" Color="{StaticResource Sector2Color}" />
+    <SolidColorBrush x:Key="Sector3Brush" Color="{StaticResource Sector3Color}" />
+
+    <SolidColorBrush x:Key="TrackRecordBrush" Color="{StaticResource Orange02Color}" />
+
+    <SolidColorBrush x:Key="Orange1Brush" Color="{StaticResource Orange01Color}" />
+    <SolidColorBrush x:Key="Orange3Brush" Color="{StaticResource Orange03Color}" />
+    
+    <SolidColorBrush x:Key="PitDifferencePositive" Color="{StaticResource Orange01Color}" />
+    <SolidColorBrush x:Key="PitDifferenceNegative" Color="{StaticResource Orange01Color}" />
+
+    <!-- Brushes used in text which are colored by underlying value (brakes temperature) -->
+    <Color x:Key="LowQuantityColor">#668cff</Color>
+    <Color x:Key="HighQuantityColor">#e60000</Color>
+    <Color x:Key="OptimalQuantityColor">#0c8d37</Color>
+    <Color x:Key="LowButOkQuantityColor">#00B3BE</Color>
+
+    <!-- Brushes used for dashboard icons -->
+    <SolidColorBrush x:Key="IconUnlitBrush" Color="{StaticResource Anthracite04Color}" />
+    <SolidColorBrush x:Key="IconOkBrush" Color="{StaticResource Green05Color}" />
+    <SolidColorBrush x:Key="IconWarningBrush" Color="{StaticResource Orange01Color}" />
+    <SolidColorBrush x:Key="IconErrorBrush" Color="{StaticResource LightRed02Color}" />
+    <SolidColorBrush x:Key="IconInformationBrush" Color="{StaticResource LightBlue01Color}" />
+
+
+    <!-- Brushes used for tyres color coding -->
+    <SolidColorBrush x:Key="TyreUltraSoft" Color="#ff00ff" />
+    <SolidColorBrush x:Key="TyreSuperSoft" Color="#ff8000" />
+    <SolidColorBrush x:Key="TyreSoft" Color="#e60000" />
+    <SolidColorBrush x:Key="TyreMedium" Color="#e6e600" />
+    <SolidColorBrush x:Key="TyreHard" Color="#ffffff" />
+    <SolidColorBrush x:Key="TyreIntermediate" Color="#33cc33" />
+    <SolidColorBrush x:Key="TyreWet" Color="#0066ff" />
+
+    <SolidColorBrush x:Key="Gold01Brush" Color="{StaticResource Gold01Color}" />
+    <SolidColorBrush x:Key="Silver01Brush" Color="{StaticResource Silver01Color}" />
+    <SolidColorBrush x:Key="Bronze01Brush" Color="{StaticResource Bronze01Color}" />
+
+    <SolidColorBrush x:Key="PitCountEqualPlayers" Color="{StaticResource Green01Color}"/>
+    <SolidColorBrush x:Key="PitCountLessThanPlayers" Color="{StaticResource Orange01Color}"/>
+    <SolidColorBrush x:Key="PitCountMoreThanPlayers" Color="{StaticResource LightBlue01Color}"/>
+    <SolidColorBrush x:Key="NoPitWindowStop" Color="{StaticResource LightRed02Color}"/>
+
+    <SolidColorBrush x:Key="PitEntryBackground" Color="{StaticResource LightBlue01Color}"/>
+    <SolidColorBrush x:Key="InPitsBackground" Color="{StaticResource Green01Color}"/>
+    <SolidColorBrush x:Key="PitExitBackground" Color="{StaticResource Orange01Color}"/>
+
+    <SolidColorBrush x:Key="TyreSlidingBrush" Color="{StaticResource LightRed02Color}" />
+    <SolidColorBrush x:Key="TyreWasSlidingBrush" Color="{StaticResource LightBlue01Color}" />
+
+
+    <SolidColorBrush x:Key="EvaluationNoneBrush" Color="{StaticResource LightGrey01Color}" />
+    <SolidColorBrush x:Key="EvaluationInfoBrush" Color="{StaticResource LightBlue01Color}" />
+    <SolidColorBrush x:Key="EvaluationOkBrush" Color="{StaticResource Green01Color}" />
+    <SolidColorBrush x:Key="EvaluationWarningBrush" Color="{StaticResource Orange01Color}" />
+    <SolidColorBrush x:Key="EvaluationErrorBrush" Color="{StaticResource LightRed02Color}" />
+
+    <SolidColorBrush x:Key="TyreWearAtRaceEndBrush" Color="{StaticResource DarkGrey01Color}" />
+
+    <SolidColorBrush x:Key="FirstPlaceBrush" Color="{StaticResource Gold01Color}"/>
+    <SolidColorBrush x:Key="SecondPlaceBrush" Color="{StaticResource Silver01Color}"/>
+    <SolidColorBrush x:Key="ThirdPlaceBrush" Color="{StaticResource Bronze01Color}"/>
+    
+    <SolidColorBrush x:Key="BlackBrush" Color="{StaticResource Black}"/>
+    <SolidColorBrush x:Key="GrayBrush" Color="{StaticResource Gray}"/>
+
+    <SolidColorBrush x:Key="TimingGridOkVirtualEnergyBrush" Color="{StaticResource Green01Color}"/>
+    <SolidColorBrush x:Key="TimingGridWarningVirtualEnergyBrush" Color="{StaticResource Orange01Color}"/>
+    <SolidColorBrush x:Key="TimingGridRedVirtualEnergyBrush" Color="{StaticResource LightRed02Color}"/>
+</ResourceDictionary>

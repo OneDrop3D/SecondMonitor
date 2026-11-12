@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Cœur multiplateforme du hub.
+    Réutilise directement les sources du DataModel et du protocole Remote de SecondMonitor (liens, pas de copie),
+    pour garantir la compatibilité protobuf avec la version Windows qui diffuse les données.
+  -->
+  <PropertyGroup>
+    <RootNamespace>SecondMonitor.Hub.Core</RootNamespace>
+    <LangVersion>12</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <DefineConstants>$(DefineConstants);SM_PORTABLE</DefineConstants>
+    <NoWarn>$(NoWarn);CS0618;CS0108;CS0114;CS0659;CS0661;CS8981;SYSLIB0050;SYSLIB0051</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\Foundation\DataModel\**\*.cs" Exclude="..\..\..\Foundation\DataModel\Properties\**;..\..\..\Foundation\DataModel\obj\**;..\..\..\Foundation\DataModel\bin\**" LinkBase="Linked\DataModel" />
+    <Compile Include="..\..\..\Remote\SecondMonitor.Remote\Models\*.cs" Exclude="..\..\..\Remote\SecondMonitor.Remote\Models\LiteNetLibHostAddressValidator.cs" LinkBase="Linked\Remote" />
+    <Compile Include="..\..\..\Remote\SecondMonitor.Remote\PacketCompressionLayer.cs" LinkBase="Linked\Remote" />
+    <Compile Include="..\..\..\Remote\SecondMonitor.Remote\Adapter\IDatagramPayloadUnpacker.cs" LinkBase="Linked\Remote" />
+    <Compile Include="..\..\..\Remote\SecondMonitor.Remote\Adapter\DatagramPayloadUnPacker.cs" LinkBase="Linked\Remote" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SecondMonitor.Hub" />
+    <InternalsVisibleTo Include="SecondMonitor.Hub.DemoServer" />
+    <InternalsVisibleTo Include="SecondMonitor.Hub.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LiteNetLib" />
+    <PackageReference Include="K4os.Compression.LZ4" />
+    <PackageReference Include="protobuf-net" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="NLog" />
+  </ItemGroup>
+</Project>

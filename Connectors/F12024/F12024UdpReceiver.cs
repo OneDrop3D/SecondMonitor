@@ -1,0 +1,107 @@
+﻿namespace SecondMonitor.F12024Connector
+{
+    using System;
+    using System.Net.Sockets;
+    using System.Runtime.InteropServices;
+    using System.Threading;
+    using System.Threading.Tasks;
+
+    using SecondMonitor.F12024Connector.DataModels;
+    using SecondMonitor.Foundation.Connectors.Udp;
+
+    internal class F12024UdpReceiver
+    {
+        private readonly int _port;
+        private readonly UdpReceiver _udpReceiver;
+        private readonly DataSetCompositor _dataSetCompositor;
+
+        internal F12024UdpReceiver(Action<AllPacketsComposition> sessionStartedHandler, Action<AllPacketsComposition> newDataHandler, int connectionPort)
+        {
+            _port = connectionPort;
+            _udpReceiver = new UdpReceiver(_port);
+            _dataSetCompositor = new DataSetCompositor(sessionStartedHandler, newDataHandler);
+        }
+
+        public async Task ReceiveLoop(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                UdpReceiveResult receiveResult = await _udpReceiver.Receive(cancellationToken).ConfigureAwait(false);
+                byte[] rawPacked = receiveResult.Buffer;
+                PacketHeader header = DeserializePackedHeader(rawPacked);
+                ProcessPacket(header, rawPacked);
+            }
+        }
+
+        private void ProcessPacket(PacketHeader header, byte[] rawPacked)
+        {
+            switch (header.PacketId)
+            {
+                case 0:
+                    PacketMotionData packetMotionData = Deserialize<PacketMotionData>(rawPacked);
+                    _dataSetCompositor.ProcessPacket(packetMotionData);
+                    break;
+                case 1:
+                    PacketSessionData packetSessionData = Deserialize<PacketSessionData>(rawPacked);
+                    _dataSetCompositor.ProcessPacket(packetSessionData);
+                    break;
+                case 2:
+                    PacketLapData packetLapData = Deserialize<PacketLapData>(rawPacked);
+                    _dataSetCompositor.ProcessPacket(packetLapData);
+                    break;
+                case 3:
+                    PacketEventData packetEventData = Deserialize<PacketEventData>(rawPacked);
+                    _dataSetCompositor.ProcessPacket(packetEventData);
+                    break;
+                case 4:
+                    PacketParticipantsData packetParticipantsData = Deserialize<PacketParticipantsData>(rawPacked);
+                    _dataSetCompositor.ProcessPacket(packetParticipantsData);
+                    break;
+                case 5:
+                    PacketCarSetupData packetCarSetupData = Deserialize<PacketCarSetupData>(rawPacked);
+                    _dataSetCompositor.ProcessPacket(packetCarSetupData);
+                    break;
+                case 6:
+                    PacketCarTelemetryData packetCarTelemetryData = Deserialize<PacketCarTelemetryData>(rawPacked);
+                    _dataSetCompositor.ProcessPacket(packetCarTelemetryData);
+                    break;
+                case 7:
+                    PacketCarStatusData packetCarStatusData = Deserialize<PacketCarStatusData>(rawPacked);
+                    _dataSetCompositor.ProcessPacket(packetCarStatusData);
+                    break;
+                case 10:
+                    PacketCarDamageData packetCarDamageData = Deserialize<PacketCarDamageData>(rawPacked);
+                    _dataSetCompositor.ProcessPacked(packetCarDamageData);
+                    break;
+                case 11:
+                    PacketSessionHistoryData packetSessionHistoryData = Deserialize<PacketSessionHistoryData>(rawPacked);
+                    _dataSetCompositor.ProcessPacked(packetSessionHistoryData);
+                    break;
+                case 13:
+                    PacketMotionExData packetMotionExData = Deserialize<PacketMotionExData>(rawPacked);
+                    _dataSetCompositor.ProcessPacked(packetMotionExData);
+                    break;
+            }
+        }
+
+        private PacketHeader DeserializePackedHeader(byte[] rawData)
+        {
+            return Deserialize<PacketHeader>(rawData);
+        }
+
+        private T Deserialize<T>(byte[] rawData) where T : struct
+        {
+            GCHandle telemetryHandle = GCHandle.Alloc(rawData, GCHandleType.Pinned);
+            try
+            {
+                int size = System.Runtime.InteropServices.Marshal.SizeOf(typeof(T));
+                T udpTelemetry = (T)Marshal.PtrToStructure(telemetryHandle.AddrOfPinnedObject(), typeof(T));
+                return udpTelemetry;
+            }
+            finally
+            {
+                telemetryHandle.Free();
+            }
+        }
+    }
+}

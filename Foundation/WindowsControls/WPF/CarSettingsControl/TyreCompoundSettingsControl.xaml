@@ -1,0 +1,199 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:wpf="clr-namespace:SecondMonitor.WindowsControls.WPF"
+                    xmlns:converters="clr-namespace:SecondMonitor.WindowsControls.WPF.Converters"
+                    xmlns:viewModel="clr-namespace:SecondMonitor.SimdataManagement.ViewModel;assembly=SimdataManagement">
+    <converters:DoubleToStringNoDecimalConverter x:Key="DoubleToStringNoDecimalConverter" />
+    <DataTemplate DataType="{x:Type viewModel:TyreCompoundPropertiesViewModel}">
+        <Grid>
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Margin="10,10,10,10" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           FontSize="{StaticResource BigFontSize}"
+                                           Style="{StaticResource StandardText}"
+                                           Text="{Binding CompoundName}" />
+                    <ContentPresenter MaxHeight="20" Margin="5,0,5,0" HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Content="{StaticResource WorldIcon}"
+                                                  ToolTip="This is global compound. Changing it will change the compound for all cars that don't have a local copy using this compound."
+                                                  Visibility="{Binding IsGlobalCompound, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <Grid>
+                        <Button Height="55" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                            Command="{Binding CopyCompoundCommand}"
+                                            Style="{StaticResource StandardButton}"
+                                            ToolTip="Creates a car specific copy of the global compound. This will allow to edit the compound without affecting other cars using the compound."
+                                            Visibility="{Binding IsGlobalCompound, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Button.Content>
+                                <wpf:ColorAbleIcon Margin="5,0,5,0"
+                                                               StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                    <ContentPresenter Content="{StaticResource CopyIcon}" />
+                                </wpf:ColorAbleIcon>
+                            </Button.Content>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <GroupBox Header="Front" Foreground="{StaticResource LightGrey01Brush}"
+                                      BorderBrush="{StaticResource LightGrey01Brush}"
+                                      FontSize="{StaticResource NormalFontSize}" HorizontalAlignment="Left"
+                                      VerticalAlignment="Top">
+                        <StackPanel>
+                            <TextBlock Margin="5,5,5,5"
+                                               Style="{StaticResource StandardText}"
+                                               Text="Ideal Tyre Temperature:" />
+                            <Border BorderThickness="2" BorderBrush="{StaticResource DarkGrey01Brush}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Margin="5,5,5,5"
+                                               Style="{StaticResource StandardText}"
+                                               Text="From:" />
+                                    <TextBox Margin="5,0,5,0" Style="{StaticResource StandardTextBox}"  VerticalAlignment="Center"
+                                             Text="{Binding FrontMinimalIdealTyreTemperature}"
+                                             ToolTip="Minimal Ideal temperature the tyres should be kept for maximum effectiveness." />
+                                    <TextBlock Margin="5,5,5,5"
+                                                       Style="{StaticResource StandardText}"
+                                                       Text="To:" />
+                                    <TextBox Margin="5,0,5,0" Style="{StaticResource StandardTextBox}"  VerticalAlignment="Center"
+                                             Text="{Binding FrontMaximumIdealTyreTemperature}"
+                                             ToolTip="Maximum Ideal temperature the tyres should be kept for maximum effectiveness." />
+                                    <TextBlock Margin="5,5,5,5"
+                                               Style="{StaticResource StandardText}"
+                                               Text="{Binding TemperatureUnitSymbol}" />
+                                </StackPanel>
+                            </Border>
+                            <Border BorderThickness="2" BorderBrush="{StaticResource DarkGrey01Brush}"  Visibility="{Binding DetermineIdealPressureByTemperature, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Vertical">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Margin="5,5,5,5"
+                                                   Style="{StaticResource StandardText}"
+                                                   Text="Ideal Pressure:" />
+                                        <TextBlock Style="{StaticResource StandardText}" VerticalAlignment="Center"
+                                                 Text="{Binding FrontIdealPressure, Converter={StaticResource DoubleToScalableDecimalsConverter}}" Visibility="{Binding DetermineIdealPressureByTemperature, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                 ToolTip="Ideal pressure the tyres should be kept for maximum effectiveness."/>
+                                        <TextBox Style="{StaticResource StandardTextBox}" VerticalAlignment="Center"
+                                                 Text="{Binding FrontIdealPressure, Converter={StaticResource DoubleToScalableDecimalsConverter}}" Visibility="{Binding DetermineIdealPressureByTemperature, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                                 ToolTip="Ideal pressure the tyres should be kept for maximum effectiveness."/>
+                                        <TextBlock Margin="5,5,5,5"
+                                                   Style="{StaticResource StandardText}"
+                                                   Text="{Binding PressureUnitSymbol}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Margin="5,5,5,5"
+                                                   Style="{StaticResource StandardText}"
+                                                   Text="Ideal Pressure Window:" />
+                                        <TextBlock Style="{StaticResource StandardText}" VerticalAlignment="Center"
+                                                   Text="{Binding FrontIdealPressureWindow, Converter={StaticResource DoubleToScalableDecimalsConverter}}" Visibility="{Binding DetermineIdealPressureByTemperature, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                   ToolTip="Ideal pressure the tyres should be kept for maximum effectiveness."/>
+                                        <TextBox Style="{StaticResource StandardTextBox}" VerticalAlignment="Center"
+                                                 Text="{Binding FrontIdealPressureWindow, Converter={StaticResource DoubleToScalableDecimalsConverter}}" Visibility="{Binding DetermineIdealPressureByTemperature, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                        <TextBlock Margin="5,5,5,5"
+                                                   Style="{StaticResource StandardText}"
+                                                   Text="{Binding PressureUnitSymbol}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox Header="Rear" Foreground="{StaticResource LightGrey01Brush}"
+                                      BorderBrush="{StaticResource LightGrey01Brush}"
+                                      FontSize="{StaticResource NormalFontSize}" HorizontalAlignment="Left"
+                                      VerticalAlignment="Top">
+                        <StackPanel>
+                            <TextBlock Margin="5,5,5,5"
+                                               Style="{StaticResource StandardText}"
+                                               Text="Ideal Tyre Temperature:" />
+                            <Border BorderThickness="2" BorderBrush="{StaticResource DarkGrey01Brush}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Margin="5,5,5,5"
+                                               Style="{StaticResource StandardText}"
+                                               Text="From:" />
+                                    <TextBox Margin="5,0,5,0" Style="{StaticResource StandardTextBox}" VerticalAlignment="Center"
+                                             Text="{Binding RearMinimalIdealTyreTemperature}"
+                                             ToolTip="Minimal Ideal temperature the tyres should be kept for maximum effectiveness." />
+                                    <TextBlock Margin="5,5,5,5"
+                                               Style="{StaticResource StandardText}"
+                                               Text="To:" />
+                                    <TextBox Margin="5,0,5,0" Style="{StaticResource StandardTextBox}"  VerticalAlignment="Center"
+                                             Text="{Binding RearMaximumIdealTyreTemperature}"
+                                             ToolTip="Maximum Ideal temperature the tyres should be kept for maximum effectiveness." />
+                                    <TextBlock Margin="5,5,5,5"
+                                               Style="{StaticResource StandardText}"
+                                               Text="{Binding TemperatureUnitSymbol}" />
+                                </StackPanel>
+                            </Border>
+                            <Border BorderThickness="2" BorderBrush="{StaticResource DarkGrey01Brush}"
+                                    Visibility="{Binding DetermineIdealPressureByTemperature, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Vertical">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Margin="5,5,5,5"
+                                                   Style="{StaticResource StandardText}"
+                                                   Text="Ideal Pressure:" />
+                                        <TextBlock Style="{StaticResource StandardText}" VerticalAlignment="Center"
+                                                   Text="{Binding RearIdealPressure, Converter={StaticResource DoubleToScalableDecimalsConverter}}"
+                                                   Visibility="{Binding DetermineIdealPressureByTemperature, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                   ToolTip="Ideal pressure the tyres should be kept for maximum effectiveness." />
+                                        <TextBox Style="{StaticResource StandardTextBox}" VerticalAlignment="Center"
+                                                 Text="{Binding RearIdealPressure, Converter={StaticResource DoubleToScalableDecimalsConverter}}"
+                                                 Visibility="{Binding DetermineIdealPressureByTemperature, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                                        <TextBlock Margin="5,5,5,5"
+                                                   Style="{StaticResource StandardText}"
+                                                   Text="{Binding PressureUnitSymbol}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Margin="5,5,5,5"
+                                                   Style="{StaticResource StandardText}"
+                                                   Text="Ideal Pressure Window:" />
+                                        <TextBlock Style="{StaticResource StandardText}" VerticalAlignment="Center"
+                                                   Text="{Binding RearIdealPressureWindow, Converter={StaticResource DoubleToScalableDecimalsConverter}}"
+                                                   Visibility="{Binding DetermineIdealPressureByTemperature, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                   ToolTip="Ideal pressure the tyres should be kept for maximum effectiveness." />
+                                        <TextBox Style="{StaticResource StandardTextBox}" VerticalAlignment="Center"
+                                                 Text="{Binding RearIdealPressureWindow, Converter={StaticResource DoubleToScalableDecimalsConverter}}"
+                                                 ToolTip="Ideal pressure the tyres should be kept for maximum effectiveness."
+                                                 Visibility="{Binding DetermineIdealPressureByTemperature, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                                        <TextBlock Margin="5,5,5,5"
+                                                   Style="{StaticResource StandardText}"
+                                                   Text="{Binding PressureUnitSymbol}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </GroupBox>
+
+                </StackPanel>
+                <CheckBox IsChecked="{Binding DetermineIdealPressureByTemperature}"  Margin="3" >
+                    <TextBlock Style="{StaticResource StandardText}" Text="Use Outer/Inner/Middle Tyre Temperatures to Estimate Ideal Pressures" FontSize="{StaticResource SmallFontSize}" />
+                </CheckBox>
+                <TextBlock Margin="5,5,5,5"
+                                       Style="{StaticResource StandardText}"
+                                       Text="Tyre Wear:" />
+                <Border BorderThickness="2" BorderBrush="{StaticResource DarkGrey01Brush}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Margin="5,5,5,5"
+                                               Style="{StaticResource StandardText}"
+                                               Text="No Wear (%):"
+                                               ToolTip="Wear in % (0 = no wear). If tyre wear is below this limit, then the tyres will be considered in perfect condition." />
+                        <TextBox Margin="5,5,5,5" Style="{StaticResource StandardTextBox}"
+                                             Text="{Binding NoWearLimit, Converter={StaticResource DoubleToStringNoDecimalConverter}}"
+                                             MinWidth="20"
+                                             ToolTip="Wear in % (0 = no wear). If tyre wear is below this limit, then the tyres will be considered in perfect condition." />
+                        <TextBlock Margin="5,5,5,5"
+                                               Style="{StaticResource StandardText}"
+                                               Text="Low Wear (%):"
+                                               ToolTip="Wear in % (0 = no wear). Tyres at this wear will be considered at low wear. (Indicated by yellow icon)" />
+                        <TextBox Margin="5,5,5,5" Style="{StaticResource StandardTextBox}"
+                                             Text="{Binding LowWearLimit, Converter={StaticResource DoubleToStringNoDecimalConverter}}"
+                                             MinWidth="20"
+                                             ToolTip="Wear in % (0 = no wear). Tyres at this wear will be considered at low wear. (Indicated by yellow icon)" />
+                        <TextBlock Margin="5,5,5,5"
+                                               Style="{StaticResource StandardText}"
+                                               Text="Heavy Wear (%):"
+                                               ToolTip="Wear in % (0 = no wear). Tyres at this wear will be considered at heavy wear. (Indicated by red icon)" />
+                        <TextBox MinWidth="20" Margin="5,5,5,5" Style="{StaticResource StandardTextBox}"
+                                             Text="{Binding HeavyWearLimit, Converter={StaticResource DoubleToStringNoDecimalConverter}}"
+                                             ToolTip="Wear in % (0 = no wear). Tyres at this wear will be considered at heavy wear. (Indicated by red icon)" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>

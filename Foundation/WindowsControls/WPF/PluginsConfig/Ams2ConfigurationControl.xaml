@@ -1,0 +1,19 @@
+﻿<UserControl x:Class="SecondMonitor.WindowsControls.WPF.PluginsConfig.Ams2ConfigurationControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:pluginsSettings="clr-namespace:SecondMonitor.ViewModels.PluginsSettings;assembly=SecondMonitor.ViewModels"
+             mc:Ignorable="d" d:DataContext="{d:DesignInstance pluginsSettings:Ams2ConfigurationViewModel}" >
+    <Border BorderThickness="1" BorderBrush="{StaticResource DarkGrey01Brush}" Padding="5" Background="{StaticResource Anthracite01Brush}">
+        <StackPanel Background="{StaticResource Anthracite01Brush}">
+            <TextBlock Text="Split Classes: " Style="{StaticResource StandardText}" VerticalAlignment="Center" Margin="0,0,0,6"/>
+            <CheckBox Foreground="{StaticResource LightGrey01Brush}" VerticalContentAlignment="Center" FontSize="{StaticResource NormalFontSize}" IsChecked="{Binding SplitGtClassics}" Content="GT Classics" />
+            <CheckBox Foreground="{StaticResource LightGrey01Brush}" VerticalContentAlignment="Center" FontSize="{StaticResource NormalFontSize}" IsChecked="{Binding SplitLancerCup}" Content="Mitsubishi Lancer" />
+            <CheckBox Foreground="{StaticResource LightGrey01Brush}" VerticalContentAlignment="Center" FontSize="{StaticResource NormalFontSize}" IsChecked="{Binding SplitCarreraCup }" Content="Porsche Carrera Cup" />
+            <CheckBox Foreground="{StaticResource LightGrey01Brush}" VerticalContentAlignment="Center" FontSize="{StaticResource NormalFontSize}" IsChecked="{Binding SplitTsiCup }" Content="TSI Cup" />
+            <CheckBox Foreground="{StaticResource LightGrey01Brush}" VerticalContentAlignment="Center" FontSize="{StaticResource NormalFontSize}" IsChecked="{Binding SplitVintageTouringTier1}" Content="Vintage Touring Tier 1" />
+            <CheckBox Foreground="{StaticResource LightGrey01Brush}" VerticalContentAlignment="Center" FontSize="{StaticResource NormalFontSize}" IsChecked="{Binding SplitVintageTouringTier2}" Content="Vintage Touring Tier 2" />
+        </StackPanel>
+    </Border>
+</UserControl>

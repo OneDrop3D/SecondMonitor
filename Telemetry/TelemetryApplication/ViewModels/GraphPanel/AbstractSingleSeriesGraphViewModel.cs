@@ -1,0 +1,99 @@
+﻿namespace SecondMonitor.Telemetry.TelemetryApplication.ViewModels.GraphPanel
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using DataExtractor;
+
+    using DataModel.Telemetry;
+    using OxyPlot;
+    using OxyPlot.Series;
+
+    using SecondMonitor.DataModel.Extensions;
+
+    using TelemetryManagement.DTO;
+    using TelemetryManagement.Settings;
+
+    public abstract class AbstractSingleSeriesGraphViewModel : AbstractGraphViewModel
+    {
+        private ISingleSeriesDataExtractor _selectedDataExtractor;
+
+        protected AbstractSingleSeriesGraphViewModel(IEnumerable<ISingleSeriesDataExtractor> dataExtractors)
+        {
+            DataExtractors = dataExtractors.ToList();
+            SelectedDataExtractor = DataExtractors.First();
+        }
+
+        public IReadOnlyCollection<ISingleSeriesDataExtractor> DataExtractors { get; }
+
+        public ISingleSeriesDataExtractor SelectedDataExtractor
+        {
+            get => _selectedDataExtractor;
+            set
+            {
+                UnSubscribeDataExtractor();
+                SetProperty(ref _selectedDataExtractor, value);
+                SubscribeDataExtractor();
+                RecreateAllLineSeries();
+            }
+        }
+
+        protected override List<LineSeries> GetLineSeries(LapSummaryDto lapSummary, CarPropertiesDto carPropertiesDto, List<TimedTelemetrySnapshot> dataPoints, OxyColor color)
+        {
+            if (!_selectedDataExtractor.ShowLapGraph(lapSummary))
+            {
+                return new List<LineSeries>();
+            }
+
+            LineSeries newLineSeries = CreateLineSeries($"Lap {lapSummary.CustomDisplayName}", color);
+            List<DataPoint> plotDataPoints = dataPoints.Select(x => new DataPoint(GetXValue(x), _selectedDataExtractor.GetValue(GetYValue, x, carPropertiesDto, XAxisKind))).ToList();
+
+            newLineSeries.Points.AddRange(plotDataPoints);
+
+            List<LineSeries> series = new List<LineSeries>(1) { newLineSeries };
+            return series;
+        }
+
+        protected abstract double GetYValue(TimedTelemetrySnapshot value, CarPropertiesDto carPropertiesDto);
+
+        private void SubscribeDataExtractor()
+        {
+            if (_selectedDataExtractor == null)
+            {
+                return;
+            }
+
+            _selectedDataExtractor.DataRefreshRequested += SelectedDataExtractorOnDataRefreshRequested;
+        }
+
+        private void UnSubscribeDataExtractor()
+        {
+            if (_selectedDataExtractor == null)
+            {
+                return;
+            }
+
+            _selectedDataExtractor.DataRefreshRequested -= SelectedDataExtractorOnDataRefreshRequested;
+        }
+
+        private void SelectedDataExtractorOnDataRefreshRequested(object sender, EventArgs e)
+        {
+            RecreateAllLineSeries();
+        }
+
+        protected override string GetDataInfo(TimedTelemetrySnapshot timedTelemetrySnapshot, CarPropertiesDto carPropertiesDto)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"Y: {GetYValue(timedTelemetrySnapshot, carPropertiesDto).ToStringScalableDecimals()}");
+            return sb.ToString();
+        }
+
+        public override void Dispose()
+        {
+            UnSubscribeDataExtractor();
+            DataExtractors.ForEach(x => x.Dispose());
+            base.Dispose();
+        }
+    }
+}

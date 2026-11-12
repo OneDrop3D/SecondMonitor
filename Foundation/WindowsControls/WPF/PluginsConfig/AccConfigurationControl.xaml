@@ -1,0 +1,62 @@
+﻿<UserControl x:Class="SecondMonitor.WindowsControls.WPF.PluginsConfig.AccConfigurationControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:pluginsSettings="clr-namespace:SecondMonitor.ViewModels.PluginsSettings;assembly=SecondMonitor.ViewModels"
+             mc:Ignorable="d" d:DataContext="{d:DesignInstance pluginsSettings:AccConfigurationViewModel}" >
+    <Border BorderThickness="1" BorderBrush="{StaticResource DarkGrey01Brush}" Padding="5" Background="{StaticResource Anthracite01Brush}">
+        <StackPanel Background="{StaticResource Anthracite01Brush}">
+            <TextBlock Text="Broadcast server connection: " Style="{StaticResource StandardText}" VerticalAlignment="Center"/>
+            <Border BorderBrush="{StaticResource DarkGrey01Brush}" BorderThickness="1" Padding="5">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="UDP Port: " Style="{StaticResource StandardText}"
+                                   VerticalAlignment="Center" />
+                        <TextBox Grid.Row="0" Grid.Column="1" Margin="5,0,0,0" Style="{StaticResource StandardTextBox}"
+                                 Text="{Binding Port, Converter={StaticResource IntegerToStringConverter}}"
+                                 MinWidth="150" />
+
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Password: " Style="{StaticResource StandardText}"
+                                   VerticalAlignment="Center" />
+                        <TextBox Grid.Row="1" Grid.Column="1" Margin="5,0,0,0" Style="{StaticResource StandardTextBox}"
+                                 Text="{Binding ConnectionPassword}"
+                                 MinWidth="150" />
+
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Command Password: "
+                                   Style="{StaticResource StandardText}" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="2" Grid.Column="1" Margin="5,0,0,0" Style="{StaticResource StandardTextBox}"
+                                 Text="{Binding ConnectionCommandPassword}"
+                                 MinWidth="150" />
+
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Pool Rate (ms) " Style="{StaticResource StandardText}"
+                                   VerticalAlignment="Center" />
+                        <TextBox Grid.Row="3" Grid.Column="1" Margin="5,0,0,0" Style="{StaticResource StandardTextBox}"
+                                 Text="{Binding PoolInterval, Converter={StaticResource IntegerToStringConverter}}"
+                                 MinWidth="150" />
+
+                </Grid>
+            </Border>
+            <StackPanel Orientation="Horizontal" Margin="0, 10,0,0">
+                <TextBlock Text="Custom Name: " Style="{StaticResource StandardText}"
+                           VerticalAlignment="Center" />
+                <TextBox  Margin="5,0,0,0" Style="{StaticResource StandardTextBox}"
+                         Text="{Binding CustomName}"
+                         MinWidth="150" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

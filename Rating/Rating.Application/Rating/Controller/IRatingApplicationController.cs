@@ -1,0 +1,19 @@
+﻿namespace SecondMonitor.Rating.Application.Rating.Controller
+{
+    using System.Threading.Tasks;
+    using DataModel.Snapshot;
+    using DataModel.Summary;
+    using RatingProvider;
+    using SecondMonitor.ViewModels.Controllers;
+    using ViewModels;
+
+    public interface IRatingApplicationController : IController
+    {
+        IRatingApplicationViewModel RatingApplicationViewModel { get; }
+        ISessionRatingProvider SessionRatingProvider { get; }
+
+        Task NotifySessionCompletion(SessionSummary sessionSummary);
+        Task NotifyDataLoaded(SimulatorDataSet simulatorDataSet);
+        Task OnPlayerFinished(SessionSummary sessionSummary);
+    }
+}

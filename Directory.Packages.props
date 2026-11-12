@@ -1,0 +1,62 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <NoWarn>$(NoWarn);NU1507</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Autoupdater.NET.Official" Version="1.9.2" />
+    <PackageVersion Include="EPPlus" Version="7.4.2" />
+    <PackageVersion Include="Extended.Wpf.Toolkit" Version="4.6.1" />
+    <PackageVersion Include="gong-wpf-dragdrop" Version="3.2.1" />
+    <PackageVersion Include="ini" Version="1.0.7" />
+    <PackageVersion Include="ini-parser" Version="2.5.2" />
+    <PackageVersion Include="K4os.Compression.LZ4" Version="1.3.8" />
+    <PackageVersion Include="LiteNetLib" Version="1.2.0" />
+    <PackageVersion Include="LiveCharts" Version="0.9.7" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Ini" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Net.Compilers.Toolset" Version="4.11.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
+    <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.2849.39" />
+    <PackageVersion Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+    <PackageVersion Include="Moq" Version="4.20.72" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageVersion Include="Ninject" Version="3.3.6" />
+    <PackageVersion Include="Ninject.Extensions.ContextPreservation" Version="3.3.1" />
+    <PackageVersion Include="Ninject.Extensions.Conventions" Version="3.3.0" />
+    <PackageVersion Include="Ninject.Extensions.Factory" Version="3.3.3" />
+    <PackageVersion Include="Ninject.Extensions.NamedScope" Version="3.3.0" />
+    <PackageVersion Include="NLog" Version="5.3.4" />
+    <PackageVersion Include="NLog.Extensions.Logging" Version="5.3.15" />
+    <PackageVersion Include="NLog.Schema" Version="5.3.4" />
+    <PackageVersion Include="NUnit" Version="4.5.1" />
+    <PackageVersion Include="NUnit.ConsoleRunner" Version="3.22.0" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="6.2.0" />
+    <PackageVersion Include="OxyPlot.Core" Version="2.2.0" />
+    <PackageVersion Include="OxyPlot.SkiaSharp" Version="2.2.0" />
+    <PackageVersion Include="OxyPlot.SkiaSharp.Wpf" Version="2.2.0" />
+    <PackageVersion Include="OxyPlot.Wpf.Shared" Version="2.2.0" />
+    <PackageVersion Include="protobuf-net" Version="3.2.45" />
+    <PackageVersion Include="Roslynator.Analyzers" Version="4.12.9" />
+    <PackageVersion Include="SharpZipLib" Version="1.4.2" />
+    <PackageVersion Include="SkiaSharp" Version="2.88.9" />
+    <PackageVersion Include="SkiaSharp.HarfBuzz" Version="2.88.9" />
+    <PackageVersion Include="SkiaSharp.Views.Desktop.Common" Version="2.88.9" />
+    <PackageVersion Include="StyleCop" Version="6.2.0" />
+    <PackageVersion Include="StyleCop.Analyzers" Version="1.1.118" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageVersion Include="System.Collections.Immutable" Version="9.0.0" />
+    <PackageVersion Include="System.Configuration.ConfigurationManager" Version="9.0.0" />
+    <PackageVersion Include="System.Reflection.Metadata" Version="9.0.0" />
+    <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.0" />
+    <PackageVersion Include="System.ServiceModel.Duplex" Version="6.0.0" />
+    <PackageVersion Include="System.ServiceModel.Federation" Version="8.1.0" />
+    <PackageVersion Include="System.ServiceModel.Http" Version="8.1.0" />
+    <PackageVersion Include="System.ServiceModel.NetTcp" Version="8.1.0" />
+    <PackageVersion Include="System.ServiceModel.Primitives" Version="8.1.0" />
+    <PackageVersion Include="System.ServiceModel.Security" Version="6.0.0" />
+    <PackageVersion Include="System.Text.Encoding.CodePages" Version="8.0.0" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,36 @@
+# Résultats de compilation (.NET / Visual Studio)
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+.vs/
+*.user
+*.suo
+*.userprefs
+*.pdb
+TestResults/
+
+# Sorties de l'ancienne application Windows
+Deployment/
+_Builds/
+*.msi
+
+# Interface web du hub (construite par « npm run build »)
+node_modules/
+Hub/src/SecondMonitor.Hub/wwwroot/
+
+# Paquets produits par construire.sh / OneDrop3D
+dist/
+Collector/dist/
+
+# Fichiers créés à l'exécution
+collecteur.json
+collecteur.log
+*.log
+
+# Systèmes
+.DS_Store
+desktop.ini
+Thumbs.db

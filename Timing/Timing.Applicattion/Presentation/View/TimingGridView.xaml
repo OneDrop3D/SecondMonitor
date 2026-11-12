@@ -1,0 +1,31 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:timingGrid="clr-namespace:SecondMonitor.Timing.Application.TimingGrid"
+                    xmlns:timingGridControl="clr-namespace:SecondMonitor.Timing.Application.Presentation.Controls.TimingGridControl">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="../Controls/TimingGridControl/TimingGrid.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+    <DataTemplate DataType="{x:Type timingGrid:TimingDataGridViewModel}">
+        <Grid>
+        <timingGridControl:TimingGrid EnableColumnVirtualization="False"
+                                                  EnableRowVirtualization="False"
+                                                  ItemsSource="{Binding DriversViewModels, IsAsync=True}"
+                                                  ScrollViewer.CanContentScroll="False"
+                                                  SelectedItem="{Binding SelectedDriverTimingViewModel}"
+                                                  MinColumnWidth="5"
+                                                  ColumnDescriptors="{Binding Columns}"
+                                                  HighlightPlayer="{Binding HighlightPLayer}"
+                                                  PlayerFontSize="{Binding HighlightPlayerFontSize}">
+            <timingGridControl:TimingGrid.InputBindings>
+                <MouseBinding Command="{Binding OpenSelectedDriversLapsCommand}"
+                                Gesture="LeftDoubleClick" />
+            </timingGridControl:TimingGrid.InputBindings>
+            <timingGridControl:TimingGrid.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel />
+                </ItemsPanelTemplate>
+            </timingGridControl:TimingGrid.ItemsPanel>
+        </timingGridControl:TimingGrid>
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>

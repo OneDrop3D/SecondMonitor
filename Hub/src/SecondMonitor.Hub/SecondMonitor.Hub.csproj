@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <AssemblyName>SecondMonitorHub</AssemblyName>
+    <RootNamespace>SecondMonitor.Hub</RootNamespace>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <ApplicationIcon>$(MSBuildThisFileDirectory)..\..\..\packaging\SecondMonitor.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SecondMonitor.Hub.Core\SecondMonitor.Hub.Core.csproj" />
+  </ItemGroup>
+</Project>

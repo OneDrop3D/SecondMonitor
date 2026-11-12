@@ -1,0 +1,278 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:quantityText="clr-namespace:SecondMonitor.WindowsControls.WPF.QuantityText"
+                    xmlns:wpf="clr-namespace:SecondMonitor.WindowsControls.WPF"
+                    xmlns:viewModel="clr-namespace:SecondMonitor.SimdataManagement.ViewModel;assembly=SimdataManagement">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="TyreCompoundSettingsControl.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+    <DataTemplate DataType="{x:Type viewModel:CarModelPropertiesViewModel}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid Row="0">
+                <Border BorderBrush="{StaticResource DarkGrey01Brush}"
+                                    BorderThickness="2" CornerRadius="3" MinWidth="1000">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="30" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="30" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Margin="10,10,10,10" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource StandardTextBox}"
+                                                IsReadOnly="True"
+                                                BorderThickness="0"
+                                               FontSize="{StaticResource ExtraBigFontSize}"
+                                               Text="{Binding CarName}" TextAlignment="Center" />
+                        <Grid Column="2">
+                            <Button Height="55" HorizontalAlignment="Right"
+                                                Command="{Binding ResetCarSettingsCommand}"
+                                                ToolTip="Reset the car settings to sim default"
+                                                Style="{StaticResource StandardButton}">
+                                <Button.Content>
+                                    <wpf:ColorAbleIcon Margin="5,0,5,0" StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                        <ContentPresenter Content="{StaticResource ResetSettings}" />
+                                    </wpf:ColorAbleIcon>
+                                </Button.Content>
+                            </Button>
+                        </Grid>
+                        <Grid Column="4">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Height="55" HorizontalAlignment="Right"
+                                        Command="{Binding PreviousCarCommand}"
+                                        Style="{StaticResource StandardButton}">
+                                    <Button.Content>
+                                        <wpf:ColorAbleIcon Margin="5,0,5,0" StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                            <ContentPresenter Content="{StaticResource PreviousFrame}" />
+                                        </wpf:ColorAbleIcon>
+                                    </Button.Content>
+                                </Button>
+                                <Grid VerticalAlignment="Center">
+                                        <TextBlock Margin="0,0,0,0" Style="{StaticResource StandardText}" VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center" Text="{Binding CarIndex}"/>
+                                </Grid>
+                                <Button Height="55" HorizontalAlignment="Right"
+                                        Command="{Binding NextCarCommand}"
+                                        Style="{StaticResource StandardButton}">
+                                    <Button.Content>
+                                        <wpf:ColorAbleIcon Margin="5,0,5,0" StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                            <ContentPresenter Content="{StaticResource NextFrame}" />
+                                        </wpf:ColorAbleIcon>
+                                    </Button.Content>
+
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                        
+                        <Grid Column="6">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Height="55" HorizontalAlignment="Right"
+                                                Command="{Binding OkCommand}"
+                                                Style="{StaticResource StandardButton}">
+                                    <Button.Content>
+                                        <wpf:ColorAbleIcon Margin="5,0,5,0" StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                            <ContentPresenter Content="{StaticResource OkIcon}" />
+                                        </wpf:ColorAbleIcon>
+                                    </Button.Content>
+                                </Button>
+                                <Button Height="55" HorizontalAlignment="Right"
+                                                Command="{Binding CancelCommand}"
+                                                Style="{StaticResource StandardButton}">
+                                    <Button.Content>
+                                        <wpf:ColorAbleIcon Margin="5,0,5,0" StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                            <ContentPresenter Content="{StaticResource CancelIcon}" />
+                                        </wpf:ColorAbleIcon>
+                                    </Button.Content>
+
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+            <Grid Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid Grid.Column="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Border BorderBrush="{StaticResource DarkGrey01Brush}" BorderThickness="2">
+                        <Grid>
+                            <StackPanel>
+                                <TextBlock Margin="5,10,5,5" HorizontalAlignment="Center"
+                                           Style="{StaticResource StandardText}"
+                                           FontSize="{StaticResource NormalFontSize}"
+                                           Text="Custom Name:" />
+                                <StackPanel Orientation="Horizontal" Margin="5,0,0,0">
+                                    <TextBox Margin="5,0,5,0" Style="{StaticResource StandardTextBox}"
+                                             VerticalAlignment="Center" Width="300"
+                                             Text="{Binding CarCustomName}"
+                                             ToolTip="Custom name for the car to be used instead of the sim provided name" />
+                                </StackPanel>
+                                <TextBlock Margin="5,10,5,5" HorizontalAlignment="Center"
+                                           Style="{StaticResource StandardText}"
+                                           FontSize="{StaticResource NormalFontSize}"
+                                           Text="Brake Properties:" />
+                                <StackPanel Orientation="Horizontal" Margin="5,0,0,0">
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               FontSize="{StaticResource NormalFontSize}" VerticalAlignment="Center"
+                                               Text="Minimal Ideal Temperature:" />
+                                    <TextBox Margin="5,0,5,0" Style="{StaticResource StandardTextBox}"
+                                             VerticalAlignment="Center"
+                                             Text="{Binding MinimalOptimalBrakeTemperature}"
+                                             ToolTip="Minimal ideal temperature the brakes should be kept for maximum effectiveness." />
+                                    <TextBlock Margin="0,10,5,5" Style="{StaticResource StandardText}"
+                                               FontSize="{StaticResource NormalFontSize}"  VerticalAlignment="Center"
+                                               Text="{Binding TemperatureUnitsSymbol}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="5,0,0,0">
+                                    <TextBlock Style="{StaticResource StandardText}"
+                                               FontSize="{StaticResource NormalFontSize}"  VerticalAlignment="Center"
+                                               Text="Max Ideal Temperature:" />
+                                    <TextBox Margin="5,0,5,0" Style="{StaticResource StandardTextBox}"
+                                             VerticalAlignment="Center"
+                                             Text="{Binding MaximumOptimalBrakeTemperature}"
+                                             ToolTip="Maximum ideal temperature the brakes should be kept for maximum effectiveness." />
+                                    <TextBlock Margin="0,10,5,5" Style="{StaticResource StandardText}"
+                                               FontSize="{StaticResource NormalFontSize}"  VerticalAlignment="Center"
+                                               Text="{Binding TemperatureUnitsSymbol}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border  BorderBrush="{StaticResource DarkGrey01Brush}" BorderThickness="2" Grid.Row="1">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Margin="5,10,5,5" HorizontalAlignment="Center"
+                               Style="{StaticResource StandardText}"
+                               FontSize="{StaticResource NormalFontSize}"
+                               Text="Static Ride Height:" />
+                            <StackPanel Orientation="Horizontal" Margin="5,0,0,0">
+                                <TextBlock Margin="5,10,5,5"
+                                    FontSize="{StaticResource NormalFontSize}"
+                                    Text="Front:" Style="{StaticResource StandardText}" />
+                                <quantityText:DistanceText Margin="5,0,5,0" IsReadonly="False"
+                                   Quantity="{Binding FrontStaticRideHeight}" Foreground="{StaticResource LightGrey01Brush}"
+                                   FontSize="{StaticResource NormalFontSize}"
+                                   ShowUnitSymbol="True"
+                                   DistanceUnits="{Binding DistanceUnits}"
+                                   ToolTip="Static ride height of the front of the car when stationary." />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="5,0,0,0">
+                                <TextBlock Margin="5,10,5,5"
+                                    FontSize="{StaticResource NormalFontSize}"
+                                    Text="Rear:" Style="{StaticResource StandardText}" />
+                                <quantityText:DistanceText Margin="5,0,5,0" IsReadonly="False"
+                                    Quantity="{Binding RearStaticRideHeight}" Foreground="{StaticResource LightGrey01Brush}"
+                                    FontSize="{StaticResource NormalFontSize}"
+                                    ShowUnitSymbol="True"
+                                    DistanceUnits="{Binding DistanceUnits}"
+                                    ToolTip="Static ride height of the rear of the car when stationary." />
+                            </StackPanel>
+                            <TextBlock Margin="5,10,0,5"
+                                       FontSize="{StaticResource NormalFontSize}"
+                                       Text="Select Motion Ratio:" 
+                                       Style="{StaticResource StandardText}" />
+                            <ComboBox x:Name="SuspensionTypeComboBox"
+                                        Margin="5,0,5,0"
+                                        IsEditable="True"
+                                        Style="{StaticResource StandardComboBoxStyle}"
+                                        ItemsSource="{Binding AllMotionRatioOptions}"
+                                        SelectedItem="{Binding SelectedMotionRatio, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        Text="{Binding SelectedMotionRatioText, Mode=TwoWay}"
+                                        DisplayMemberPath="HumanReadableValue"
+                                        IsTextSearchEnabled="True">
+                            </ComboBox>
+                        </StackPanel>
+                    </Border>
+                    <Border  BorderBrush="{StaticResource DarkGrey01Brush}" BorderThickness="2" Grid.Row="2">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Margin="5,10,5,5" Style="{StaticResource StandardText}"
+                                                   FontSize="{StaticResource NormalFontSize}"
+                                                   Text="Wheel Rotation:" />
+                            <TextBox Margin="5,5,5,5" Style="{StaticResource StandardTextBox}" Text="{Binding WheelRotation, Converter={StaticResource IntegerToStringConverter}}" MinWidth="40"
+                                                 ToolTip="Wheel Rotation Range in degrees" />
+                        </StackPanel>
+                    </Border>
+                    <Border BorderBrush="{StaticResource DarkGrey01Brush}" BorderThickness="2" Grid.Row="3">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Vertical" Grid.Column="0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Margin="5,10,5,5"
+                                                           FontSize="{StaticResource NormalFontSize}"
+                                                           Text="Front Wheel Radius:" Style="{StaticResource StandardText}" />
+                                    <quantityText:DistanceText Margin="5,0,5,0" IsReadonly="False"
+                                                                           Quantity="{Binding FrontWheelDiameter}" Foreground="{StaticResource LightGrey01Brush}"
+                                                                           FontSize="{StaticResource NormalFontSize}"
+                                                                           ShowUnitSymbol="True"
+                                                                           DistanceUnits="{Binding DistanceUnits}"
+                                                                           ToolTip="Diameter of the front wheels" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Margin="5,10,5,5"
+                                                           FontSize="{StaticResource NormalFontSize}"
+                                                           Text="Rear Wheel Radius:" Style="{StaticResource StandardText}" />
+                                    <quantityText:DistanceText Margin="5,0,5,0" IsReadonly="False"
+                                                                           Quantity="{Binding RearWheelDiameter}" Foreground="{StaticResource LightGrey01Brush}"
+                                                                           FontSize="{StaticResource NormalFontSize}"
+                                                                           ShowUnitSymbol="True"
+                                                                           DistanceUnits="{Binding DistanceUnits}"
+                                                                           ToolTip="Diameter of the rear wheels" />
+                                </StackPanel>
+                            </StackPanel>
+                            <Button Grid.Column="1" Height="55" HorizontalAlignment="Right"
+                                                Command="{Binding OpenTyreDiameterWizardCommand}"
+                                                Style="{StaticResource StandardButton}" ToolTip="Opens the tyre diameter calculation wizard.">
+                                <Button.Content>
+                                    <wpf:ColorAbleIcon Margin="-2" StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}">
+                                        <ContentPresenter Content="{StaticResource TyreDiameterCalcIcon}" />
+                                    </wpf:ColorAbleIcon>
+                                </Button.Content>
+                            </Button>
+                        </Grid>
+                    </Border>
+                    <StackPanel Grid.Row="4">
+                        <TextBlock Margin="5,10,0,5"
+                                               FontSize="{StaticResource NormalFontSize}"
+                                               Text="Select Tyre:" Style="{StaticResource StandardText}" />
+                        <ComboBox Margin="5,0,5,0"
+                                              ItemsSource="{Binding TyreCompounds}"
+                                              SelectedItem="{Binding SelectedTyreCompound}"
+                                              Style="{StaticResource StandardComboBoxStyle}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource StandardText}" Text="{Binding CompoundName}" />
+                                        <ContentPresenter MaxHeight="15" Margin="5,0,5,0" HorizontalAlignment="Right"
+                                                                      Content="{StaticResource WorldIcon}"
+                                                                      ToolTip="This is global compound. Changing it will change the compound for all cars using this compound."
+                                                                      Visibility="{Binding IsGlobalCompound, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
+                <Grid Grid.Column="1">
+                    <Border BorderBrush="{StaticResource DarkGrey01Brush}" BorderThickness="2">
+                        <ContentPresenter Content="{Binding SelectedTyreCompound}"/>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>

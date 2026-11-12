@@ -1,0 +1,197 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:quantityText="clr-namespace:SecondMonitor.WindowsControls.WPF.QuantityText"
+                    xmlns:trackInfo="clr-namespace:SecondMonitor.ViewModels.TrackInfo;assembly=SecondMonitor.ViewModels"
+                    xmlns:volumeBehavior="clr-namespace:SecondMonitor.WindowsControls.WPF.Behaviors.VolumeBehavior"
+                    xmlns:b="http://schemas.microsoft.com/xaml/behaviors">
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+    <DataTemplate DataType="{x:Type trackInfo:TrackInfoViewModel}">
+        <Border BorderThickness="2" BorderBrush="{StaticResource DarkGrey05Brush}" CornerRadius="3">
+        <Grid Background="{StaticResource Anthracite01Brush}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Grid Grid.Column="0" Margin="10,0,5,5">
+                    <StackPanel VerticalAlignment="Center" Orientation="Vertical" HorizontalAlignment="Center">
+                        <TextBlock Style="{StaticResource StandardText}" FontWeight="Bold"
+                                   Text="{Binding SessionType}"
+                                   Margin="10,5,5,5" VerticalAlignment="Bottom"
+                                   HorizontalAlignment="Right" />
+                        <TextBlock Style="{StaticResource StandardText}" Visibility="{Binding RunningCarsInfo, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
+                                   ToolTip="Number of cars on track."
+                                   Text="{Binding RunningCarsInfo}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                    </StackPanel>
+                </Grid>
+                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource StandardText}" FontWeight="Bold"
+                               Text="{Binding TrackName}"
+                               FontSize="{StaticResource BigFontSize}" Margin="10,5,5,5" VerticalAlignment="Bottom"
+                               HorizontalAlignment="Right" />
+                    <quantityText:DistanceText HorizontalAlignment="Center"
+                                               Foreground="{StaticResource LightGrey01Brush}"
+                                               FontSize="{StaticResource SmallFontSize}"
+                                               Quantity="{Binding LayoutLength}"
+                                               DistanceUnits="{Binding DistanceUnits}"
+                                               ShowUnitSymbol="True" />
+                </StackPanel>
+            </Grid>
+            <Grid Grid.Row="1"
+                  Visibility="{Binding WeatherInfoAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" BorderBrush="{StaticResource DarkGrey05Brush}" CornerRadius="2"
+                        BorderThickness="2">
+                    <DockPanel>
+                        <ContentPresenter Content="{StaticResource AirIcon}" MaxWidth="25" Margin="5,5,0,0"
+                                          VerticalAlignment="Center" DockPanel.Dock="Left" />
+                        <DockPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource StandardText}" FontWeight="Bold"
+                                       Text="{Binding AirTemperatureInfo}"
+                                       FontSize="{StaticResource BigFontSize}" Margin="15,5,5,0"
+                                       VerticalAlignment="Center"
+                                       DockPanel.Dock="Top"/>
+                            <StackPanel Orientation="Horizontal" Margin="15,2,5,5" DockPanel.Dock="Bottom">
+                                <quantityText:TemperatureText HorizontalAlignment="Center"
+                                                              VerticalAlignment="Top"
+                                                              FontSize="{StaticResource SmallFontSize}"
+                                                              Foreground="{StaticResource LightGrey01Brush}"
+                                                              Quantity="{Binding AirFirstTemperatureChange.ActualQuantity, Mode=OneWay}"
+                                                              TemperatureUnits="{Binding TemperatureUnits, Mode=OneWay}"
+                                                              ShowUnitSymbol="True"
+                                                              Style="{StaticResource TemperatureTextScalable}">
+                                    <b:Interaction.Behaviors>
+                                        <volumeBehavior:ForegroundByTemperatureBehavior
+                                            DefaultColor="{StaticResource LightGrey01Color}"
+                                            HighQuantityColor="{StaticResource LightRed01Color}"
+                                            IdealQuantityColor="{StaticResource LightGrey01Color}"
+                                            LowQuantityColor="{StaticResource LowQuantityColor}"
+                                            Volume="{Binding AirFirstTemperatureChange, Mode=OneWay}" />
+                                    </b:Interaction.Behaviors>
+                                </quantityText:TemperatureText>
+                                <TextBlock Style="{StaticResource StandardText}" FontWeight="Bold"
+                                           Text=" / "
+                                           FontSize="{StaticResource SmallFontSize}" 
+                                           VerticalAlignment="Center"
+                                           DockPanel.Dock="Top"/>
+                                <quantityText:TemperatureText HorizontalAlignment="Center"
+                                                              VerticalAlignment="Top"
+                                                              FontSize="{StaticResource SmallFontSize}"
+                                                              Foreground="{StaticResource LightGrey01Brush}"
+                                                              Quantity="{Binding AirSecondTemperatureChange.ActualQuantity, Mode=OneWay}"
+                                                              TemperatureUnits="{Binding TemperatureUnits, Mode=OneWay}"
+                                                              ShowUnitSymbol="True"
+                                                              Style="{StaticResource TemperatureTextScalable}">
+                                    <b:Interaction.Behaviors>
+                                        <volumeBehavior:ForegroundByTemperatureBehavior
+                                            DefaultColor="{StaticResource LightGrey01Color}"
+                                            HighQuantityColor="{StaticResource LightRed01Color}"
+                                            IdealQuantityColor="{StaticResource LightGrey01Color}"
+                                            LowQuantityColor="{StaticResource LowQuantityColor}"
+                                            Volume="{Binding AirSecondTemperatureChange, Mode=OneWay}"
+                                            />
+                                    </b:Interaction.Behaviors>
+                                </quantityText:TemperatureText>
+                            </StackPanel>
+                            <!--<TextBlock Style="{StaticResource StandardText}"
+                                       Text="{Binding AirTemperatureSecondaryInfo}"
+                                       FontSize="{StaticResource SmallFontSize}" Margin="15,2,5,5"
+                                       VerticalAlignment="Center"
+                                       ToolTip="Shows the change in air temperature. Change over last 5 minutes / Change from session start" 
+                                       DockPanel.Dock="Bottom"/>-->
+                        </DockPanel>
+                    </DockPanel>
+                </Border>
+                <Border Grid.Column="1" BorderBrush="{StaticResource DarkGrey05Brush}" CornerRadius="2"
+                        BorderThickness="2">
+                    <DockPanel>
+                        <ContentPresenter Content="{StaticResource RoadIcon}" MaxWidth="25" Margin="5,5,0,0"
+                                          VerticalAlignment="Center" DockPanel.Dock="Left" />
+                        <DockPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource StandardText}" FontWeight="Bold"
+                                       Text="{Binding TrackTemperatureInfo}"
+                                       FontSize="{StaticResource BigFontSize}" Margin="15,5,5,0"
+                                       VerticalAlignment="Center" DockPanel.Dock="Top" />
+                            <StackPanel Orientation="Horizontal" Margin="15,2,5,5" DockPanel.Dock="Bottom">
+                                <quantityText:TemperatureText HorizontalAlignment="Center"
+                                                              VerticalAlignment="Top"
+                                                              FontSize="{StaticResource SmallFontSize}"
+                                                              Foreground="{StaticResource LightGrey01Brush}"
+                                                              Quantity="{Binding TrackFirstTemperatureChange.ActualQuantity, Mode=OneWay}"
+                                                              TemperatureUnits="{Binding TemperatureUnits, Mode=OneWay}"
+                                                              ShowUnitSymbol="True"
+                                                              Style="{StaticResource TemperatureTextScalable}">
+                                    <b:Interaction.Behaviors>
+                                        <volumeBehavior:ForegroundByTemperatureBehavior
+                                            DefaultColor="{StaticResource LightGrey01Color}"
+                                            HighQuantityColor="{StaticResource LightRed01Color}"
+                                            IdealQuantityColor="{StaticResource LightGrey01Color}"
+                                            LowQuantityColor="{StaticResource LowQuantityColor}"
+                                            Volume="{Binding TrackFirstTemperatureChange, Mode=OneWay}"
+                                            />
+                                    </b:Interaction.Behaviors>
+                                </quantityText:TemperatureText>
+                                <TextBlock Style="{StaticResource StandardText}" FontWeight="Bold"
+                                           Text=" / "
+                                           FontSize="{StaticResource SmallFontSize}" 
+                                           VerticalAlignment="Center"
+                                           DockPanel.Dock="Top"/>
+                                <quantityText:TemperatureText HorizontalAlignment="Center"
+                                                              VerticalAlignment="Top"
+                                                              FontSize="{StaticResource SmallFontSize}"
+                                                              Foreground="{StaticResource LightGrey01Brush}"
+                                                              Quantity="{Binding TrackSecondTemperatureChange.ActualQuantity, Mode=OneWay}"
+                                                              TemperatureUnits="{Binding TemperatureUnits, Mode=OneWay}"
+                                                              ShowUnitSymbol="True"
+                                                              Style="{StaticResource TemperatureTextScalable}">
+                                    <b:Interaction.Behaviors>
+                                        <volumeBehavior:ForegroundByTemperatureBehavior
+                                            DefaultColor="{StaticResource LightGrey01Color}"
+                                            HighQuantityColor="{StaticResource LightRed01Color}"
+                                            IdealQuantityColor="{StaticResource LightGrey01Color}"
+                                            LowQuantityColor="{StaticResource LowQuantityColor}"
+                                            Volume="{Binding TrackSecondTemperatureChange, Mode=OneWay}" />
+                                    </b:Interaction.Behaviors>
+                                </quantityText:TemperatureText>
+                            </StackPanel>
+                        </DockPanel>
+                    </DockPanel>
+                </Border>
+                <Border Grid.Column="2" BorderBrush="{StaticResource DarkGrey05Brush}" CornerRadius="2"
+                        BorderThickness="2" MinWidth="120">
+                    <DockPanel>
+                        <ContentPresenter Content="{StaticResource RainIcon}" MaxWidth="25" Margin="5,5,0,0"
+                                          VerticalAlignment="Center" DockPanel.Dock="Left" />
+                        <DockPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource StandardText}" FontWeight="Bold"
+                                       Text="{Binding RainIntensity}"
+                                       FontSize="{StaticResource BigFontSize}" Margin="15,5,5,0"
+                                       VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                                       DockPanel.Dock="Top" />
+                            <TextBlock Style="{StaticResource StandardText}"
+                                       Visibility="{Binding TrackWetness, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
+                                       Text="{Binding TrackWetness}"
+                                       FontSize="{StaticResource SmallFontSize}" Margin="15,2,5,5"
+                                       VerticalAlignment="Center"
+                                       DockPanel.Dock="Bottom"
+                                       ToolTip="Shows the track wetness as reported by sim" />
+                        </DockPanel>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </Grid>
+        </Border>
+    </DataTemplate>
+</ResourceDictionary>

@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    SecondMonitor Collecteur : lit le jeu sur le PC de jeu et envoie les données au hub (Mac), rien d'autre.
+    Réutilise sans copie les connecteurs de SecondMonitor (liens vers les sources), sans interface WPF :
+    un seul petit programme, multiplateforme (Windows, Linux/SteamOS).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>SecondMonitor-Collecteur</AssemblyName>
+    <RootNamespace>SecondMonitor.Collector</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>$(DefineConstants);SM_PORTABLE</DefineConstants>
+    <NoWarn>$(NoWarn);CS0618;CS0108;CS0114;CS0659;CS0661;CS8981;CS0169;CS0414;CS0649;CS0067;CS0168;CS0219;SYSLIB0050;SYSLIB0051;CA1416</NoWarn>
+
+    <!-- Le moins de ressources possible sur le PC de jeu. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+    <ApplicationIcon>$(MSBuildThisFileDirectory)..\..\packaging\SecondMonitor.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\Foundation\DataModel\**\*.cs" Exclude="..\..\Foundation\DataModel\Properties\**;..\..\Foundation\DataModel\obj\**;..\..\Foundation\DataModel\bin\**" LinkBase="Linked\DataModel" />
+    <Compile Include="..\..\Foundation\Contracts\**\*.cs" Exclude="..\..\Foundation\Contracts\Properties\**;..\..\Foundation\Contracts\obj\**;..\..\Foundation\Contracts\bin\**;..\..\Foundation\Contracts\Commands\**;..\..\Foundation\Contracts\NInject\**;..\..\Foundation\Contracts\PerfMon\**" LinkBase="Linked\Contracts" />
+    <Compile Include="..\..\Foundation\PluginsConfiguration\Controller\IPluginSettingsProvider.cs;..\..\Foundation\PluginsConfiguration\DataModel\*.cs" LinkBase="Linked\PluginsConfiguration" />
+    <Compile Include="..\..\Foundation\Connectors\**\*.cs" Exclude="..\..\Foundation\Connectors\Properties\**;..\..\Foundation\Connectors\obj\**;..\..\Foundation\Connectors\bin\**" LinkBase="Linked\Connectors" />
+    <Compile Include="..\..\Connectors\**\*.cs" Exclude="..\..\Connectors\**\Properties\AssemblyInfo.cs;..\..\Connectors\**\obj\**;..\..\Connectors\**\bin\**;..\..\Connectors\**\*Module.cs" LinkBase="Linked\Games" />
+    <Compile Include="..\..\Remote\SecondMonitor.Remote\Models\*.cs" Exclude="..\..\Remote\SecondMonitor.Remote\Models\LiteNetLibHostAddressValidator.cs" LinkBase="Linked\Remote" />
+    <!-- Course de démonstration du hub : l option demo teste la liaison avec le Mac sans lancer de jeu. -->
+    <Compile Include="..\..\Hub\src\SecondMonitor.Hub.Core\Demo\DemoRaceSimulator.cs;..\..\Hub\src\SecondMonitor.Hub.Core\Demo\DemoTrackProfile.cs" LinkBase="Linked\Demo" />
+    <Compile Include="..\..\Remote\SecondMonitor.Remote\PacketCompressionLayer.cs;..\..\Remote\SecondMonitor.Remote\Adapter\*.cs;..\..\Remote\SecondMonitor.Remote\Comparators\*.cs" LinkBase="Linked\Remote" />
+  </ItemGroup>
+
+  <!-- Données incorporées dans les connecteurs (mêmes noms de ressource que dans SecondMonitor). -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\Connectors\ForzaMotorsportConnector\DataModels\ForzaMotorsportCarsTrackWidthKeys.json" LogicalName="SecondMonitor.ForzaMotorsportConnector.DataModels.ForzaMotorsportCarsTrackWidthKeys.json" />
+    <EmbeddedResource Include="..\..\Connectors\ForzaMotorsportConnector\DataModels\ForzaMotorsportCarsKeys.json" LogicalName="SecondMonitor.ForzaMotorsportConnector.DataModels.ForzaMotorsportCarsKeys.json" />
+    <EmbeddedResource Include="..\..\Connectors\ForzaMotorsportConnector\DataModels\ForzaMotorsportTracksKeys.json" LogicalName="SecondMonitor.ForzaMotorsportConnector.DataModels.ForzaMotorsportTracksKeys.json" />
+  </ItemGroup>
+
+  <!-- Plugins que certains jeux doivent recevoir (installés par le connecteur au premier lancement, comme SecondMonitor). -->
+  <ItemGroup>
+    <None Include="..\..\Artifacts\Dependencies\Rfactor2\**" LinkBase="Connectors\RFactor2" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="..\..\Artifacts\Dependencies\RFactor\**" LinkBase="Connectors\RFactor" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="..\..\Artifacts\r3e-data.json" Link="Connectors\R3E\r3e-data.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="..\..\Artifacts\Dependencies\AssettoCorsa\AssettoCorsaPlugin\**" LinkBase="Connectors\AssettoCorsa" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LiteNetLib" />
+    <PackageReference Include="K4os.Compression.LZ4" />
+    <PackageReference Include="protobuf-net" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="NLog" />
+  </ItemGroup>
+</Project>

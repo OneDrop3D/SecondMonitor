@@ -1,0 +1,140 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:layouts="clr-namespace:SecondMonitor.ViewModels.Layouts;assembly=SecondMonitor.ViewModels"
+                    xmlns:dynamicGrid="clr-namespace:SecondMonitor.WindowsControls.WPF.DynamicGrid"
+                    xmlns:editor="clr-namespace:SecondMonitor.ViewModels.Layouts.Editor;assembly=SecondMonitor.ViewModels">
+    <DataTemplate DataType="{x:Type layouts:TwoViewModelsLayout}">
+        <Grid Background="Blue" >
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <ContentPresenter Content="{Binding FirstViewModel}" Grid.Row="0"/>
+            <ContentPresenter Content="{Binding SecondViewModel}" Grid.Row="1"/>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type editor:EmptyViewModel}">
+        <Grid/>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type layouts:ViewModelContainer}">
+       <ContentPresenter Content="{Binding ViewModel}" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type layouts:MultipleColumnsLayout}">
+        <Grid>
+            <dynamicGrid:DynamicDefinedColumnsGrid GridSplitterBackground="{StaticResource DarkGrey01Brush}" IsGridSplitterEnabled="{Binding AddGridSplitters, Mode=OneWay}" ViewModels="{Binding ViewModels}" ColumnsWidth="{Binding ColumnsWidth}"/>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type layouts:MultipleRowsLayout}">
+        <Grid>
+            <dynamicGrid:DynamicDefinedRowsGrid GridSplitterBackground="{StaticResource DarkGrey01Brush}" IsGridSplitterEnabled="{Binding AddGridSplitters, Mode=OneWay}" ViewModels="{Binding ViewModels}" RowsHeight="{Binding RowsHeight}" />
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type layouts:TwoColumnsLayout}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{Binding LeftColumnSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                <ColumnDefinition Width="{Binding RightColumnSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+            </Grid.ColumnDefinitions>
+            <ContentPresenter Content="{Binding LeftColumnViewModel}" Grid.Column="0"/>
+            <ContentPresenter Content="{Binding RightColumnViewModel}" Grid.Column="1"/>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type layouts:ThreeColumnsLayout}">
+        <Border  BorderBrush="{StaticResource Anthracite03Brush}" BorderThickness="2">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{Binding LeftColumnSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                <ColumnDefinition Width="{Binding MiddleColumnSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                <ColumnDefinition Width="{Binding RightColumnSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+            </Grid.ColumnDefinitions>
+            <ContentPresenter Content="{Binding LeftColumnViewModel}" Grid.Column="0"/>
+            <ContentPresenter Content="{Binding MiddleColumnViewModel}" Grid.Column="1"/>
+            <ContentPresenter Content="{Binding RightColumnViewModel}" Grid.Column="2"/>
+        </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type layouts:FourColumnsLayout}">
+        <Border  BorderBrush="{StaticResource Anthracite03Brush}" BorderThickness="2">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="{Binding FirstColumnSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                    <ColumnDefinition Width="{Binding SecondColumnSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                    <ColumnDefinition Width="{Binding ThirdColumnSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                    <ColumnDefinition Width="{Binding FourthColumnSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                </Grid.ColumnDefinitions>
+                <ContentPresenter Content="{Binding FirstColumnViewModel}" Grid.Column="0"/>
+                <ContentPresenter Content="{Binding SecondColumnViewModel}" Grid.Column="1"/>
+                <ContentPresenter Content="{Binding ThirdColumnViewModel}" Grid.Column="2"/>
+                <ContentPresenter Content="{Binding FourthColumnViewModel}" Grid.Column="3"/>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type layouts:TwoRowsLayout}">
+        <Border  BorderBrush="{StaticResource Anthracite03Brush}" BorderThickness="2">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="{Binding TopRowSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                    <RowDefinition Height="{Binding BottomRowSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                </Grid.RowDefinitions>
+                <ContentPresenter Content="{Binding TopRowViewModel}" Grid.Column="0"/>
+                <ContentPresenter Content="{Binding BottomRowViewModel}" Grid.Row="1"/>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type layouts:ThreeRowsLayout}">
+        <Border  BorderBrush="{StaticResource Anthracite03Brush}" BorderThickness="2">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="{Binding TopRowSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                    <RowDefinition Height="{Binding MiddleRowSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                    <RowDefinition Height="{Binding BottomRowSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                </Grid.RowDefinitions>
+                <ContentPresenter Content="{Binding TopRowViewModel}" Grid.Column="0"/>
+                <ContentPresenter Content="{Binding MiddleRowViewModel}" Grid.Row="1"/>
+                <ContentPresenter Content="{Binding BottomRowViewModel}" Grid.Row="2"/>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type layouts:FourRowsLayout}">
+        <Border  BorderBrush="{StaticResource Anthracite03Brush}" BorderThickness="2">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="{Binding FirstRowSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                    <RowDefinition Height="{Binding SecondRowSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                    <RowDefinition Height="{Binding ThirdRowSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                    <RowDefinition Height="{Binding FourthRowSize, Converter={StaticResource SizeDefinitionToSizeConverter}}"/>
+                </Grid.RowDefinitions>
+                <ContentPresenter Content="{Binding FirstRowViewModel}" Grid.Column="0"/>
+                <ContentPresenter Content="{Binding SecondRowViewModel}" Grid.Row="1"/>
+                <ContentPresenter Content="{Binding ThirdRowViewModel}" Grid.Row="2"/>
+                <ContentPresenter Content="{Binding FourthRowViewModel}" Grid.Row="3"/>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type layouts:AutoUpdateViewModelWrapper}">
+        <ContentPresenter Content="{Binding WrappedViewModel}"/>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type layouts:CustomSizeWrapper}">
+        <Grid Width="{Binding Width}" Height="{Binding Height}">
+            <!--<ScrollViewer CanContentScroll="False" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">-->
+                <ContentPresenter Content="{Binding Content}" />
+            <!--</ScrollViewer>-->
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type layouts:ExpanderWrapper}">
+        <Expander ExpandDirection="{Binding ExpandDirection, Converter={StaticResource ExpandDirectionConverter}}" Content="{Binding ViewModel}" IsExpanded="{Binding IsExpanded}" />
+    </DataTemplate>
+</ResourceDictionary>

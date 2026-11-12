@@ -1,0 +1,107 @@
+﻿<Window x:Class="SecondMonitor.Plugins.Remote.View.ServerOverviewWindow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:ViewModels="clr-namespace:SecondMonitor.Plugins.Remote.ViewModels"
+             mc:Ignorable="d"
+             d:DesignHeight="Auto" d:DesignWidth="Auto" Title="Second Monitor Broadcast Server" d:DataContext="{d:DesignInstance ViewModels:ServerOverviewViewModel}" SizeToContent="WidthAndHeight"
+             ResizeMode="NoResize">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="RemoteApplication.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Background="{StaticResource Anthracite01Brush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="200"/>
+            </Grid.ColumnDefinitions>
+            <Grid Column="0" >
+                <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="2" CornerRadius="3" Padding="5">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource StandardText}" Text="Connected Clients:" />
+                        <ItemsControl ItemsSource="{Binding ConnectedClients}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource StandardText}" Text="{Binding IpAddress}" />
+                                        <TextBlock Style="{StaticResource StandardText}" Text=":" />
+                                        <TextBlock Style="{StaticResource StandardText}" Text="{Binding Port}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </Grid>
+            <Grid Column="1" >
+                <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="2" CornerRadius="3" Padding="5">
+                    <StackPanel Orientation="Horizontal" Height="Auto">
+                        <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="2" CornerRadius="3" Padding="5">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource StandardText}" FontSize="{StaticResource BigFontSize}" Text="Clutch:"/>
+                                <TextBlock Style="{StaticResource StandardText}" FontSize="{StaticResource BigFontSize}" HorizontalAlignment="Center" Text="{Binding ClutchInput, Converter={StaticResource DoubleToScalableDecimalsConverter}}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="2" CornerRadius="3" Padding="5">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource StandardText}" FontSize="{StaticResource BigFontSize}" Text="Brake:"/>
+                                <TextBlock Style="{StaticResource StandardText}" FontSize="{StaticResource BigFontSize}" HorizontalAlignment="Center" Text="{Binding BrakeInput, Converter={StaticResource DoubleToScalableDecimalsConverter}}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="2" CornerRadius="3" Padding="5">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource StandardText}" FontSize="{StaticResource BigFontSize}" Text="Throttle:"/>
+                                <TextBlock Style="{StaticResource StandardText}" FontSize="{StaticResource BigFontSize}" HorizontalAlignment="Center" Text="{Binding ThrottleInput, Converter={StaticResource DoubleToScalableDecimalsConverter}}"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
+            <Grid Column="2" >
+                <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="2" CornerRadius="3" Padding="5">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource StandardText}" Text="Server IPs:" />
+                        <ItemsControl ItemsSource="{Binding AvailableIps}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <TextBlock Style="{StaticResource StandardText}" Text="{Binding}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+        <Grid Row="1">
+            <Border BorderBrush="{StaticResource LightGrey01Brush}" BorderThickness="2" CornerRadius="3" Padding="5">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Grid.Column="0">
+                        <TextBlock Style="{StaticResource StandardText}" Text="Connected Simulator:" />
+                        <TextBlock Style="{StaticResource StandardText}" Text="{Binding ConnectedSimulator}" Margin="10,0,0,0" />
+                    </StackPanel>
+                    <Grid Column="1" Width="175" Background="{StaticResource Green01Brush}" Visibility="{Binding IsRunning, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Style="{StaticResource StandardText}" Text="{Binding NetworkStatsViewModel.UploadDownloadSpeed}" />
+                    </Grid>
+                    <Grid Column="1" Width="175" Background="{StaticResource DarkRed01Brush}" Visibility="{Binding IsRunning, Converter={StaticResource InvertedBooleanToVisibilityConverter}}" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,2 @@
+[SecondMonitor]
+LoadMemoryModule=1

@@ -1,0 +1,184 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:viewModels="clr-namespace:SecondMonitor.SimdataManagement.RaceSuggestion.ViewModels;assembly=SimdataManagement"
+                    xmlns:wpf="clr-namespace:SecondMonitor.WindowsControls.WPF">
+    <DataTemplate DataType="{x:Type viewModels:SuggestionsViewModel}">
+        <Border Margin="5" Padding="2" BorderThickness="2" BorderBrush="{StaticResource DarkGrey01Brush}" CornerRadius="5" Background="{StaticResource Anthracite01Brush}">
+        <Grid>
+            <StackPanel Orientation="Vertical">
+                <Button VerticalAlignment="Top" HorizontalAlignment="Right"
+                        Command="{Binding CloseCommand}"
+                        Style="{StaticResource StandardButton}"  Width="32" Height="32"
+                        ToolTip="Closes the Window">
+                    <Button.Content>
+                        <wpf:ColorAbleIcon Margin="-5" StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}" IsHitTestVisible="False">
+                            <ContentPresenter Content="{StaticResource CancelIcon}" />
+                        </wpf:ColorAbleIcon>
+                    </Button.Content>
+                </Button>
+                <TabControl Background="{StaticResource Anthracite01Brush}" TabStripPlacement="Top" Height="500">
+                    <TabItem Background="{StaticResource Anthracite01Brush}">
+                        <TabItem.Header>
+                            <Border BorderThickness="2" BorderBrush="{StaticResource DarkGrey05Brush}">
+                                <Grid Background="{StaticResource Anthracite01Brush}" ToolTip="Random Race">
+                                    <TextBlock Style="{StaticResource StandardText}" FontSize="{StaticResource BigFontSize}" Text="Random Races:" Margin="5,0,10,0" DockPanel.Dock="Left"/>
+                                </Grid>
+                            </Border>
+                        </TabItem.Header>
+                        <ContentPresenter Content="{Binding RacesSuggestionsViewModel}"/>
+                        </TabItem>
+                    <TabItem Background="{StaticResource Anthracite01Brush}">
+                        <TabItem.Header>
+                            <Border BorderThickness="2" BorderBrush="{StaticResource DarkGrey05Brush}">
+                                <Grid Background="{StaticResource Anthracite01Brush}" ToolTip="Random Track">
+                                    <TextBlock Style="{StaticResource StandardText}" FontSize="{StaticResource BigFontSize}" Text="Random Track" Margin="5,0,10,0" DockPanel.Dock="Left"/>
+                                </Grid>
+                            </Border>
+                        </TabItem.Header>
+                        <ContentPresenter Content="{Binding TrackSuggestionViewModel}"/>
+                    </TabItem>
+                </TabControl>
+            </StackPanel>
+        </Grid>
+        </Border>
+    </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewModels:RacesSuggestionsViewModel}">
+        <Border Margin="5" Padding="2" BorderThickness="2" BorderBrush="{StaticResource DarkGrey01Brush}" CornerRadius="5" Background="{StaticResource Anthracite01Brush}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+                <DockPanel LastChildFill="False" Grid.Row="0">
+                    <Button DockPanel.Dock="Left"
+                            Command="{Binding RandomizeCommand}"
+                            Style="{StaticResource StandardButton}"  Width="32" Height="32"
+                            ToolTip="Creates new Random Races:">
+                        <Button.Content>
+                            <wpf:ColorAbleIcon Margin="-5" StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}" IsHitTestVisible="False">
+                                <ContentPresenter Content="{StaticResource RandomIcon}" />
+                            </wpf:ColorAbleIcon>
+                        </Button.Content>
+                    </Button>
+                </DockPanel>
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding RaceSuggestions}" Grid.IsSharedSizeScope="True">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Vertical"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type viewModels:RaceSuggestionViewModel}">
+        <Border Margin="2" Padding="2" BorderThickness="1" BorderBrush="{StaticResource DarkGrey01Brush}" CornerRadius="5" Background="{StaticResource Anthracite01Brush}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="SuggestionSim"/>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="SuggestionCar"/>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="SuggestionClass"/>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="SuggestionTrack"/>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="SuggestionDifficulty"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Grid.Column="0"  Margin="15,0,0,0">
+                    <TextBlock Style="{StaticResource StandardText}" Text="{Binding SimulatorName}" VerticalAlignment="Center"/>
+                    <Button VerticalAlignment="Bottom" HorizontalAlignment="Right" Width="28" Height="28"
+                            Command="{Binding SuggestSimulatorCommand}"
+                            Style="{StaticResource StandardButton}"
+                            ToolTip="Closes the Window">
+                        <Button.Content>
+                            <wpf:ColorAbleIcon Margin="-4" StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}" IsHitTestVisible="False" VerticalAlignment="Bottom">
+                                <ContentPresenter Content="{StaticResource PlusIcon}" />
+                            </wpf:ColorAbleIcon>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Grid.Column="1"  Margin="15,0,0,0">
+                    <TextBlock Style="{StaticResource StandardText}" Text="Car:" FontSize="{StaticResource SmallFontSize}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                    <TextBlock Style="{StaticResource StandardText}" Text="{Binding CarName}" VerticalAlignment="Center"/>
+                    <Button VerticalAlignment="Bottom" HorizontalAlignment="Right" Width="28" Height="28"
+                            Command="{Binding SuggestCarCommand}"
+                            Style="{StaticResource StandardButton}"
+                            ToolTip="Closes the Window">
+                        <Button.Content>
+                            <wpf:ColorAbleIcon Margin="-4" StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}" IsHitTestVisible="False" VerticalAlignment="Bottom">
+                                <ContentPresenter Content="{StaticResource PlusIcon}" />
+                            </wpf:ColorAbleIcon>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Grid.Column="2"  Margin="15,0,0,0">
+                    <TextBlock Style="{StaticResource StandardText}" Text="Class:" FontSize="{StaticResource SmallFontSize}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                    <TextBlock Style="{StaticResource StandardText}"  Text="{Binding CarClassName}" VerticalAlignment="Center"/>
+                    <Button VerticalAlignment="Bottom" HorizontalAlignment="Right" Width="28" Height="28"
+                            Command="{Binding SuggestClassCommand}"
+                            Style="{StaticResource StandardButton}"
+                            ToolTip="Closes the Window">
+                        <Button.Content>
+                            <wpf:ColorAbleIcon Margin="-4" StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}" IsHitTestVisible="False" VerticalAlignment="Bottom">
+                                <ContentPresenter Content="{StaticResource PlusIcon}" />
+                            </wpf:ColorAbleIcon>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Grid.Column="3"  Margin="15,0,0,0">
+                    <TextBlock Style="{StaticResource StandardText}" Text="Track:" FontSize="{StaticResource SmallFontSize}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                    <TextBlock Style="{StaticResource StandardText}"  Text="{Binding TrackName}" VerticalAlignment="Center"/>
+                    <Button VerticalAlignment="Bottom" HorizontalAlignment="Right" Width="28" Height="28"
+                            Command="{Binding SuggestTrackCommand}"
+                            Style="{StaticResource StandardButton}"
+                            ToolTip="Closes the Window">
+                        <Button.Content>
+                            <wpf:ColorAbleIcon Margin="-4" StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}" IsHitTestVisible="False" VerticalAlignment="Bottom">
+                                <ContentPresenter Content="{StaticResource PlusIcon}" />
+                            </wpf:ColorAbleIcon>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Grid.Column="4"  Margin="15,0,0,0" Visibility="{Binding IsDifficultyVisible, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource StandardText}" Text="Diff:" FontSize="{StaticResource SmallFontSize}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                    <TextBlock Style="{StaticResource StandardText}"  Text="{Binding Difficulty}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type viewModels:TrackSuggestionViewModel}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid Row="0" Margin="5">
+                <DockPanel LastChildFill="False">
+                    <TextBlock Style="{StaticResource StandardText}" Text="Simulator :" Margin="0,0,3,0" VerticalAlignment="Center" DockPanel.Dock="Left" />
+                    <ComboBox HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Center" Width="94" DockPanel.Dock="Left"
+                              ItemsSource="{Binding AvailableSims}"
+                              SelectedItem="{Binding SelectedSim}"
+                              Style="{StaticResource StandardComboBoxStyle}" />
+                    <Button DockPanel.Dock="Left"
+                            Command="{Binding RandomizeCommand}"
+                            Style="{StaticResource StandardButton}"  Width="32" Height="32"
+                            ToolTip="Picks another random track">
+                        <Button.Content>
+                            <wpf:ColorAbleIcon Margin="-5" StrokeBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}, Mode=OneWay}" IsHitTestVisible="False">
+                                <ContentPresenter Content="{StaticResource RandomIcon}" />
+                            </wpf:ColorAbleIcon>
+                        </Button.Content>
+                    </Button>
+                </DockPanel>
+            </Grid>
+            <Grid Grid.Row="1" Margin="5">
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Style="{StaticResource StandardText}" Text="{Binding TrackName}" Margin="0,0,3,0" VerticalAlignment="Center" FontSize="{StaticResource BigFontSize}"/>
+                </StackPanel>
+            </Grid>
+            <ContentPresenter Margin="5,10,5,10" Grid.Row="2" Content="{Binding TrackGeometryViewModel}" />
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>

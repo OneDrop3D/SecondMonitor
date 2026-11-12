@@ -1,0 +1,3226 @@
+{
+    "1005": {
+        "FrontTrackWidth": 1.565,
+        "RearTrackWidth": 1.532
+    },
+    "1009": {
+        "FrontTrackWidth": 1.544,
+        "RearTrackWidth": 1.544
+    },
+    "1011": {
+        "FrontTrackWidth": 1.54,
+        "RearTrackWidth": 1.539
+    },
+    "1020": {
+        "FrontTrackWidth": 1.621,
+        "RearTrackWidth": 1.603
+    },
+    "1022": {
+        "FrontTrackWidth": 1.669,
+        "RearTrackWidth": 1.616
+    },
+    "1023": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.545
+    },
+    "1032": {
+        "FrontTrackWidth": 1.59,
+        "RearTrackWidth": 1.59
+    },
+    "1033": {
+        "FrontTrackWidth": 1.542,
+        "RearTrackWidth": 1.539
+    },
+    "1034": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "1040": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.576
+    },
+    "1041": {
+        "FrontTrackWidth": 1.471,
+        "RearTrackWidth": 1.448
+    },
+    "1042": {
+        "FrontTrackWidth": 1.48,
+        "RearTrackWidth": 1.48
+    },
+    "1043": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.515
+    },
+    "1045": {
+        "FrontTrackWidth": 1.542,
+        "RearTrackWidth": 1.565
+    },
+    "1046": {
+        "FrontTrackWidth": 1.565,
+        "RearTrackWidth": 1.539
+    },
+    "1059": {
+        "FrontTrackWidth": 1.485,
+        "RearTrackWidth": 1.52
+    },
+    "1060": {
+        "FrontTrackWidth": 1.53,
+        "RearTrackWidth": 1.54
+    },
+    "1063": {
+        "FrontTrackWidth": 1.59,
+        "RearTrackWidth": 1.6
+    },
+    "1064": {
+        "FrontTrackWidth": 1.52,
+        "RearTrackWidth": 1.52
+    },
+    "1065": {
+        "FrontTrackWidth": 1.52,
+        "RearTrackWidth": 1.52
+    },
+    "1069": {
+        "FrontTrackWidth": 1.613,
+        "RearTrackWidth": 1.588
+    },
+    "1081": {
+        "FrontTrackWidth": 1.59,
+        "RearTrackWidth": 1.58
+    },
+    "1086": {
+        "FrontTrackWidth": 1.586,
+        "RearTrackWidth": 1.587
+    },
+    "1090": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "1093": {
+        "FrontTrackWidth": 1.448,
+        "RearTrackWidth": 1.499
+    },
+    "1104": {
+        "FrontTrackWidth": 1.48,
+        "RearTrackWidth": 1.48
+    },
+    "1105": {
+        "FrontTrackWidth": 1.57,
+        "RearTrackWidth": 1.57
+    },
+    "1110": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "1117": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1124": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1125": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1126": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "1130": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1131": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "1150": {
+        "FrontTrackWidth": 1.59,
+        "RearTrackWidth": 1.59
+    },
+    "1154": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "1155": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1171": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "1173": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1181": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "1184": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1202": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "1216": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1217": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "1219": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1220": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1229": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "1231": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1260": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1267": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1268": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "1269": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "1272": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "1273": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1277": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1278": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "1280": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1281": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1282": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "1290": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "1291": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "1292": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "1293": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "1296": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "1299": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1300": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "1301": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1302": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "1306": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "1309": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.542
+    },
+    "1314": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1317": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "1322": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1323": {
+        "FrontTrackWidth": 1.53,
+        "RearTrackWidth": 1.54
+    },
+    "1325": {
+        "FrontTrackWidth": 1.59,
+        "RearTrackWidth": 1.59
+    },
+    "1328": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1329": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1330": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "1331": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1335": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "1336": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1337": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.542
+    },
+    "1348": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1350": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "1352": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "1354": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "1355": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "1367": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "1368": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "1369": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1370": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1372": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1379": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "1380": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1381": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1382": {
+        "FrontTrackWidth": 1.53,
+        "RearTrackWidth": 1.54
+    },
+    "1383": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1385": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "1386": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "1387": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1388": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "1392": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1393": {
+        "FrontTrackWidth": 1.59,
+        "RearTrackWidth": 1.59
+    },
+    "1395": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "1396": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1403": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "1417": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1418": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "1426": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "1427": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1428": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1429": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "1435": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1440": {
+        "FrontTrackWidth": 1.692,
+        "RearTrackWidth": 1.615
+    },
+    "1451": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1457": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1459": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "1462": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1478": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1480": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "1481": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1482": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1486": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "1487": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1490": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1493": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "1500": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "1510": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "1511": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1513": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1514": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "1517": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "1519": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "1524": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1525": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "1533": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1535": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1536": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1537": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "1539": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1549": {
+        "FrontTrackWidth": 1.59,
+        "RearTrackWidth": 1.59
+    },
+    "1550": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "1551": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "1553": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1559": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "1560": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "1562": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1564": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "1572": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1573": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1574": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1575": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "1578": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "1580": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "1583": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1587": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "1589": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1591": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1592": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "1598": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "1599": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "1607": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1612": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1615": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1619": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "1620": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "1651": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1652": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1653": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1654": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "1655": {
+        "FrontTrackWidth": 1.53,
+        "RearTrackWidth": 1.54
+    },
+    "1658": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "1662": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1663": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1665": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1667": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1668": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "1670": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1671": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "1672": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2003": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2004": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "2005": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2006": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "2007": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "2009": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2010": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2015": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2017": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2018": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "2019": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2024": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2033": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2034": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2038": {
+        "FrontTrackWidth": 1.59,
+        "RearTrackWidth": 1.59
+    },
+    "2040": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2042": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2049": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2051": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2066": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2068": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2069": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "2083": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "2096": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2097": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2103": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "2104": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "2105": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2112": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "2118": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2125": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2126": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2128": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2131": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2133": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "2140": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2142": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2149": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2151": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2154": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "2158": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2160": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2161": {
+        "FrontTrackWidth": 1.59,
+        "RearTrackWidth": 1.59
+    },
+    "2162": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2164": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2165": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2166": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2168": {
+        "FrontTrackWidth": 1.53,
+        "RearTrackWidth": 1.54
+    },
+    "2175": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2177": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "2178": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2179": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2180": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2181": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "2182": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2183": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "2184": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2185": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2186": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2188": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2189": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2193": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "2194": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2203": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2205": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2207": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2209": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "2226": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "2229": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "2235": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2240": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "2255": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "2258": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2262": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2265": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2266": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2267": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "2268": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2269": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "2270": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "2271": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2272": {
+        "FrontTrackWidth": 1.48,
+        "RearTrackWidth": 1.48
+    },
+    "2275": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2289": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2290": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2293": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2298": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2299": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2300": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "2302": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "2312": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2314": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2315": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2333": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2334": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "2352": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2357": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2363": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2368": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "2371": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2379": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2400": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2401": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2403": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2405": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2409": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2412": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "2417": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2421": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2422": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2423": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2426": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2427": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2428": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2430": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2431": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "2434": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "2467": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2468": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "2469": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "247": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "2470": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "2471": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2473": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2474": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2475": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2477": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "2479": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2481": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2482": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "2483": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "2485": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "2486": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2488": {
+        "FrontTrackWidth": 1.48,
+        "RearTrackWidth": 1.48
+    },
+    "2489": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "249": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2493": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "2506": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2507": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "251": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "2512": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "2514": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2523": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "2527": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "2528": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2529": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "253": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2532": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2534": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2535": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2537": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2538": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2541": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2542": {
+        "FrontTrackWidth": 1.59,
+        "RearTrackWidth": 1.59
+    },
+    "2543": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2544": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "2548": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2549": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "255": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2551": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2552": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2559": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2566": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "2568": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2569": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "257": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2574": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2577": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2580": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2581": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2582": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2584": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2585": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2586": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2587": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "260": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "261": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2614": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2616": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2618": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "262": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2624": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2625": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2628": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "263": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2636": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "2647": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "265": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2654": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2656": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "2659": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "266": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2665": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "268": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "269": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2739": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "2740": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2741": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2743": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "2755": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2760": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2774": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2775": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2776": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "278": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2792": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2793": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2794": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2796": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2797": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "2800": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2801": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "2817": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2823": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "2824": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "2826": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2840": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "2844": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2846": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2847": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "2852": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2859": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "286": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "2860": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "2866": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2868": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2869": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "287": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "2870": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2871": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2872": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2874": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "2875": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "289": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "2909": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "291": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2910": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "292": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "295": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "2967": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2968": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "297": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2972": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2973": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2974": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "2976": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2980": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2981": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "2988": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "299": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "2993": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2995": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2996": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "2997": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3000": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3003": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3007": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3018": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3019": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "302": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3023": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3024": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "3028": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3035": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3046": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "306": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3062": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3064": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3071": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3072": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3073": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3079": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3080": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "309": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3091": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "3094": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3112": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3117": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3118": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "312": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3123": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3125": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "3129": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3134": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "314": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3140": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3141": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3149": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "315": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3153": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3154": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3155": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3157": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3158": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "316": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3161": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3163": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3168": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3172": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3173": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3181": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3182": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3185": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "3191": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3195": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3196": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3197": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3198": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "320": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3211": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "3212": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3214": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3215": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3217": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3218": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3225": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3226": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3227": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3228": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3229": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "323": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3231": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3235": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3239": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "324": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3240": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3241": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3243": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3244": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "325": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3250": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3251": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3256": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3257": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "326": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3264": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3266": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3268": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "327": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3270": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3272": {
+        "FrontTrackWidth": 1.53,
+        "RearTrackWidth": 1.54
+    },
+    "3276": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3277": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3278": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3281": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3282": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3283": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3284": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3285": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3286": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3287": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3289": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3292": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "3293": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3298": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "330": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3301": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3307": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3309": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3310": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3311": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3312": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3315": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3316": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3318": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3320": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "333": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3334": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3338": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "335": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3359": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "336": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3360": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3362": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3363": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3364": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "3365": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3366": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3367": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3369": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3371": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3373": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "3374": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "338": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3392": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3395": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "340": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3402": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "3403": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3411": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3412": {
+        "FrontTrackWidth": 1.53,
+        "RearTrackWidth": 1.54
+    },
+    "3413": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3418": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "3419": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "342": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3420": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3427": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3429": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "343": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3434": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3435": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3436": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3437": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3438": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3439": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "344": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3445": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3449": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "345": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3453": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3454": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3457": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3460": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3477": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "348": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3482": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "349": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3490": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3492": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3497": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3498": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3499": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "350": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3506": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3517": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3518": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3520": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3521": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "3523": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3529": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "353": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3530": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3532": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3533": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3534": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3537": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "354": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3541": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3543": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3545": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3546": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3547": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3548": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3549": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3551": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3552": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3554": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3556": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3559": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "357": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "358": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3580": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "3583": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3584": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3590": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3594": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3595": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3597": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3599": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3603": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3606": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3616": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3620": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3622": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3625": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3629": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "363": {
+        "FrontTrackWidth": 1.53,
+        "RearTrackWidth": 1.54
+    },
+    "3631": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "3633": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "364": {
+        "FrontTrackWidth": 1.53,
+        "RearTrackWidth": 1.54
+    },
+    "3644": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3645": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "365": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3650": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3652": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3655": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3657": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3658": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3662": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3667": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3668": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3669": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3672": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3673": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3676": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3677": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3678": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "368": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3681": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "3682": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3686": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3689": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3693": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3696": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3698": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3700": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3706": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3716": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3719": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3720": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3722": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3724": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "3734": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3735": {
+        "FrontTrackWidth": 1.53,
+        "RearTrackWidth": 1.54
+    },
+    "3736": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3737": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "374": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3741": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3742": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3743": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3744": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3745": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3746": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3747": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "375": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3753": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3757": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3759": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3760": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3761": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "3762": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "3763": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3766": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3767": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3771": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3774": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "378": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3781": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3792": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3795": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3798": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "3800": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3801": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3802": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3803": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3804": {
+        "FrontTrackWidth": 1.53,
+        "RearTrackWidth": 1.54
+    },
+    "3807": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3808": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3809": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3810": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3811": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "382": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3823": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "3827": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "383": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3832": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3835": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3836": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3837": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3838": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3846": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3847": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3848": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "3862": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3866": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3867": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3868": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3870": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3874": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3876": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3886": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3888": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3891": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3906": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "391": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3913": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3915": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "3916": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "3919": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "3921": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "3928": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3951": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3953": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "397": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "3972": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "398": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "3993": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "3994": {
+        "FrontTrackWidth": 1.531,
+        "RearTrackWidth": 1.537
+    },
+    "3995": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "4026": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "405": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    },
+    "411": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "412": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "417": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "419": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "420": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "4208": {
+        "FrontTrackWidth": 1.930,
+        "RearTrackWidth": 1.935
+    },
+    "4209": {
+        "FrontTrackWidth": 1.930,
+        "RearTrackWidth": 1.935
+    },
+    "422": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "423": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "424": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "425": {
+        "FrontTrackWidth": 1.455,
+        "RearTrackWidth": 1.46
+    },
+    "428": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "432": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "433": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "439": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "440": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "441": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "444": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "445": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "453": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "455": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "457": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "460": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "461": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "462": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "479": {
+        "FrontTrackWidth": 1.58,
+        "RearTrackWidth": 1.575
+    },
+    "483": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "489": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "498": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "505": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "513": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "524": {
+        "FrontTrackWidth": 1.625,
+        "RearTrackWidth": 1.581
+    },
+    "540": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "550": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "555": {
+        "FrontTrackWidth": 1.51,
+        "RearTrackWidth": 1.49
+    },
+    "565": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "567": {
+        "FrontTrackWidth": 1.495,
+        "RearTrackWidth": 1.498
+    },
+    "568": {
+        "FrontTrackWidth": 1.56,
+        "RearTrackWidth": 1.537
+    },
+    "633": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "634": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "637": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "639": {
+        "FrontTrackWidth": 1.578,
+        "RearTrackWidth": 1.57
+    },
+    "641": {
+        "FrontTrackWidth": 1.55,
+        "RearTrackWidth": 1.55
+    },
+    "642": {
+        "FrontTrackWidth": 1.518,
+        "RearTrackWidth": 1.548
+    },
+    "9007": {
+        "FrontTrackWidth": 1.529,
+        "RearTrackWidth": 1.518
+    }
+}

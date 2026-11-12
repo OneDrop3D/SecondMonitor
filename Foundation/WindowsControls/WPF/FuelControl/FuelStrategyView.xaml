@@ -1,0 +1,278 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:quantityText="clr-namespace:SecondMonitor.WindowsControls.WPF.QuantityText"
+                    xmlns:fuelStatus="clr-namespace:SecondMonitor.ViewModels.CarStatus.FuelStatus;assembly=SecondMonitor.ViewModels"
+                    xmlns:wpf="clr-namespace:SecondMonitor.WindowsControls.WPF"
+                    xmlns:tankToTank="clr-namespace:SecondMonitor.ViewModels.FuelConsumption.FuelStrategy.TankToTank;assembly=SecondMonitor.ViewModels"
+                    xmlns:pitWindow="clr-namespace:SecondMonitor.ViewModels.FuelConsumption.FuelStrategy.PitWindow;assembly=SecondMonitor.ViewModels"
+                    xmlns:stint="clr-namespace:SecondMonitor.ViewModels.FuelConsumption.FuelStrategy.Stint;assembly=SecondMonitor.ViewModels"
+                    xmlns:virtualTankToTank="clr-namespace:SecondMonitor.ViewModels.FuelConsumption.FuelStrategy.VirtualTankToTank;assembly=SecondMonitor.ViewModels"
+                    mc:Ignorable="d">
+    
+    <DataTemplate DataType="{x:Type stint:TimedStintStrategyViewModel }">
+        <Grid Margin="0,10,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}" Text="Max Stint Time (minutes):" VerticalAlignment="Bottom" />
+                <TextBox Margin="10,0,0,10" Style="{StaticResource StandardTextBox}"
+                         Text="{Binding StintDurationMinutes, Converter={StaticResource NonNegativeIntToStringConverter}, UpdateSourceTrigger=PropertyChanged}"
+                         Width="50" VerticalAlignment="Bottom" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Orientation="Horizontal">
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}"
+                           Text="Stint Length:" VerticalAlignment="Bottom" />
+                <ComboBox Style="{StaticResource StandardComboBoxStyle}" SelectedItem="{Binding SelectedStingLength}"
+                          ItemsSource="{Binding AllStintLengthOptions}" Width="150" Margin="20,0,0,10" VerticalAlignment="Bottom" />
+            </StackPanel>
+            <StackPanel Grid.Row="2" Orientation="Horizontal">
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}"
+                           Text="Show As:" VerticalAlignment="Bottom" />
+                <ComboBox Style="{StaticResource StandardComboBoxStyle}" SelectedItem="{Binding SelectedStingPitStopInfo}"
+                          ItemsSource="{Binding AllStintPitStopInfo}" Width="175" Margin="20,0,0,10" VerticalAlignment="Bottom" />
+            </StackPanel>
+            <StackPanel Grid.Row="3" Orientation="Horizontal">
+                <TextBlock Margin="0,0,5,10" Style="{StaticResource StandardText}" Text="{Binding RegularStintCount}" VerticalAlignment="Bottom"/>
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}" Text="{Binding RegularStintMinutes, StringFormat={}Stints. Timed: {0}minutes.}" VerticalAlignment="Bottom"/>
+                <quantityText:VolumeQuantityText HorizontalAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left" VerticalContentAlignment="Bottom"
+                                                 Margin="20,0,0,10"
+                                                 FontSize="{StaticResource BigFontSize}"
+                                                 Foreground="{StaticResource LightGrey01Brush}"
+                                                 Quantity="{Binding RegularStintRequiresFuel}"
+                                                 DecimalPlaces="{Binding DisplaySettingsViewModel.VolumeUnits, Converter={StaticResource VolumeUnitToDecimalPlacesConverterDefault}}"
+                                                 Style="{StaticResource VolumeQuantityNoDecimalScaling}"
+                                                 VolumeUnits="{Binding DisplaySettingsViewModel.VolumeUnits, Mode=OneWay}"
+                                                 ShowUnitSymbol="True" />
+                <TextBlock Margin="5,0,0,10" Style="{StaticResource StandardText}" Text="{Binding RegularStintLaps, StringFormat={}({0} Laps)}" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Grid.Row="4" Visibility="{Binding ShowLastStintInfo, Converter={StaticResource BooleanToVisibilityConverter}}" Orientation="Horizontal">
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}" Text="{Binding LastStintMinutes, StringFormat={}Last Stint: {0}minutes}" VerticalAlignment="Bottom"/>
+                <quantityText:VolumeQuantityText HorizontalAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left" VerticalContentAlignment="Bottom"
+                                                 Margin="20,0,0,10"
+                                                 FontSize="{StaticResource BigFontSize}"
+                                                 Foreground="{StaticResource LightGrey01Brush}"
+                                                 Quantity="{Binding LastStintFuel}"
+                                                 DecimalPlaces="{Binding DisplaySettingsViewModel.VolumeUnits, Converter={StaticResource VolumeUnitToDecimalPlacesConverterDefault}}"
+                                                 Style="{StaticResource VolumeQuantityNoDecimalScaling}"
+                                                 VolumeUnits="{Binding DisplaySettingsViewModel.VolumeUnits, Mode=OneWay}"
+                                                 ShowUnitSymbol="True" />
+                <TextBlock Margin="5,0,0,10" Style="{StaticResource StandardText}" Text="{Binding LastStintLaps, StringFormat={}({0} Laps)}" VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
+
+    <DataTemplate DataType="{x:Type tankToTank:TankToTankViewModel }">
+        <Grid Margin="0,10,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}" Text="Starting Fuel:" VerticalAlignment="Bottom" />
+                <ComboBox Style="{StaticResource StandardComboBoxStyle}" SelectedItem="{Binding StartFuel}"
+                          ItemsSource="{Binding AllStartFuelOptions}" Width="120" Margin="20,0,0,10" VerticalAlignment="Bottom" />
+                <TextBox Margin="10,0,0,10" Style="{StaticResource StandardTextBox}"
+                         Text="{Binding CustomStartingFuel, Converter={StaticResource DoubleToScalableDecimalsConverter}, UpdateSourceTrigger=PropertyChanged}"
+                         Visibility="{Binding IsCustomFuelVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                         Width="50"
+                         VerticalAlignment="Bottom" />
+                <quantityText:VolumeQuantityText HorizontalAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"
+                                              Margin="10,0,0,10"
+                                              Visibility="{Binding IsCustomFuelVisible, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                              FontSize="{StaticResource BigFontSize}"
+                                              Foreground="{StaticResource LightGrey01Brush}"
+                                              Quantity="{Binding AutomaticFuelVolume}"
+                                              DecimalPlaces="{Binding DisplaySettingsViewModel.VolumeUnits, Converter={StaticResource VolumeUnitToDecimalPlacesConverterDefault}}"
+                                              Style="{StaticResource VolumeQuantityNoDecimalScaling}"
+                                              VolumeUnits="{Binding DisplaySettingsViewModel.VolumeUnits, Mode=OneWay}"
+                                              ShowUnitSymbol="True" />
+                <TextBlock Margin="5,0,0,10" Style="{StaticResource StandardText}" Text="{Binding StartFuelLaps, StringFormat={}({0} Laps)}" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Orientation="Horizontal">
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}"
+                           Text="Stint Length:" VerticalAlignment="Bottom" />
+                <ComboBox Style="{StaticResource StandardComboBoxStyle}" SelectedItem="{Binding StintLength}"
+                          ItemsSource="{Binding AllStintLengthOptions}" Width="150" Margin="20,0,0,10" VerticalAlignment="Bottom" />
+            </StackPanel>
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Visibility="{Binding IsPitStopRequired, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}" Text="{Binding PitStopCount, StringFormat={}Pit Stops: {0}}" VerticalAlignment="Center" />
+                <TextBlock Margin="10,0,0,10" Style="{StaticResource StandardText}" Text="{Binding StopDescription}" VerticalAlignment="Center" />
+                <quantityText:VolumeQuantityText VerticalAlignment="Center" DockPanel.Dock="Left"
+                                                 Margin="2,0,0,10"
+                                                 FontSize="{StaticResource BigFontSize}"
+                                                 Foreground="{StaticResource LightGrey01Brush}"
+                                                 Quantity="{Binding PitStopVolume}"
+                                                 DecimalPlaces="{Binding DisplaySettingsViewModel.VolumeUnits, Converter={StaticResource VolumeUnitToDecimalPlacesConverterDefault}}"
+                                                 Style="{StaticResource VolumeQuantityNoDecimalScaling}"
+                                                 VolumeUnits="{Binding DisplaySettingsViewModel.VolumeUnits, Mode=OneWay}"
+                                                 ShowUnitSymbol="True" />
+                <TextBlock Margin="5,0,0,10" Style="{StaticResource StandardText}" Text="{Binding PitStopLapCount, StringFormat={}({0} Laps)}" VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+    
+    <DataTemplate DataType="{x:Type virtualTankToTank:VirtualTankToTankViewModel }">
+        <Grid Margin="0,10,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}" Text="Starting VE (%):" VerticalAlignment="Bottom" />
+                <ComboBox Style="{StaticResource StandardComboBoxStyle}" SelectedItem="{Binding StartFuel}"
+                          ItemsSource="{Binding AllStartFuelOptions}" Width="120" Margin="20,0,0,10" VerticalAlignment="Bottom" />
+                <TextBox Margin="10,0,0,10" Style="{StaticResource StandardTextBox}"
+                         Text="{Binding CustomVirtualEnergy, Converter={StaticResource DoubleToScalableDecimalsConverter}, UpdateSourceTrigger=PropertyChanged}"
+                         Visibility="{Binding IsCustomFuelVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                         Width="50"
+                         VerticalAlignment="Bottom" />
+                <quantityText:VolumeQuantityText HorizontalAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"
+                                                 Margin="5,0,0,10"
+                                                 Visibility="{Binding IsCustomFuelVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                 Foreground="{StaticResource LightGrey01Brush}"
+                                                 Quantity="{Binding CustomStartingFuel}"
+                                                 DecimalPlaces="{Binding DisplaySettingsViewModel.VolumeUnits, Converter={StaticResource VolumeUnitToDecimalPlacesConverterDefault}}"
+                                                 Style="{StaticResource VolumeQuantityNoDecimalScaling}"
+                                                 VolumeUnits="{Binding DisplaySettingsViewModel.VolumeUnits, Mode=OneWay}"
+                                                 ShowUnitSymbol="True" />
+                <TextBlock Visibility="{Binding IsCustomFuelVisible, Converter={StaticResource InverseBooleanToVisibilityConverter}}" FontSize="{StaticResource BigFontSize}" Margin="5,0,0,10" Style="{StaticResource StandardText}" Text="{Binding AutomaticVirtualEnergyPercentage, StringFormat={}VE: {0}% / }" VerticalAlignment="Center" />
+                <quantityText:VolumeQuantityText HorizontalAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"
+                                              Margin="10,0,0,10"
+                                              Visibility="{Binding IsCustomFuelVisible, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                              FontSize="{StaticResource BigFontSize}"
+                                              Foreground="{StaticResource LightGrey01Brush}"
+                                              Quantity="{Binding AutomaticFuelVolume}"
+                                              DecimalPlaces="{Binding DisplaySettingsViewModel.VolumeUnits, Converter={StaticResource VolumeUnitToDecimalPlacesConverterDefault}}"
+                                              Style="{StaticResource VolumeQuantityNoDecimalScaling}"
+                                              VolumeUnits="{Binding DisplaySettingsViewModel.VolumeUnits, Mode=OneWay}"
+                                              ShowUnitSymbol="True" />
+                <TextBlock Margin="5,0,0,10" Style="{StaticResource StandardText}" Text="{Binding StartFuelLaps, StringFormat={}({0} Laps)}" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Orientation="Horizontal">
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}"
+                           Text="Stint Length:" VerticalAlignment="Bottom" />
+                <ComboBox Style="{StaticResource StandardComboBoxStyle}" SelectedItem="{Binding StintLength}"
+                          ItemsSource="{Binding AllStintLengthOptions}" Width="150" Margin="20,0,0,10" VerticalAlignment="Bottom" />
+            </StackPanel>
+            <StackPanel Grid.Row="2" Orientation="Horizontal">
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}"
+                           Text="Show As:" VerticalAlignment="Bottom" />
+                <ComboBox Style="{StaticResource StandardComboBoxStyle}" SelectedItem="{Binding SelectedPitStopInfo}"
+                          ItemsSource="{Binding AllPitStopInfos}" Width="175" Margin="20,0,0,10" VerticalAlignment="Bottom" />
+            </StackPanel>
+            <StackPanel Grid.Row="3" Orientation="Horizontal" Visibility="{Binding IsPitStopRequired, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}" Text="{Binding PitStopCount, StringFormat={}Pit Stops: {0}}" VerticalAlignment="Center" />
+                <TextBlock Margin="10,0,0,10" Style="{StaticResource StandardText}" Text="{Binding StopDescription}" VerticalAlignment="Center" />
+                <TextBlock Margin="5,0,0,10" Style="{StaticResource StandardText}" FontSize="{StaticResource BigFontSize}" Text="{Binding PitStopVolumeLabel}" VerticalAlignment="Center" />
+                <TextBlock Margin="5,0,0,10" Style="{StaticResource StandardText}" Text="{Binding PitStopLapCount, StringFormat={}({0} Laps)}" VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pitWindow:PitWindowStrategyViewModel }">
+        <Grid Margin="0,10,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}" Text="Starting Fuel:" VerticalAlignment="Bottom" />
+                <ComboBox Style="{StaticResource StandardComboBoxStyle}" SelectedItem="{Binding StartFuel}"
+                   ItemsSource="{Binding AllStartFuelOptions}" Width="120" Margin="20,0,0,10" VerticalAlignment="Bottom" />
+                <TextBox Margin="10,0,0,10" Style="{StaticResource StandardTextBox}"
+                  Text="{Binding StartFuelCustom, Converter={StaticResource DoubleToScalableDecimalsConverter}, UpdateSourceTrigger=PropertyChanged}"
+                  Visibility="{Binding IsStartFuelFuelCustomVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                  Width="50"
+                  VerticalAlignment="Bottom" />
+                <quantityText:VolumeQuantityText HorizontalAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"
+                                       Margin="10,0,0,10"
+                                       Visibility="{Binding IsCustomFuelVisible, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                       FontSize="{StaticResource BigFontSize}"
+                                       Foreground="{StaticResource LightGrey01Brush}"
+                                       Quantity="{Binding AutomaticStartFuelVolume}"
+                                       DecimalPlaces="{Binding DisplaySettingsViewModel.VolumeUnits, Converter={StaticResource VolumeUnitToDecimalPlacesConverterDefault}}"
+                                       Style="{StaticResource VolumeQuantityNoDecimalScaling}"
+                                       VolumeUnits="{Binding DisplaySettingsViewModel.VolumeUnits, Mode=OneWay}"
+                                       ShowUnitSymbol="True" />
+                <TextBlock Margin="5,0,0,10" Style="{StaticResource StandardText}" Text="{Binding StartFuelMinutes, StringFormat={}({0} min)}" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" >
+                <CheckBox IsChecked="{Binding IsRefuelingAllowed}" Content="Is Refueling Allowed" Foreground="{StaticResource LightGrey01Brush}" Margin="5,10,0,10" VerticalAlignment="Bottom"/>
+                <StackPanel Orientation="Horizontal" Visibility="{Binding IsRefuelingAllowed, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Margin="20,0,0,10" Style="{StaticResource StandardText}" Text="Pit"
+                               VerticalAlignment="Bottom" />
+                    <TextBox Margin="5,0,0,10" Style="{StaticResource StandardTextBox}"
+                             Text="{Binding PitWindowPercentage, Converter={StaticResource NonNegativeIntToStringConverter}, UpdateSourceTrigger=PropertyChanged}"
+                             Width="50"
+                             VerticalAlignment="Bottom" />
+                    <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}" Text="% into Pit Window"
+                               VerticalAlignment="Bottom" />
+                </StackPanel>
+            </StackPanel>
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Visibility="{Binding IsRefuelingAllowed, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}" Text="Pit Stop Fuel:" VerticalAlignment="Bottom" />
+                <ComboBox Style="{StaticResource StandardComboBoxStyle}" SelectedItem="{Binding PitWindowFuel}"
+                          ItemsSource="{Binding AllStartFuelOptions}" Width="120" Margin="20,0,0,10" VerticalAlignment="Bottom" />
+                <TextBox Margin="10,0,0,10" Style="{StaticResource StandardTextBox}"
+                         Text="{Binding PitWindowFuelCustom, Converter={StaticResource DoubleToScalableDecimalsConverter}, UpdateSourceTrigger=PropertyChanged}"
+                         Visibility="{Binding IsPitWindowFuelCustomVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                         Width="50"
+                         VerticalAlignment="Bottom" />
+                <quantityText:VolumeQuantityText HorizontalAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"
+                                                 Margin="10,0,0,10"
+                                                 Visibility="{Binding IsPitWindowFuelCustomVisible, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                                 FontSize="{StaticResource BigFontSize}"
+                                                 Foreground="{StaticResource LightGrey01Brush}"
+                                                 Quantity="{Binding AutomaticPitFuelVolume}"
+                                                 DecimalPlaces="{Binding DisplaySettingsViewModel.VolumeUnits, Converter={StaticResource VolumeUnitToDecimalPlacesConverterDefault}}"
+                                                 Style="{StaticResource VolumeQuantityNoDecimalScaling}"
+                                                 VolumeUnits="{Binding DisplaySettingsViewModel.VolumeUnits, Mode=OneWay}"
+                                                 ShowUnitSymbol="True" />
+                <TextBlock Margin="5,0,0,10" Style="{StaticResource StandardText}" Text="{Binding PitFuelMinutes, StringFormat={}({0} min)}" VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type fuelStatus:FuelStrategiesViewModel}">
+        <Border BorderThickness="2" BorderBrush="{StaticResource DarkGrey01Brush}" CornerRadius="2" Padding="5">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Margin="0,0,0,10" Style="{StaticResource StandardText}"
+                               FontSize="{StaticResource BigFontSize}" Text="Race Strategy:" VerticalAlignment="Bottom" />
+                    <ComboBox Style="{StaticResource StandardComboBoxStyle}" SelectedItem="{Binding SelectedStrategy}"
+                              ItemsSource="{Binding SelectableStrategies}" Width="150" Margin="20,0,0,10" VerticalAlignment="Bottom" />
+                </StackPanel>
+                <ContentPresenter Grid.Row="1" Content="{Binding SelectedStrategy.Value.StrategyViewModel}"/>
+                <StackPanel Grid.Row="2" Orientation="Horizontal">
+                    <wpf:ColorAbleIcon Margin="5,0,5,0" StrokeBrush="{StaticResource IconOkBrush}" Height="32"
+                                       Visibility="{Binding SelectedStrategy.Value.StrategyViewModel.IsStrategyValid, Converter={StaticResource BooleanToVisibilityConverter}}" RebindOnVisibilityChange="True">
+                        <ContentPresenter Content="{StaticResource OkIcon}" />
+                    </wpf:ColorAbleIcon>
+                    <wpf:ColorAbleIcon Margin="5,0,5,0" StrokeBrush="{StaticResource IconErrorBrush}" Height="32"
+                                       Visibility="{Binding SelectedStrategy.Value.StrategyViewModel.IsStrategyValid, Converter={StaticResource InverseBooleanToVisibilityConverter}}" RebindOnVisibilityChange="True">
+                        <ContentPresenter Content="{StaticResource CancelIcon}" />
+                    </wpf:ColorAbleIcon>
+                    <TextBlock Margin="0,0,0,0" Style="{StaticResource StandardText}" Text="{Binding SelectedStrategy.Value.StrategyViewModel.StrategyRemark}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </DataTemplate>
+</ResourceDictionary>

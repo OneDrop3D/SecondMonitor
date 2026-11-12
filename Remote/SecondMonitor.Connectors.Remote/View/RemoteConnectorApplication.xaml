@@ -1,0 +1,14 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:View="clr-namespace:SecondMonitor.Connectors.Remote.View" >
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/WindowsControls;component/WPF/CommonResources.xaml"/>
+        <ResourceDictionary Source="pack://application:,,,/WindowsControls;component/WPF/ButtonStyles.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+    <View:ConnectionStateToColorConverter x:Key="ConnectionStateToColourConverter"
+                                          ConnectedColor="{StaticResource Green01Color}"
+                                          DisconnectedColor="{StaticResource DarkRed01Color}"
+                                          ConnectingColor="{StaticResource Green02Color}"
+                                          DisconnectingColor="{StaticResource LightRed02Color}"/>
+
+</ResourceDictionary>

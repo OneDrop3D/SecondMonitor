@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="fond" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d2b44"/>
+      <stop offset="1" stop-color="#0b0f17"/>
+    </linearGradient>
+    <linearGradient id="trait" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3987e5"/>
+      <stop offset="1" stop-color="#5fb0ff"/>
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#fond)"/>
+  <!-- tracé de circuit -->
+  <path d="M250 640 C250 470 330 420 430 430 C530 440 560 360 640 330 C730 300 790 360 770 450 C750 540 650 560 640 640 C630 720 560 760 470 750 C380 740 250 760 250 640 Z"
+        fill="none" stroke="#2c3a52" stroke-width="54" stroke-linejoin="round"/>
+  <path d="M250 640 C250 470 330 420 430 430 C530 440 560 360 640 330 C730 300 790 360 770 450 C750 540 650 560 640 640 C630 720 560 760 470 750 C380 740 250 760 250 640 Z"
+        fill="none" stroke="url(#trait)" stroke-width="18" stroke-linejoin="round"/>
+  <circle cx="640" cy="330" r="34" fill="#e0533f" stroke="#0b0f17" stroke-width="12"/>
+  <!-- ondes radio -->
+  <path d="M770 200 a90 90 0 0 1 90 90" fill="none" stroke="#5fb0ff" stroke-width="22" stroke-linecap="round"/>
+  <path d="M770 140 a150 150 0 0 1 150 150" fill="none" stroke="#5fb0ff" stroke-width="22" stroke-linecap="round" opacity="0.55"/>
+  <text x="512" y="900" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="120" font-weight="800" fill="#f0efec" letter-spacing="4">SM</text>
+</svg>

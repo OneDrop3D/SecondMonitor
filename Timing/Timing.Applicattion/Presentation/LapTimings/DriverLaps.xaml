@@ -1,0 +1,183 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+                    xmlns:behaviors="clr-namespace:SecondMonitor.WindowsControls.WPF.Behaviors;assembly=WindowsControls"
+                    xmlns:viewModel="clr-namespace:SecondMonitor.Timing.Application.LapTimings.ViewModel"
+                    xmlns:b="http://schemas.microsoft.com/xaml/behaviors">
+    <DataTemplate DataType="{x:Type viewModel:DriverLapsViewModel}">
+        <Grid Background="{StaticResource Anthracite01Brush}" MaxHeight="600" >
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Style="{StaticResource StandardText}" Text="{Binding Path=DriverName}" VerticalAlignment="Top" Margin="10" Height="31" Foreground="{StaticResource LightGrey01Brush}" FontSize="18" HorizontalAlignment="Center"/>
+        <DataGrid Grid.Row="1" x:Name="LapsGrid" Margin="10,5,10,10" VerticalAlignment="Stretch" FontSize="18" Foreground="{StaticResource LightGrey01Brush}" Background="{StaticResource Anthracite05Brush}" ItemsSource="{Binding Laps}" HeadersVisibility="Column" AutoGenerateColumns="False"
+                  IsReadOnly="True" SelectionMode="Single" SelectionUnit="FullRow">
+            <DataGrid.Resources>
+            <Style TargetType="{x:Type DataGridColumnHeader}">
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Foreground" Value="{StaticResource LightGrey01Brush}"/>
+                <Setter Property="Background" Value="Blue" />
+                <Setter Property="BorderBrush"  Value="{StaticResource LightGrey01Brush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+            </Style>
+                <Style x:Key="TextBoxStyleSector1" TargetType="TextBlock">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsSector1PersonalBest}" Value="True">
+                            <Setter Property="Background" Value="{StaticResource Green01Brush}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsSector1ClassBest}" Value="True">
+                            <Setter Property="Background" Value="{StaticResource PurpleClassTimingBrush}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsSector1SessionBest}" Value="True">
+                            <Setter Property="Background" Value="{StaticResource PurpleTimingBrush}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+                <Style x:Key="TextBoxStyleSector2" TargetType="TextBlock">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsSector2PersonalBest}" Value="True">
+                            <Setter Property="Background" Value="{StaticResource Green01Brush}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsSector2ClassBest}" Value="True">
+                            <Setter Property="Background" Value="{StaticResource PurpleClassTimingBrush}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsSector2SessionBest}" Value="True">
+                            <Setter Property="Background" Value="{StaticResource PurpleTimingBrush}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+                <Style x:Key="TextBoxStyleSector3" TargetType="TextBlock">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsSector3PersonalBest}" Value="True">
+                            <Setter Property="Background" Value="{StaticResource Green01Brush}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsSector3ClassBest}" Value="True">
+                            <Setter Property="Background" Value="{StaticResource PurpleClassTimingBrush}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsSector3SessionBest}" Value="True">
+                            <Setter Property="Background" Value="{StaticResource PurpleTimingBrush}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+                <Style x:Key="TextBoxStyleLap" TargetType="TextBlock">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsLapValid}" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource LightGrey01Brush}"/>
+                            <Setter Property="Background" Value="#FFBD073B"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsLapBestClassLap}" Value="True">
+                            <Setter Property="Background" Value="{StaticResource PurpleClassTimingBrush}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsLapBestPersonalLap}" Value="True">
+                            <Setter Property="Background" Value="{StaticResource Green01Brush}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsLapBestSessionLap}" Value="True">
+                            <Setter Property="Background" Value="{StaticResource PurpleTimingBrush}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.Resources>
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Width="20">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Grid ToolTip="Tyre Compound" Background="{Binding StartOfLapTyres, Converter={StaticResource TyreCompoundToBrushConverter}}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Binding="{Binding LapNumber, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                                       Width= "60"
+                                                                                       Header="Lap #"/>
+                <DataGridTextColumn Binding="{Binding StartOfLapPosition, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Width= "90"
+                                    Header="Pos"/>
+                <DataGridTextColumn Binding="{Binding Sector1, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Width= "90"
+                                    Header="S1"
+                                    ElementStyle="{StaticResource TextBoxStyleSector1}"/>
+                <DataGridTextColumn Binding="{Binding Sector2, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Width= "90"
+                                    Header="S2"
+                                    ElementStyle="{StaticResource TextBoxStyleSector2}"/>
+                <DataGridTextColumn Binding="{Binding Sector3, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Width= "90"
+                                    Header="S3"
+                                    ElementStyle="{StaticResource TextBoxStyleSector3}"/>
+                <DataGridTextColumn Binding="{Binding LapTime, UpdateSourceTrigger=PropertyChanged}"
+                                    Width= "140"
+                                    Header="Time"
+                                    ElementStyle="{StaticResource TextBoxStyleLap}"/>
+                <DataGridTextColumn Binding="{Binding BestPersonalDelta, UpdateSourceTrigger=PropertyChanged}"
+                                    Width= "90"
+                                    Header="Δ Pers."/>
+                <DataGridTextColumn Binding="{Binding BestLapDelta, UpdateSourceTrigger=PropertyChanged}"
+                                    Width= "90"
+                                    Header="Δ Best"/>
+                <DataGridTextColumn Binding="{Binding StartOfLapTyreWear, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Width= "90"
+                                    Header="TWI"/>
+                <DataGridTextColumn Binding="{Binding StartOfLapFuelLoad, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Width= "90"
+                                    Header="Fuel"/>
+                <DataGridTextColumn Binding="{Binding PitInfo, UpdateSourceTrigger=PropertyChanged}"
+                                    Width= "90"
+                                    Header="Pit Stop"/>
+                </DataGrid.Columns>
+            <DataGrid.ItemContainerStyle>
+                <Style TargetType="{x:Type DataGridRow}">
+                    <Setter Property="Background" Value="{StaticResource BlackBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource GrayBrush}" />
+                    <Setter Property="BorderThickness" Value="0.5" />
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="{StaticResource BlackBrush}" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.ItemContainerStyle>
+            <b:Interaction.Behaviors>
+                <behaviors:ScrollToLastBehavior/>
+            </b:Interaction.Behaviors>
+        </DataGrid>
+        <DockPanel LastChildFill="False" Grid.Row="2" Margin="10"
+              Background="{StaticResource Anthracite01Brush}">
+            <ContentPresenter Content="{Binding RatingViewModel}" DockPanel.Dock="Left" />
+
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Visibility="{Binding IsPlayer, Mode=OneWay, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                <CheckBox Margin="5" VerticalAlignment="Center"
+                          Foreground="{StaticResource LightGrey01Brush}"
+                          IsChecked="{Binding HasCustomOutline, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <TextBlock FontSize="{StaticResource SmallFontSize}" Text="Enable Custom Outline" />
+                </CheckBox>
+                <Grid Width="20" Height="30" Margin="5,0,0,0"
+                      Background="{Binding OutLineColor, Converter={StaticResource ColorDtoToSolidBrushConverter}, Mode=OneWay}" />
+
+                <xctk:ColorPicker Width="15" Height="15" Margin="2" SelectedColor="{Binding OutLineColor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource ColorDtoToColorConverter}}" />
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type viewModel:RatingViewModel}">
+        <Border BorderThickness="1" BorderBrush="{StaticResource DarkGrey01Brush}" Visibility="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}" Padding="5">
+            <StackPanel Orientation="Vertical" >
+                <TextBlock Style="{StaticResource StandardText}" FontSize="{StaticResource BigFontSize}" Text="Rating Info:"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource StandardText}" Text="Rating:" Margin="0,5,5,0"/>
+                    <TextBlock Style="{StaticResource StandardText}" Text="{Binding Rating}" Margin="0,5,5,0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource StandardText}" Text="Reputation:" Margin="0,2,5,0"/>
+                    <TextBlock Style="{StaticResource StandardText}" Text="{Binding Reputation, Converter={StaticResource DoubleToScalableDecimalsConverter }}" Margin="0,2,5,0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource StandardText}" Text="Total Races:" Margin="0,2,5,0"/>
+                    <TextBlock Style="{StaticResource StandardText}" Text="{Binding RacesCompleted}" Margin="0,2,5,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </DataTemplate>
+</ResourceDictionary>
