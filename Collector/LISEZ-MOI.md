@@ -18,6 +18,8 @@ Dans la fenêtre :
 - *Lancer avec Windows* : démarrage automatique, fenêtre réduite ;
 - *Démonstration* : envoie une course fictive pour tester la liaison sans jeu.
 
+- *Bouton radio* : choisissez une touche du clavier ou un bouton du volant de ce PC. Un appui démarre ou envoie la dictée de l'ingénieur IA sur SecondMonitor, ou le coupe s'il parle. Il fonctionne même quand le jeu est au premier plan.
+
 Sans fenêtre (serveur, script) : `SecondMonitor-Collecteur.exe --sans-fenetre`.
 
 > Le SecondMonitor complet et le collecteur utilisent le même port (52642) : n'en lancez qu'un des deux à la fois.

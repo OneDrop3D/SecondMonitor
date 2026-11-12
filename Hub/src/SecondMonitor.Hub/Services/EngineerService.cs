@@ -19,7 +19,21 @@ public sealed class EngineerService
         "Si l'information manque, dis simplement « Je n'ai pas cette information pour le moment ». " +
         "Le classement qui compte est celui de la catégorie du pilote ; les autres catégories ne sont que du trafic. " +
         "« Rentrer », « box » ou « stand » signifient l'arrêt au stand, pas la fin de la course. " +
-        "Tiens compte de la mémoire de course (retours du pilote). Pas de liste, pas d'emoji, pas de markdown.";
+        "Tiens compte de la mémoire de course (retours du pilote). Pas de liste, pas d'emoji, pas de markdown. " +
+        "Vocabulaire du sport auto à comprendre et à employer : undercut (s'arrêter avant l'adversaire pour le passer grâce aux pneus neufs), " +
+        "overcut (rester en piste plus longtemps que lui pendant qu'il perd du temps sur pneus froids), relais (stint), box, tour de sortie (out lap), " +
+        "tour d'entrée (in lap), perte au stand, delta, rythme, dégradation, graining, blistering, aspiration, air sale, carrossage, pressions à chaud, " +
+        "sous-virage, survirage, fenêtre d'arrêt, drapeau jaune, voiture de sécurité, VSC, trafic, voiture à un tour. " +
+        "Les calculs d'undercut, d'overcut et de position à la sortie des stands sont déjà faits dans les informations : recopie-les.";
+
+    /// <summary>Ce qui compte selon la session : la voiture en essais, le tour lancé en qualification, le déroulé en course.</summary>
+    private static string SessionFocus(string? sessionType) => sessionType switch
+    {
+        "Practice" or "WarmUp" => "SESSION : ESSAIS. Le pilote travaille la voiture : privilégie les températures et pressions des pneus, l'équilibre, les freins, les secteurs où il perd du temps et son meilleur tour théorique.",
+        "Qualification" => "SESSION : QUALIFICATION. Privilégie le tour lancé : écart au meilleur tour, secteurs, température des pneus pour attaquer, piste qui s'améliore.",
+        "Race" => "SESSION : COURSE. Privilégie le déroulé : position, écarts, rythme, arrêts, carburant, undercut et overcut, menaces derrière.",
+        _ => string.Empty,
+    };
 
     private const string Unknown = "Je n'ai pas cette information pour le moment.";
 
@@ -237,7 +251,7 @@ public sealed class EngineerService
     private async Task<string> ThinkAsync(string question, BriefingResult brief, bool test, CancellationToken ct)
     {
         AiSettings ai = _settings.Current.Ai;
-        string system = SystemPrompt + "\n\nINFORMATIONS (chiffres exacts calculés par l'ordinateur) :\n" + brief.Facts;
+        string system = SystemPrompt + "\n\n" + SessionFocus(_engine.BuildSnapshot().SessionType) + "\n\nINFORMATIONS (chiffres exacts calculés par l'ordinateur) :\n" + brief.Facts;
         if (brief.Suggestion != null)
         {
             system += "\n\nRÉPONSE PRÉPARÉE POUR CETTE QUESTION (à dire au pilote, presque mot pour mot) :\n" + brief.Suggestion;

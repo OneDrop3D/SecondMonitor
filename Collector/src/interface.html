@@ -50,6 +50,7 @@
   .ip { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
   .hint { color: var(--muted); font-size: 12px; margin-top: 3px; }
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .value { font-weight: 650; }
   .seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
   .seg button { background: var(--panel-2); color: var(--text); border: 0; border-right: 1px solid var(--line); padding: 6px 4px; cursor: pointer; font: inherit; }
   .seg button:last-child { border-right: 0; }
@@ -115,6 +116,13 @@
       </div>
       <div class="hint" id="qualite-detail"></div>
       <div class="notice" id="relancer"><span>Prise en compte au prochain démarrage.</span><button class="btn" id="btn-relancer">Redémarrer maintenant</button></div>
+      <div style="margin-top:8px">Bouton radio (parler à l'ingénieur IA)</div>
+      <div class="row" id="radio-row">
+        <span id="radio-bouton" class="value">aucun</span>
+        <button class="btn" id="btn-radio-choisir">Choisir</button>
+        <button class="btn" id="btn-radio-retirer">Retirer</button>
+      </div>
+      <div class="hint" id="radio-aide">Une touche du clavier ou un bouton du volant de ce PC, même pendant le jeu : un appui pour parler, un second pour envoyer.</div>
       <div style="margin-top:6px">
         <label class="switch"><input type="checkbox" id="autostart"><span id="autostart-label">Lancer à l'ouverture de session (fenêtre réduite)</span></label>
         <label class="switch"><input type="checkbox" id="demo"><span>Démonstration : envoyer une course fictive (tester la liaison sans jeu)</span></label>
@@ -192,6 +200,15 @@
     $('demo').checked = e.demo;
     $('btn-visualiseur').style.display = e.visualiseur ? '' : 'none';
     $('jeux').textContent = 'Jeux surveillés : ' + e.jeux.join(', ');
+    const r = e.radio;
+    if (!r.supporte) {
+      $('radio-row').style.display = 'none';
+      $('radio-aide').textContent = 'Bouton radio sur ce PC : disponible sous Windows. Ailleurs, utilisez le bouton de SecondMonitor ou ClickDeck.';
+    } else {
+      $('radio-bouton').textContent = r.apprentissage ? 'Appuyez sur la touche ou le bouton du volant…' : r.bouton;
+      $('btn-radio-retirer').style.display = r.bouton === 'aucun' ? 'none' : '';
+      if (r.apprentissage) $('options').open = true;
+    }
   }
 
   window.external.receiveMessage((text) => {
@@ -208,6 +225,8 @@
   $('btn-relancer').addEventListener('click', () => send('relancer'));
   $('btn-dossier').addEventListener('click', () => send('dossier'));
   $('btn-visualiseur').addEventListener('click', () => send('visualiseur'));
+  $('btn-radio-choisir').addEventListener('click', () => send('radio-choisir'));
+  $('btn-radio-retirer').addEventListener('click', () => send('radio-retirer'));
   $('advice-btn').addEventListener('click', (e) => { const a = e.target.dataset.action; if (a) send(a); });
   send('pret');
 </script>

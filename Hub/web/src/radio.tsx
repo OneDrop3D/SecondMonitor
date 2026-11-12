@@ -249,6 +249,21 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     }
   }, [handleReply]);
 
+  // ───── Appuis venus d'ailleurs (bouton du PC de jeu, ClickDeck) : même effet que le bouton à l'écran ─────
+  useEffect(() => {
+    const onRemote = () => {
+      if (phaseRef.current === 'recording') stopTalk(); else if (phaseRef.current === 'idle') startTalk();
+    };
+    window.addEventListener('sm-radio-press', onRemote);
+    return () => window.removeEventListener('sm-radio-press', onRemote);
+  }, [startTalk, stopTalk]);
+
+  // L'état de la radio est signalé au serveur par le poste radio (affiché sur ClickDeck).
+  useEffect(() => {
+    if (!isRadioStation()) return;
+    fetch('/api/radio/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phase }) }).catch(() => undefined);
+  }, [phase]);
+
   // ───── Volant / manette : lecture des boutons (API Gamepad) ─────
   useEffect(() => {
     const previous = new Map<string, boolean[]>();
@@ -319,4 +334,23 @@ export function RadioProvider({ children }: { children: ReactNode }) {
   };
 
   return <RadioContext.Provider value={api}>{children}</RadioContext.Provider>;
+}
+
+/**
+ * Poste radio : l'écran qui enregistre le micro quand un bouton du PC de jeu ou de ClickDeck est appuyé.
+ * Par défaut la fenêtre de SecondMonitor (ouverte sur l'ordinateur lui-même) ; réglable par écran.
+ */
+export function isRadioStation(): boolean {
+  try {
+    const v = localStorage.getItem('smhub-poste-radio');
+    if (v === 'oui') return true;
+    if (v === 'non') return false;
+  } catch {
+    /* stockage indisponible */
+  }
+  return ['localhost', '127.0.0.1'].includes(location.hostname);
+}
+
+export function setRadioStation(on: boolean) {
+  try { localStorage.setItem('smhub-poste-radio', on ? 'oui' : 'non'); } catch { /* stockage indisponible */ }
 }

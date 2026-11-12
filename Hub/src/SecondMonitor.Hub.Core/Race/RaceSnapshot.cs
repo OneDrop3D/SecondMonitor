@@ -74,6 +74,12 @@ namespace SecondMonitor.Hub.Core.Race
         public List<double[]> Outline { get; set; }
 
         public bool WorldPositionsValid { get; set; }
+
+        /// <summary>« jeu » (appris en roulant), « bibliothèque » (tracé réel, avant le premier tour) ou null (cercle).</summary>
+        public string OutlineSource { get; set; }
+
+        /// <summary>Nom du tracé de bibliothèque utilisé, et sa source (crédit).</summary>
+        public string OutlineCredit { get; set; }
     }
 
     public sealed class WeatherDto
@@ -289,8 +295,17 @@ namespace SecondMonitor.Hub.Core.Race
         /// <summary>Températures des pneus dans la durée (moyenne du tour, surchauffe prolongée).</summary>
         public List<TyreThermalDto> TyreThermal { get; set; } = new();
 
-        /// <summary>Alertes à afficher (pneus trop chauds sur un tour, surchauffe qui dure…).</summary>
+        /// <summary>Alertes à afficher (pneus trop chauds sur un tour, surchauffe qui dure, nouveau dégât…).</summary>
         public List<string> Alerts { get; set; } = new();
+
+        /// <summary>Dégâts pièce par pièce (0 à 100).</summary>
+        public List<DamagePartDto> Damage { get; set; } = new();
+
+        /// <summary>Dernier dégât apparu et, après deux tours, ce qu'il coûte au tour.</summary>
+        public DamageEvent DamageEvent { get; set; }
+
+        /// <summary>Simulations d'arrêt : perte au stand, position à la sortie, undercut / overcut.</summary>
+        public SecondMonitor.Hub.Core.Strategy.PitPlanDto PitPlan { get; set; }
     }
 
     public sealed class FuelStrategy

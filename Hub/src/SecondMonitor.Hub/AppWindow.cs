@@ -79,9 +79,14 @@ public static class AppWindow
     }
 
     /// <summary>Message simple dans une petite fenêtre (ou la console si aucune fenêtre n'est possible).</summary>
-    public static void Message(string title, string text)
+    public static void Message(bool consoleOnly, string title, string text)
     {
         Console.WriteLine($"{title} : {text}");
+        if (consoleOnly)
+        {
+            return; // serveur sans fenêtre : pas de fenêtre surprise sur l'écran
+        }
+
         try
         {
             string html = $"""

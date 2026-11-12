@@ -61,6 +61,9 @@ namespace SecondMonitor.Collector
 
         public ConnectorHost Host => _host;
 
+        /// <summary>Bouton radio du PC de jeu (Windows), créé au démarrage.</summary>
+        public RadioButton Radio { get; private set; }
+
         /// <summary>Le jeu envoie-t-il de vraies données de course (pas seulement des signes de vie) ?</summary>
         public bool GameDataFlowing => Demo || (_host.ActiveGame != null && (DateTime.UtcNow - _host.LastGameDataUtc).TotalSeconds < 5);
 
@@ -138,6 +141,7 @@ namespace SecondMonitor.Collector
             }
 
             Log("Prêt. En attente de SecondMonitor (l'application qui affiche les données) sur le réseau…");
+            Radio = new RadioButton(this);
             return true;
         }
 
@@ -243,6 +247,7 @@ namespace SecondMonitor.Collector
         public void Dispose()
         {
             Stop();
+            Radio?.Dispose();
             _server.Dispose();
         }
 

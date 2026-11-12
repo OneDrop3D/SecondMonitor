@@ -22,6 +22,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
         public void Reset()
         {
+            _debriefLap = -1;
             _fired.Clear();
             _hotSince.Clear();
             _lastMessage = DateTime.MinValue;
@@ -58,6 +59,16 @@ namespace SecondMonitor.Hub.Core.Ai
             var candidates = new List<ProactiveMessage>();
             PlayerStrategy p = snap.Player;
             TyreAlerts(p, me, candidates);
+            DamageAlerts(p, candidates);
+            if (snap.SessionType is "Practice" or "WarmUp")
+            {
+                PracticeDebrief(snap, me, p, candidates);
+            }
+
+            if (race)
+            {
+                CutAlerts(snap, me, p, candidates);
+            }
             bool onWets = IsWetCompound(me.Tyres.Compound);
             int threshold = options.WetThresholdPct;
 
@@ -183,6 +194,104 @@ namespace SecondMonitor.Hub.Core.Ai
                         600));
                 }
             }
+        }
+
+        /// <summary>Nouveau dégât, puis ce qu'il coûte au tour une fois mesuré (et s'il vaut un arrêt).</summary>
+        private static void DamageAlerts(PlayerStrategy p, List<ProactiveMessage> candidates)
+        {
+            if (p.DamageEvent is not DamageEvent ev)
+            {
+                return;
+            }
+
+            string id = $"{ev.Key}-{ev.Time:0}";
+            candidates.Add(Info($"damage-{id}", "dégâts", $"Dégât : {ev.Label}, {N(ev.Percent, 0)} %. Je mesure ce que ça coûte au tour.", 100000, urgent: true));
+            if (ev.LossPerLap is double loss)
+            {
+                double left = p.LapsRemaining ?? 0;
+                double pitLoss = p.PitPlan?.PitLoss ?? SecondMonitor.Hub.Core.Strategy.PitPlanner.DefaultPitLoss;
+                string verdict = loss < 0.1 ? "C'est négligeable, on continue."
+                    : left > 0 && loss * left > pitLoss + 5 ? $"Sur la fin de course ça fait {N(loss * left, 0)} secondes, plus qu'un arrêt : on peut réparer au prochain passage."
+                    : "Moins qu'un arrêt d'ici l'arrivée : on continue.";
+                candidates.Add(Info($"damage-loss-{id}", "dégâts", $"Le dégât vous coûte {N(Math.Max(0, loss), 2)} seconde par tour. {verdict}", 100000, urgent: true));
+            }
+        }
+
+        /// <summary>Undercut jouable sur la voiture devant (si l'arrêt approche), menace d'undercut de la voiture derrière.</summary>
+        private static void CutAlerts(RaceSnapshot snap, DriverRow me, PlayerStrategy p, List<ProactiveMessage> candidates)
+        {
+            var plan = p.PitPlan;
+            if (plan == null)
+            {
+                return;
+            }
+
+            bool stopSoon = p.RecommendedStopLap is int sl && sl - me.Laps is >= 0 and <= 3;
+            var under = plan.Cuts.FirstOrDefault(c => c.Kind == "undercut" && c.Feasible);
+            if (under != null && stopSoon)
+            {
+                candidates.Add(Info($"undercut-{under.RivalId}-{me.Laps}", "stratégie", under.Text + (plan.RejoinNow?.Text is string r ? " " + r : string.Empty), 300));
+            }
+
+            var threat = plan.Cuts.FirstOrDefault(c => c.Kind == "menace-undercut" && c.Feasible);
+            DriverRow rival = threat == null ? null : snap.Drivers.FirstOrDefault(d => d.Id == threat.RivalId);
+            if (threat != null && rival?.NextStop?.LapsUntil is <= 1)
+            {
+                candidates.Add(Info($"threat-under-{threat.RivalId}-{me.Laps}", "stratégie", threat.Text, 300));
+            }
+        }
+
+        private int _debriefLap = -1;
+
+        /// <summary>Essais : à la fin d'un tour, ce qui mérite un réglage (pressions, carrossage) ou un nouveau meilleur tour.</summary>
+        private void PracticeDebrief(RaceSnapshot snap, DriverRow me, PlayerStrategy p, List<ProactiveMessage> candidates)
+        {
+            if (me.Laps <= _debriefLap || me.LastLap is not double last || last <= 0)
+            {
+                _debriefLap = Math.Max(_debriefLap, me.Laps);
+                return;
+            }
+
+            _debriefLap = me.Laps;
+            var notes = new List<string>();
+            if (me.LastLapIsPersonalBest)
+            {
+                notes.Add($"Meilleur tour : {LapSpoken(last)}.");
+            }
+
+            foreach (WheelStatus w in p.Wheels)
+            {
+                if (w.Pressure is double pr && w.IdealPressure is double ideal && Math.Abs(pr - ideal) >= 5)
+                {
+                    notes.Add($"Pression {WheelName(w.Position)} {(pr > ideal ? "trop haute" : "trop basse")} de {N(Math.Abs(pr - ideal), 0)} kilopascals.");
+                }
+            }
+
+            WheelStatus fl = p.Wheels.FirstOrDefault(w => w.Position == "FL");
+            if (fl?.TempInner is double inner && fl.TempOuter is double outer)
+            {
+                double spread = inner - outer;
+                if (spread > 12)
+                {
+                    notes.Add($"À l'avant, l'intérieur du pneu est {N(spread, 0)} degrés plus chaud que l'extérieur : trop de carrossage négatif.");
+                }
+                else if (spread < 0)
+                {
+                    notes.Add("À l'avant, l'extérieur du pneu est plus chaud que l'intérieur : pas assez de carrossage négatif.");
+                }
+            }
+
+            if (notes.Count > 0)
+            {
+                candidates.Add(Info($"debrief-{me.Laps}", "essais", string.Join(" ", notes.Take(3)), 60));
+            }
+        }
+
+        private static string LapSpoken(double s)
+        {
+            int m = (int)(s / 60);
+            double rest = s - (m * 60);
+            return m > 0 ? $"{m} minute{(m > 1 ? "s" : string.Empty)} {N(rest, 1)}" : $"{N(rest, 1)} secondes";
         }
 
         private static string TyreAdvice(List<TyreThermalDto> hot)

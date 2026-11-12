@@ -80,8 +80,16 @@ public sealed class LiveHub : BackgroundService
     }
 
     /// <summary>Envoie un message ponctuel (ex. radio de l'IA, demande de stand) à tous les clients.</summary>
+    /// <summary>Dernière réponse de l'ingénieur (pour les petits écrans : ClickDeck…).</summary>
+    public string? LastRadioText { get; private set; }
+
     public Task BroadcastAsync(string type, object data)
     {
+        if (type == "radio" && data is EngineerReply last)
+        {
+            LastRadioText = last.Answer;
+        }
+
         if (type == "radio")
         {
             lock (_radioHistory)

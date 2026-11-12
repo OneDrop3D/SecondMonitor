@@ -34,4 +34,8 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="NLog" />
   </ItemGroup>
+  <!-- Tracés de circuits (sources libres, voir tools/circuits.py). -->
+  <ItemGroup>
+    <EmbeddedResource Include="Track\Library\circuits.json" LogicalName="SecondMonitor.Hub.Core.Track.circuits.json" />
+  </ItemGroup>
 </Project>

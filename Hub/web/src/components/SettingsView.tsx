@@ -3,6 +3,7 @@ import { api } from '../live';
 import type { HubSettings, HubStatus, RaceSnapshot } from '../types';
 import { ThermalProfiles } from './ThermalProfiles';
 import { WheelBindingCard } from './EngineerView';
+import { isRadioStation, setRadioStation } from '../radio';
 
 export function SettingsView({ theme, setTheme, snapshot }: { theme: string; setTheme: (t: string) => void; snapshot: RaceSnapshot | null }) {
   const [settings, setSettings] = useState<HubSettings | null>(null);
@@ -38,6 +39,7 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
   return (
     <div className="stack" style={{ maxWidth: 900 }}>
       {message && <div className="cx-advice">{message}</div>}
+      <RadioSourcesCard />
       <WheelBindingCard />
 
       <ThermalProfiles snapshot={snapshot} />
@@ -89,6 +91,27 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
           <div className="card-body"><div className="log">{status.source.log.join('\n') || '—'}</div></div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Où appuyer pour parler à l'ingénieur : volant de cet ordinateur, touche ou volant du PC de jeu, ClickDeck. */
+function RadioSourcesCard() {
+  const [station, setStation] = useState(isRadioStation());
+  return (
+    <div className="card">
+      <div className="card-head"><span className="card-title">Bouton radio</span><span className="muted">un appui pour parler, un second pour envoyer</span></div>
+      <div className="card-body stack-sm">
+        <ul className="guide-list secondary" style={{ margin: 0 }}>
+          <li><b>Volant ou manette branché sur cet ordinateur</b> : choisissez le bouton ci-dessous.</li>
+          <li><b>Touche du clavier ou bouton du volant du PC de jeu</b> : dans la fenêtre du <b>collecteur</b>, Réglages › « Bouton radio » › Choisir, puis appuyez sur la touche. Marche même quand le jeu est au premier plan.</li>
+          <li><b>ClickDeck</b> : touche « Radio » du profil « SecondMonitor — Course ».</li>
+        </ul>
+        <label className="switch-row">
+          <input type="checkbox" checked={station} onChange={(e) => { setRadioStation(e.target.checked); setStation(e.target.checked); }} />
+          <span>Cet écran est le <b>poste radio</b> : il écoute le micro quand on appuie sur un bouton du PC de jeu ou de ClickDeck. Un seul écran devrait l'être (par défaut, la fenêtre de SecondMonitor).</span>
+        </label>
+      </div>
     </div>
   );
 }

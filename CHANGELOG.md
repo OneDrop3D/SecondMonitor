@@ -3,6 +3,37 @@
 SecondMonitor (l'application qui affiche) et SecondMonitor Collecteur (PC de jeu), pour Windows, Mac et Linux/SteamOS.
 Basé sur [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) de winzarten (licence MIT).
 
+## Version 0.5.0
+
+- **Dégâts mécaniques** pièce par pièce, quand le jeu les donne :
+  - F1 24 : ailerons avant gauche et droit, aileron arrière, fond plat, diffuseur, pontons, boîte, moteur, usure de chaque élément moteur (MGU-K, MGU-H, batterie…), pannes DRS et ERS, pneus abîmés ;
+  - ACC : carrosserie par zone et suspension par roue ;
+  - Le Mans Ultimate : carrosserie, pièce arrachée, surchauffe, crevaisons ;
+  - les autres jeux : moteur, boîte, suspension, carrosserie, freins.
+
+  Un nouveau dégât est signalé tout de suite. Son coût par tour est mesuré deux tours plus tard, et l'ingénieur dit si un arrêt pour réparer est rentable.
+- **Stratégie d'arrêt calculée** :
+  - perte au stand et gain des pneus neufs mesurés sur tout le plateau ;
+  - position à la sortie si vous rentrez maintenant ;
+  - **undercut** et **overcut** sur la voiture devant ;
+  - **menace d'undercut** de la voiture derrière.
+
+  Le tout est affiché dans l'écran Stratégies et le panneau du Chronométrage, et l'ingénieur prévient quand un undercut est jouable.
+- **Ingénieur IA** :
+  - il connaît le vocabulaire de course (undercut, overcut, relais, tour de sortie, graining, carrossage…) et recopie les calculs ;
+  - il s'adapte à la session : la voiture en essais (compte rendu de tour avec pressions et carrossage), le tour lancé en qualification, le déroulé en course ;
+  - les questions rapides changent selon la session.
+- **Tracés réels** de 40 circuits (Silverstone, Spa, Monza, Le Castellet, Suzuka, COTA, Interlagos, Imola, Portimão, Losail…). Ils s'affichent dès le premier tour au lieu du cercle, puis sont remplacés par le tracé appris en roulant. Un tracé n'est utilisé que si le nom et la longueur du circuit correspondent.
+- **Bouton radio** où l'on veut :
+  - une touche du clavier ou un bouton du volant du **PC de jeu**, réglé dans la fenêtre du collecteur ; il marche même quand le jeu est au premier plan (Windows) ;
+  - le volant branché sur l'ordinateur qui affiche ;
+  - une touche ClickDeck.
+
+  L'écran « poste radio » se choisit dans les Réglages.
+- **Essais et qualification** : le panneau de droite du Chronométrage montre la voiture (meilleur tour, écart, pneus sur le dernier tour, pressions) à la place des duels.
+- Nouvelle adresse `/api/deck` : toutes les données de course sous une forme compacte, pour ClickDeck et les petits écrans. `POST /api/radio/press` pour un bouton radio externe.
+- En mode serveur sans fenêtre, plus de fenêtre surprise si le port est déjà pris.
+
 ## Version 0.4.1
 
 - **Écran noir corrigé** : une valeur de calcul impossible (division par zéro sur certaines données de jeu) faisait planter l'interface. Ces valeurs s'affichent maintenant « — ». Si un écran rencontre malgré tout un problème, il l'affiche et les autres continuent.

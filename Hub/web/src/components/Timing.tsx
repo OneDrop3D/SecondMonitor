@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { clock, compoundInfo, flagLabel, gap, lapTime, num, sessionLabel, thermal, thermalColor } from '../format';
-import type { DriverRow, EngineDto, HubStatus, RaceSnapshot, TyreThermal, WheelStatus } from '../types';
+import type { DriverRow, HubStatus, RaceSnapshot, TyreThermal, WheelStatus } from '../types';
 import { collectorAddress, linkStage } from '../status';
 import { visibleDrivers, type ClassView } from '../classView';
 import { TrackMap } from './TrackMap';
 import { BattlePanel } from './BattlePanel';
 import { BrandLogo } from './BrandLogo';
+import { DamageList, PitPlanCard } from './RaceExtras';
 
 /*
  * Écran « Chronométrage » : reprend la disposition de SecondMonitor d'origine
@@ -291,21 +292,8 @@ export function CarStatus({ snapshot }: { snapshot: RaceSnapshot }) {
         <div className="tm-kv" title="Eau"><span><Icon name="water" /> Eau</span><b className="tnum" style={{ color: e?.waterTemp != null ? thermalColor(thermal(e.waterTemp, e.waterIdeal, e.waterWindow)) : undefined }}>{num(e?.waterTemp, 0, ' °C')}</b></div>
         <div className="tm-kv" title="Huile"><span><Icon name="oil" /> Huile</span><b className="tnum" style={{ color: e?.oilTemp != null ? thermalColor(thermal(e.oilTemp, e.oilIdeal, e.oilWindow)) : undefined }}>{num(e?.oilTemp, 0, ' °C')}</b></div>
         {e?.oilPressure != null && <div className="tm-kv"><span>Pression huile</span><b className="tnum">{e.oilPressure.toFixed(0)} kPa</b></div>}
-        <Damage e={e} />
       </div>
-    </div>
-  );
-}
-
-function Damage({ e }: { e: EngineDto | null }) {
-  if (!e) return null;
-  const items = [
-    ['Moteur', e.damageEngine], ['Boîte', e.damageTransmission], ['Suspension', e.damageSuspension], ['Carrosserie', e.damageBodywork],
-  ].filter(([, v]) => v != null && (v as number) > 0.01) as [string, number][];
-  if (items.length === 0) return null;
-  return (
-    <div className="tm-damage">
-      {items.map(([k, v]) => <span key={k} className={v > 0.5 ? 'bad' : 'warn'} title={`${k} : ${(v * 100).toFixed(0)} %`}>{k} {(v * 100).toFixed(0)} %</span>)}
+      {(p.damage ?? []).some((d) => d.percent >= 1) && <div className="tm-fuel tm-damage-box"><div className="tm-label">Dégâts</div><DamageList player={p} compact /></div>}
     </div>
   );
 }
@@ -337,7 +325,11 @@ export function TimingScreen(props: GridProps & { setClassView: (v: ClassView) =
       <div className="tm-bottom">
         <CarStatus snapshot={snapshot} />
         <div className="tm-panel tm-map"><TrackMap snapshot={snapshot} classColor={classColor} onSelect={onSelect} classView={classView} /></div>
-        <div className="tm-side"><BattlePanel snapshot={snapshot} onSelect={onSelect} /><NextStop snapshot={snapshot} /></div>
+        <div className="tm-side">
+          {snapshot.sessionType === 'Race'
+            ? <><BattlePanel snapshot={snapshot} onSelect={onSelect} /><NextStop snapshot={snapshot} /></>
+            : <MyCarPanel snapshot={snapshot} />}
+        </div>
       </div>
     </div>
   );
@@ -355,6 +347,39 @@ function NextStop({ snapshot }: { snapshot: RaceSnapshot }) {
       <div className="tm-kv"><span>Rythme moyen</span><b className="tnum">{lapTime(p.averageLap)}</b></div>
       <div className="tm-kv"><span>Dégradation</span><b className="tnum">{p.degradation != null ? `${p.degradation > 0 ? '+' : ''}${p.degradation.toFixed(2)} s/tour` : '—'}</b></div>
       {p.recommendedStopLap != null && <div className="tm-callout">Arrêt conseillé <b>tour {p.recommendedStopLap}</b><div className="muted">{p.recommendedStopReason}</div></div>}
+      <PitPlanCard player={p} compact />
+    </div>
+  );
+}
+
+/** Essais et qualification : la voiture plutôt que la course (meilleur tour, pneus sur le tour, pressions). */
+function MyCarPanel({ snapshot }: { snapshot: RaceSnapshot }) {
+  const p = snapshot.player;
+  const me = snapshot.drivers.find((d) => d.isPlayer);
+  if (!p || !me) return null;
+  const classBest = Math.min(...snapshot.drivers.filter((d) => d.classId === me.classId && d.bestLap).map((d) => d.bestLap!));
+  const label = (pos: string) => ({ FL: 'AvG', FR: 'AvD', RL: 'ArG', RR: 'ArD' } as Record<string, string>)[pos] ?? pos;
+  return (
+    <div className="tm-panel tm-strategy">
+      {(p.alerts ?? []).map((a) => <div key={a} className="tm-alert" role="alert">⚠ {a}</div>)}
+      <div className="tm-panel-title">{snapshot.sessionType === 'Qualification' ? 'Qualification' : 'Essais'} · ma voiture</div>
+      <div className="tm-kv"><span>Meilleur tour</span><b className="tnum">{lapTime(me.bestLap)}{me.bestLapNumber ? <span className="muted"> (T{me.bestLapNumber})</span> : null}</b></div>
+      <div className="tm-kv"><span>Écart au meilleur de la catégorie</span><b className="tnum">{me.bestLap && isFinite(classBest) ? (me.bestLap - classBest < 0.0005 ? '—' : `+${(me.bestLap - classBest).toFixed(3)}`) : '—'}</b></div>
+      <div className="tm-kv"><span>Dernier tour</span><b className="tnum">{lapTime(me.lastLap)}</b></div>
+      <div className="tm-panel-title" style={{ marginTop: 6 }}>Pneus sur le dernier tour</div>
+      {(p.tyreThermal ?? []).map((t) => {
+        const w = p.wheels.find((x) => x.position === t.position);
+        const dp = w?.pressure != null && w.idealPressure != null ? w.pressure - w.idealPressure : null;
+        return (
+          <div key={t.position} className="tm-kv">
+            <span>{label(t.position)}</span>
+            <b className="tnum">
+              <span style={{ color: t.lastLapState === 'chaud' ? 'var(--critical)' : t.lastLapState === 'froid' ? 'var(--temp-cold)' : undefined }}>{t.lastLapAverage != null ? `${t.lastLapAverage.toFixed(0)}°` : '—'}</span>
+              {dp != null && <span className={Math.abs(dp) >= 5 ? 'warn-text' : 'muted'}> · {dp > 0 ? '+' : ''}{dp.toFixed(0)} kPa</span>}
+            </b>
+          </div>
+        );
+      })}
     </div>
   );
 }

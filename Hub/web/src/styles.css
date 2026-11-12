@@ -799,3 +799,26 @@ details.cx-log > summary { cursor: pointer; list-style: none; }
 .tm-wheel-avg.hot { color: var(--critical); font-weight: 700; }
 .tm-wheel-avg.cold { color: var(--temp-cold); font-weight: 700; }
 .tm-alert { padding: 6px 8px; margin-bottom: 4px; border-radius: var(--radius-sm); border-left: 3px solid var(--critical); background: color-mix(in oklab, var(--critical) 14%, var(--tm-panel)); font-size: 13px; font-weight: 600; }
+.switch-row { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.switch-row input { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--accent); flex: none; }
+
+/* Dégâts et simulation d'arrêt */
+.dmg { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.dmg-row { display: grid; grid-template-columns: minmax(0, 1fr) 70px 44px; gap: 8px; align-items: center; font-size: 13px; }
+.dmg.compact .dmg-row { grid-template-columns: minmax(0, 1fr) 40px 38px; font-size: 12px; }
+.dmg-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dmg-bar { height: 6px; border-radius: var(--radius-sm); background: var(--surface-3); overflow: hidden; }
+.dmg-bar span { display: block; height: 100%; background: var(--text-secondary); }
+.dmg-row.warn .dmg-bar span { background: var(--warning); }
+.dmg-row.bad .dmg-bar span { background: var(--critical); }
+.dmg-row.bad .dmg-name { color: var(--critical); font-weight: 650; }
+.dmg-pct { text-align: right; }
+.dmg-loss { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.tm-damage-box { min-width: 190px; max-width: 260px; }
+.pitplan { display: flex; flex-direction: column; gap: 6px; }
+.pitplan-rejoin { font-size: 13px; font-weight: 600; }
+.pitplan-cut { padding: 6px 8px; border-radius: var(--radius-sm); background: var(--surface-2); border-left: 3px solid var(--border-strong); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.pitplan-cut > .secondary { flex-basis: 100%; }
+.pitplan-cut.ok { border-left-color: var(--good); }
+.pitplan-cut.threat { border-left-color: var(--critical); }
+.pill.on { background: color-mix(in oklab, var(--good) 35%, var(--surface-3)); color: var(--text-primary); }

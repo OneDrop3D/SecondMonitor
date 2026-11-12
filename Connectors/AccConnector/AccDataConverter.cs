@@ -1,4 +1,4 @@
-namespace SecondMonitor.AccConnector
+﻿namespace SecondMonitor.AccConnector
 {
     using System;
     using System.Collections.Generic;
@@ -353,6 +353,21 @@ namespace SecondMonitor.AccConnector
             playerCar.CarDamageInformation.Suspension.MediumDamageThreshold = 0.08;
             playerCar.CarDamageInformation.Suspension.HeavyDamageThreshold = 0.25;
             playerCar.CarDamageInformation.Suspension.Damage = data.AcsPhysics.suspensionDamage.Max();
+
+            // Détail (SecondMonitor multiplateforme) : carrosserie par zone (avant, arrière, gauche, droite) et suspension par roue.
+            var parts = playerCar.CarDamageInformation.Parts;
+            parts.Clear();
+            string[] zones = { "body-front", "body-rear", "body-left", "body-right" };
+            for (int i = 0; i < 4 && i < data.AcsPhysics.carDamage.Length; i++)
+            {
+                parts.Add(new DamagePart(zones[i], "aero", Math.Min(1, data.AcsPhysics.carDamage[i] / 1000.0)));
+            }
+
+            string[] accWheels = { "fl", "fr", "rl", "rr" };
+            for (int i = 0; i < 4 && i < data.AcsPhysics.suspensionDamage.Length; i++)
+            {
+                parts.Add(new DamagePart($"suspension-{accWheels[i]}", "suspension", Math.Min(1, data.AcsPhysics.suspensionDamage[i])));
+            }
 
             simData.PlayerInfo.CarInfo.SpeedLimiterEngaged = data.AcsPhysics.pitLimiterOn == 1;
             if (data.AcsGraphic.driverStintTimeLeft > 0)

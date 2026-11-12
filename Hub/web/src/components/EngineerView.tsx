@@ -15,15 +15,26 @@ interface Diagnostic {
 
 interface ModelsResponse { ok: boolean; error?: string | null; models: OllamaModel[]; nodes: NodeStatus[] }
 
-const QUICK = [
+// Questions rapides selon la session : la course se joue sur la stratégie, les essais sur la voiture.
+const QUICK_RACE = [
   'Quand est-ce que je rentre au stand ?',
+  'Undercut possible sur la voiture devant ?',
+  'Si je rentre maintenant, je ressors où ?',
+  'Quel rythme pour gagner ?',
   'Écart avec la voiture derrière ?',
   "Combien de tours d'essence ?",
-  'État des pneus ?',
-  'Quelle est ma vitesse de pointe ?',
+  'Des dégâts sur la voiture ?',
+  'La météo va évoluer ?',
+];
+const QUICK_PRACTICE = [
+  'Comment sont mes pneus ?',
+  'Mes pressions sont bonnes ?',
   'Où je perds du temps ?',
-  'Pneus pluie ?',
+  'Quel est mon meilleur tour théorique ?',
   'Température des freins ?',
+  'Quelle est ma vitesse de pointe ?',
+  'Des dégâts sur la voiture ?',
+  'La météo va évoluer ?',
 ];
 
 /** Réglages partagés par les cartes de cet onglet (un seul enregistrement, pas d'écrasement entre cartes). */
@@ -41,7 +52,8 @@ function useHubSettings() {
   return { settings, save };
 }
 
-export function EngineerView({ radio, hasLiveData }: { radio: RadioMessage[]; hasLiveData: boolean }) {
+export function EngineerView({ radio, hasLiveData, sessionType }: { radio: RadioMessage[]; hasLiveData: boolean; sessionType?: string | null }) {
+  const QUICK = sessionType === 'Race' || !sessionType ? QUICK_RACE : QUICK_PRACTICE;
   const r = useRadio();
   const [text, setText] = useState('');
   const { settings, save } = useHubSettings();

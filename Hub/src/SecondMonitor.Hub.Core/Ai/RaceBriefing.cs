@@ -34,17 +34,21 @@ namespace SecondMonitor.Hub.Core.Ai
             Performance,
             Rain,
             Pace,
+            Strategy,
+            Damage,
         }
 
         private static readonly (Topic Topic, string[] Words)[] Keywords =
         {
+            (Topic.Strategy, new[] { "undercut", "under cut", "overcut", "over cut", "si je rentre", "ressors", "ressortir", "ressortirai", "sortie des stands", "perte au stand", "couvrir", "stratégie d'arrêt", "strategie d'arret" }),
+            (Topic.Damage, new[] { "dégât", "degat", "cassé", "casse ", "aileron", "fond plat", "diffuseur", "ponton", "abîmé", "abime", "endommag", "touché", "réparer", "reparer", "mgu", "drs" }),
             (Topic.Pace, new[] { "rythme", "allure", "chrono", "temps au tour", "tourner en", "dois tourner", "pour gagner", "gagner la course", "aller plus vite", "plus vite", "quel temps je", "en combien je" }),
             (Topic.Pit, new[] { "box", "stand", "rentre", "rentrer", "arrêt", "arret", "pit", "ravitaill" }),
             (Topic.Speed, new[] { "vitesse", "pointe", "vmax", "v max", "vmin", "v min", "km/h", "kilomètre", "top speed", "ligne droite", "lignes droites" }),
             (Topic.Performance, new[] { "perd", "gagner du temps", "amélior", "ameliorer", "plus lent", "secteur", "temps perdu", "où je", "ou je" }),
             (Topic.Fuel, new[] { "essence", "carburant", "fuel", "litre", "conso", "réservoir", "plein" }),
             (Topic.Energy, new[] { "énergie", "energie", "virtuel", "batterie", "hybride" }),
-            (Topic.Car, new[] { "moteur", "huile", "l'eau", " eau", "frein", "dégât", "degat", "cassé", "radiateur" }),
+            (Topic.Car, new[] { "moteur", "huile", "l'eau", " eau", "frein", "radiateur" }),
             (Topic.Tyres, new[] { "pneu", "gomme", "usure", "température", "pression", "dégrad", "carcasse" }),
             (Topic.Opponents, new[] { "stratégie", "strategie", "adversaire", "concurrent", "va s'arrêter", "va s'arreter", "ses pneus" }),
             (Topic.Gap, new[] { "écart", "ecart", "derrière", "derriere", "devant", "gap", "revient", "reprend", "attaque", "loin", "rattrape" }),
@@ -124,7 +128,14 @@ namespace SecondMonitor.Hub.Core.Ai
             }
 
             var sb = new StringBuilder();
-            var order = topics.Concat(Enum.GetValues<Topic>().Except(topics));
+            // Ce qui compte d'abord selon la session : la voiture en essais, le déroulé en course.
+            Topic[] focus = snap.SessionType switch
+            {
+                "Practice" or "WarmUp" => new[] { Topic.Tyres, Topic.Car, Topic.Damage, Topic.Performance, Topic.Pace, Topic.Speed, Topic.Fuel },
+                "Qualification" => new[] { Topic.Pace, Topic.Performance, Topic.Tyres, Topic.Speed, Topic.Session },
+                _ => new[] { Topic.Position, Topic.Gap, Topic.Pace, Topic.Strategy, Topic.Pit, Topic.Fuel, Topic.Tyres, Topic.Damage },
+            };
+            var order = topics.Concat(focus.Except(topics)).Concat(Enum.GetValues<Topic>().Except(topics).Except(focus));
             sb.AppendLine("FICHE DE FAITS (chiffres exacts calculés par l'ordinateur) :");
             foreach (Topic topic in order.Where(sections.ContainsKey))
             {
@@ -408,28 +419,7 @@ namespace SecondMonitor.Hub.Core.Ai
                         Add(Topic.Car, "Moteur : " + string.Join(", ", parts) + ".");
                     }
 
-                    var damage = new List<string>();
-                    if (eng.DamageEngine > 1)
-                    {
-                        damage.Add($"moteur {N(eng.DamageEngine.Value, 0)} %");
-                    }
-
-                    if (eng.DamageTransmission > 1)
-                    {
-                        damage.Add($"boîte {N(eng.DamageTransmission.Value, 0)} %");
-                    }
-
-                    if (eng.DamageSuspension > 1)
-                    {
-                        damage.Add($"suspensions {N(eng.DamageSuspension.Value, 0)} %");
-                    }
-
-                    if (eng.DamageBodywork > 1)
-                    {
-                        damage.Add($"carrosserie {N(eng.DamageBodywork.Value, 0)} %");
-                    }
-
-                    Add(Topic.Car, damage.Count == 0 ? "Aucun dégât signalé sur la voiture." : "Dégâts : " + string.Join(", ", damage) + ".");
+                    // Les dégâts ont leur propre sujet (pièce par pièce, coût au tour) : voir plus bas.
                 }
 
                 if (p.Degradation.HasValue)
@@ -463,6 +453,41 @@ namespace SecondMonitor.Hub.Core.Ai
             }
 
             AddForecastFacts(extras.Weather, (t, s, c, tag) => Add(t, s, companion: c, tag: tag));
+
+            if (p?.PitPlan is SecondMonitor.Hub.Core.Strategy.PitPlanDto plan)
+            {
+                foreach (var cut in plan.Cuts.OrderByDescending(c => c.Feasible))
+                {
+                    Add(Topic.Strategy, cut.Text, cut.Kind == "menace-undercut" ? Side.Behind : Side.Ahead);
+                }
+
+                if (plan.RejoinNow?.Text is string rejoin)
+                {
+                    Add(Topic.Strategy, rejoin, companion: true);
+                    Add(Topic.Pit, rejoin, companion: true);
+                }
+
+                Add(Topic.Strategy, $"Un arrêt coûte environ {N(plan.PitLoss, 0)} secondes ({plan.PitLossSource})" +
+                    (plan.FreshTyreGain is double fg ? $" ; les pneus neufs font gagner environ {N(fg, 1)} seconde par tour ({plan.FreshTyreGainSource})." : "."), companion: true);
+            }
+
+            if (p?.Damage is { Count: > 0 } damageParts)
+            {
+                var hurt = damageParts.Where(d => d.Percent >= 1).OrderByDescending(d => d.Percent).ToList();
+                Add(Topic.Damage, hurt.Count == 0
+                    ? "Aucun dégât sur la voiture."
+                    : "Dégâts : " + string.Join(", ", hurt.Take(5).Select(d => $"{d.Label} {N(d.Percent, 0)} %")) + ".");
+                if (p.DamageEvent is { LossPerLap: double loss } ev && loss > 0.1)
+                {
+                    double left = p.LapsRemaining ?? 0;
+                    double pitLoss = p.PitPlan?.PitLoss ?? SecondMonitor.Hub.Core.Strategy.PitPlanner.DefaultPitLoss;
+                    string verdict = left <= 0 ? string.Empty
+                        : loss * left > pitLoss + 5
+                            ? $" Sur les {N(Math.Floor(left), 0)} tours restants, cela fait {N(loss * left, 0)} secondes : réparer au stand ({N(pitLoss, 0)} secondes) est rentable."
+                            : $" Sur les {N(Math.Floor(left), 0)} tours restants, cela fait {N(loss * left, 0)} secondes : moins qu'un arrêt ({N(pitLoss, 0)} secondes), on continue.";
+                    Add(Topic.Damage, $"Le dégât ({ev.Label}) vous coûte {N(loss, 2)} seconde par tour.{verdict}", companion: true);
+                }
+            }
             if (me != null)
             {
                 AddPaceFacts(snap, me, p, extras, (t, s, side, tag) => Add(t, s, side, tag: tag));

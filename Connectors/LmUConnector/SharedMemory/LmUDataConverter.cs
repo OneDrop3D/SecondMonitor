@@ -196,6 +196,19 @@
                 playerCar.CarDamageInformation.Engine.Damage = 1;
             }
 
+            // Détail (SecondMonitor multiplateforme) : carrosserie, pièce arrachée, surchauffe, crevaisons.
+            var parts = playerCar.CarDamageInformation.Parts;
+            parts.Clear();
+            parts.Add(new DamagePart("bodywork", "aero", Math.Min(1, totalDent / 16.0)));
+            parts.Add(new DamagePart("parts-detached", "aero", data.mDetached != 0 ? 1 : 0));
+            parts.Add(new DamagePart("engine-overheating", "engine", data.mOverheating != 0 ? 1 : 0));
+            string[] lmuWheels = { "fl", "fr", "rl", "rr" };
+            for (int i = 0; i < 4 && data.mWheels != null && i < data.mWheels.Length; i++)
+            {
+                parts.Add(new DamagePart($"puncture-{lmuWheels[i]}", "tyres", data.mWheels[i].mFlat != 0 ? 1 : 0));
+                parts.Add(new DamagePart($"wheel-{lmuWheels[i]}", "suspension", data.mWheels[i].mDetached != 0 ? 1 : 0));
+            }
+
             /*playerCar.WorldOrientation = new Orientation()
             {
                 Yaw = Angle.GetFromRadians(Math.Atan2(data.mOri[2].x, data.mOri[2].z)),

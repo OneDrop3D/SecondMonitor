@@ -473,6 +473,34 @@
             playerCar.CarDamageInformation.Engine.Damage = rawCarDamageData.EngineDamage / 100.0;
             playerCar.CarDamageInformation.Transmission.Damage = rawCarDamageData.GearBoxDamage / 100.0;
 
+            // Détail des pièces (SecondMonitor multiplateforme) : F1 donne chaque élément aéro, l'usure de chaque partie moteur et les pannes.
+            var parts = playerCar.CarDamageInformation.Parts;
+            parts.Clear();
+            parts.Add(new DamagePart("front-wing-left", "aero", rawCarDamageData.FrontLeftWingDamage / 100.0));
+            parts.Add(new DamagePart("front-wing-right", "aero", rawCarDamageData.FrontRightWingDamage / 100.0));
+            parts.Add(new DamagePart("rear-wing", "aero", rawCarDamageData.RearWingDamage / 100.0));
+            parts.Add(new DamagePart("floor", "aero", rawCarDamageData.FloorDamage / 100.0));
+            parts.Add(new DamagePart("diffuser", "aero", rawCarDamageData.DiffuserDamage / 100.0));
+            parts.Add(new DamagePart("sidepod", "aero", rawCarDamageData.SidePodDamage / 100.0));
+            parts.Add(new DamagePart("gearbox", "gearbox", rawCarDamageData.GearBoxDamage / 100.0));
+            parts.Add(new DamagePart("engine", "engine", rawCarDamageData.EngineDamage / 100.0));
+            parts.Add(new DamagePart("engine-ice-wear", "engine", rawCarDamageData.EngineICEWear / 100.0));
+            parts.Add(new DamagePart("engine-mguh-wear", "engine", rawCarDamageData.EngineMGUHWear / 100.0));
+            parts.Add(new DamagePart("engine-mguk-wear", "engine", rawCarDamageData.EngineMGUKWear / 100.0));
+            parts.Add(new DamagePart("engine-es-wear", "engine", rawCarDamageData.EngineESWear / 100.0));
+            parts.Add(new DamagePart("engine-ce-wear", "engine", rawCarDamageData.EngineCEWear / 100.0));
+            parts.Add(new DamagePart("engine-tc-wear", "engine", rawCarDamageData.EngineTCWear / 100.0));
+            string[] wheels = { "rl", "rr", "fl", "fr" }; // ordre F1 : arrière gauche, arrière droit, avant gauche, avant droit
+            for (int i = 0; i < 4 && rawCarDamageData.TyresDamage != null && i < rawCarDamageData.TyresDamage.Length; i++)
+            {
+                parts.Add(new DamagePart($"tyre-{wheels[i]}", "tyres", rawCarDamageData.TyresDamage[i] / 100.0));
+            }
+
+            parts.Add(new DamagePart("drs-fault", "electronics", rawCarDamageData.DrsFault != 0 ? 1 : 0));
+            parts.Add(new DamagePart("ers-fault", "electronics", rawCarDamageData.ErsFault != 0 ? 1 : 0));
+            parts.Add(new DamagePart("engine-blown", "engine", rawCarDamageData.EngineBlown != 0 ? 1 : 0));
+            parts.Add(new DamagePart("engine-seized", "engine", rawCarDamageData.EngineSeized != 0 ? 1 : 0));
+
             playerCar.SpeedLimiterEngaged = rawCarStatusData.PitLimiterStatus == 1;
 
             /*playerCar.WorldOrientation = new Orientation()

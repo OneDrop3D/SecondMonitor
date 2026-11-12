@@ -117,6 +117,8 @@ namespace SecondMonitor.Hub.Core.Race
         }
 
         private readonly TyreThermalWatch _thermal = new();
+        private readonly DamageWatch _damage = new();
+        private SecondMonitor.Hub.Core.Track.LibraryTrack _libraryTrack;
 
         public RaceSnapshot BuildSnapshot()
         {
@@ -175,6 +177,8 @@ namespace SecondMonitor.Hub.Core.Race
         private void ResetInternal()
         {
             _thermal.Reset();
+            _damage.Reset();
+            _libraryTrack = null;
             _trackers.Clear();
             _player.Reset();
             _telemetry.Reset();
@@ -242,8 +246,20 @@ namespace SecondMonitor.Hub.Core.Race
                 Layout = session.TrackInfo?.TrackLayoutName,
                 Length = lapLength,
                 Outline = _trackMap.Outline,
+                OutlineSource = _trackMap.Outline != null ? "jeu" : null,
                 WorldPositionsValid = worldValid,
             };
+            if (snap.Track.Outline == null)
+            {
+                // Pas encore de tracé appris (premier tour, ou jeu sans positions) : le vrai tracé du circuit s'il est connu.
+                _libraryTrack ??= SecondMonitor.Hub.Core.Track.TrackLibrary.Find(snap.Track.Name, snap.Track.Layout, lapLength);
+                if (_libraryTrack != null)
+                {
+                    snap.Track.Outline = _libraryTrack.Points;
+                    snap.Track.OutlineSource = "bibliothèque";
+                    snap.Track.OutlineCredit = $"{_libraryTrack.Name} · {_libraryTrack.Source}";
+                }
+            }
             snap.Weather = new WeatherDto
             {
                 Air = TempOrNull(session.WeatherInfo?.AirTemperature),
@@ -291,6 +307,19 @@ namespace SecondMonitor.Hub.Core.Race
                 bool moving = !playerInfo.InPits && (playerInfo.Speed?.InKph ?? 0) > 20;
                 playerStrategy.TyreThermal = _thermal.Update(now, playerInfo.CompletedLaps, moving, playerStrategy.Wheels);
                 playerStrategy.Alerts = TyreThermalWatch.Alerts(playerStrategy.TyreThermal);
+
+                var clean = playerTracker?.Laps.Where(l => l.Time > 0 && !l.IsPitLap && !l.IsOutLap && l.Valid).Select(l => (l.Lap, l.Time.Value)).ToList() ?? new List<(int, double)>();
+                playerStrategy.Damage = _damage.Update(playerInfo, now, playerInfo.CompletedLaps, clean);
+                if (_damage.LastEvent is DamageEvent ev)
+                {
+                    playerStrategy.DamageEvent = ev;
+                    if (now - ev.Time < 120 || ev.LossPerLap.HasValue && now - ev.Time < 600)
+                    {
+                        playerStrategy.Alerts.Insert(0, ev.LossPerLap is double loss
+                            ? $"Dégât : {ev.Label} ({ev.Percent:0} %), il coûte {loss:0.00} s par tour."
+                            : $"Dégât : {ev.Label} ({ev.Percent:0} %).");
+                    }
+                }
             }
 
             DriverTracker leader = current.FirstOrDefault();
@@ -428,6 +457,11 @@ namespace SecondMonitor.Hub.Core.Race
             if (playerStrategy != null && playerTracker != null && isRace)
             {
                 playerStrategy.Battles = BuildBattles(snap, playerTracker.Id);
+            }
+
+            if (playerStrategy != null)
+            {
+                playerStrategy.PitPlan = SecondMonitor.Hub.Core.Strategy.PitPlanner.Build(snap, _trackers);
             }
 
             snap.DataRate.PlayerHz = Math.Round(playerTracker?.Analysis.SampleHz ?? 0, 1);

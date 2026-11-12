@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { num, thermal, thermalColor, WHEEL_LABEL } from '../format';
+import { DamageList } from './RaceExtras';
 import type { EngineDto, RaceSnapshot, WheelStatus } from '../types';
 import { LineChart, type Series } from '../charts/LineChart';
 import { seriesPoints, useTelemetry, type TelemetryStore } from '../telemetry';
@@ -26,6 +27,10 @@ export function CarView({ snapshot }: { snapshot: RaceSnapshot }) {
 
   return (
     <div className="stack">
+      <section className="card">
+        <div className="card-head"><span className="card-title">Dégâts</span><span className="muted">pièce par pièce quand le jeu le donne (F1 : ailerons, fond plat, moteur…)</span></div>
+        <div className="card-body"><DamageList player={p} /></div>
+      </section>
       <div className="grid-car">
         <section className="card">
           <div className="card-body">

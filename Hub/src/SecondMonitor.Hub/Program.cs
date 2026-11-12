@@ -52,6 +52,7 @@ if (!portFree)
     }
 
     AppWindow.Message(
+        headless,
         "SecondMonitor ne peut pas démarrer",
         alreadyRunning
             ? $"SecondMonitor tourne déjà sur cet ordinateur : {localUrl}"
@@ -233,6 +234,21 @@ app.MapPost("/api/client-log", (ClientLog entry) =>
     HubJournal.Write(dataDir, "interface", $"{entry.Message} {entry.Detail}".Trim());
     return Results.Ok();
 });
+// ───── Petits écrans et boutons externes (ClickDeck, touche du clavier ou bouton du volant du PC de jeu) ─────
+app.MapGet("/api/deck", (RaceEngine engine, LiveHub hub) => Results.Json(DeckApi.Build(engine.BuildSnapshot(), hub.LastRadioText), LiveHub.Json));
+app.MapPost("/api/radio/press", async (LiveHub hub, HttpContext ctx) =>
+{
+    // Un appui « radio » venu d'ailleurs : le poste radio (la fenêtre de SecondMonitor) démarre ou envoie la dictée,
+    // ou coupe l'ingénieur s'il parle. Même comportement que le bouton à l'écran.
+    string from = ctx.Request.Query["de"].FirstOrDefault() ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "?";
+    await hub.BroadcastAsync("radioPress", new { from, at = DateTime.Now });
+    return Results.Json(new { ok = true, postes = hub.ClientCount, phase = DeckApi.RadioPhase });
+});
+app.MapPost("/api/radio/state", (RadioState state) =>
+{
+    DeckApi.RadioPhase = state.Phase ?? "idle";
+    return Results.Ok();
+});
 app.MapPost("/api/radio/stop", async (EngineerService engineer) =>
 {
     await engineer.StopSpeakingAsync();
@@ -250,7 +266,7 @@ try
 }
 catch (Exception ex)
 {
-    AppWindow.Message("SecondMonitor ne peut pas démarrer", ex.Message);
+    AppWindow.Message(headless, "SecondMonitor ne peut pas démarrer", ex.Message);
     return;
 }
 
@@ -285,3 +301,5 @@ public sealed record DiagnosticRequest(string Step);
 public sealed record MemoryNote(string Text, string? Source = null);
 
 public sealed record ClientLog(string Message, string? Detail = null);
+
+public sealed record RadioState(string? Phase);

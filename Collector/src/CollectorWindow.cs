@@ -101,6 +101,7 @@ namespace SecondMonitor.Collector
                     donnees = runtime.GameDataFlowing,
                     voitures = runtime.Host.LastDriverCount,
                     conseil = runtime.Advice() is { } a ? new { titre = a.Title, texte = a.Text, action = a.Action } : null,
+                    radio = new { supporte = RadioButton.Supported, bouton = runtime.Radio?.Description ?? "aucun", apprentissage = runtime.Radio?.Learning ?? false },
                 });
             }
 
@@ -142,6 +143,14 @@ namespace SecondMonitor.Collector
                             break;
                         case "installer":
                             runtime.Host.RunDecision();
+                            SendState();
+                            break;
+                        case "radio-choisir":
+                            runtime.Radio?.Learn();
+                            SendState();
+                            break;
+                        case "radio-retirer":
+                            runtime.Radio?.Clear();
                             SendState();
                             break;
                         case "admin":

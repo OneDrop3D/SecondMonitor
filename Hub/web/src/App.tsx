@@ -16,7 +16,7 @@ import { CarView } from './components/CarView';
 import { WeatherView } from './components/WeatherView';
 import { BattlePanel } from './components/BattlePanel';
 import { RadioDock } from './components/RadioDock';
-import { RadioProvider, type RadioMessage } from './radio';
+import { RadioProvider, isRadioStation, type RadioMessage } from './radio';
 import { playBase64Wav, stopPlayback } from './audio';
 import { useSelection } from './selection';
 import type { ClassView } from './classView';
@@ -67,6 +67,7 @@ function Shell() {
       return;
     }
     if (m.type === 'radioStop') { stopPlayback(); return; }
+    if (m.type === 'radioPress') { if (isRadioStation()) window.dispatchEvent(new Event('sm-radio-press')); return; }
     if (m.type !== 'radio') return;
     const msg = m.data as RadioMessage;
     setRadio((r) => [...r.slice(-49), msg]);
@@ -142,7 +143,7 @@ function Shell() {
           {tab === 'settings' ? (
             <SettingsView theme={theme} setTheme={setThemeState} snapshot={snapshot} />
           ) : tab === 'ai' ? (
-            <EngineerView radio={radio} hasLiveData={!!snapshot?.hasData} />
+            <EngineerView radio={radio} hasLiveData={!!snapshot?.hasData} sessionType={snapshot?.sessionType} />
           ) : tab === 'connection' ? (
             <ConnectionView status={status} snapshot={snapshot} />
           ) : needsData && !snapshot?.hasData ? (

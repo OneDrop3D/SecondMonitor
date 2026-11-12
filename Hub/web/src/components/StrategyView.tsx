@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { compoundInfo, lapTime } from '../format';
 import type { DriverRow, RaceSnapshot, StintDto } from '../types';
 import { ClassSwatch, Confidence, TyreBadge } from './Common';
+import { PitPlanCard } from './RaceExtras';
 
 const ROW_H = 26;
 const BAR_H = 16;
@@ -75,6 +76,12 @@ export function StrategyView({ snapshot, classColor, onSelect }: Props) {
 
   return (
     <div className="stack">
+      {snapshot.player?.pitPlan && (
+        <div className="card">
+          <div className="card-head"><span className="card-title">Simulation d'arrêt</span><span className="muted">si vous rentrez maintenant · undercut · overcut</span></div>
+          <div className="card-body"><PitPlanCard player={snapshot.player} /></div>
+        </div>
+      )}
       <div className="card">
         <div className="card-head">
           <span className="card-title">Stratégies du plateau</span>

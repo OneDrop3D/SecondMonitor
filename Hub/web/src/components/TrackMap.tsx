@@ -50,7 +50,7 @@ export function TrackMap({ snapshot, classColor, onSelect, classView = 'all' }: 
   const { rows: shown, traffic } = visibleDrivers(snapshot, classView);
   const placed: Placed[] = shown.map((d) => {
     if (frame && outline) {
-      const useWorld = d.inPits && d.x != null && d.z != null && snapshot.track.worldPositionsValid;
+      const useWorld = d.inPits && d.x != null && d.z != null && snapshot.track.worldPositionsValid && snapshot.track.outlineSource === 'jeu';
       if (useWorld) return { d, x: frame.tx(d.x!), y: frame.ty(d.z!) };
       const f = ((d.lapFraction % 1) + 1) % 1;
       const pos = f * (outline.length - 1);
@@ -88,6 +88,9 @@ export function TrackMap({ snapshot, classColor, onSelect, classView = 'all' }: 
       <div className="card-head">
         <span className="card-title">Carte</span>
         <span className="muted">{snapshot.track.name}{snapshot.track.layout ? ` · ${snapshot.track.layout}` : ''}</span>
+        {snapshot.track.outlineSource === 'bibliothèque' && (
+          <span className="pill small-pill" title={`Tracé réel (${snapshot.track.outlineCredit ?? ''}) en attendant celui appris en roulant`}>tracé réel</span>
+        )}
         <span className="spacer" />
         {traffic.size > 0 && <span className="pill" title="Voitures d'autres catégories à moins de 5 s">{traffic.size} en trafic</span>}
         {!frame && <span className="pill" title="La carte se dessine après un tour complet sans passage au stand">Tracé en apprentissage</span>}

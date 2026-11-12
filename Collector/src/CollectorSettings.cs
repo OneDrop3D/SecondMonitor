@@ -36,6 +36,12 @@ namespace SecondMonitor.Collector
         /// <summary>Arrêter de lire le jeu quand aucun hub n'est connecté depuis ce nombre de secondes (0 = jamais).</summary>
         public int PauseSansHubSecondes { get; set; } = 20;
 
+        /// <summary>Touche ou bouton du volant de ce PC qui déclenche la radio de l'ingénieur (null = aucun).</summary>
+        public BoutonRadio BoutonRadio { get; set; }
+
+        /// <summary>Port de l'interface de SecondMonitor (pour lui transmettre les appuis radio).</summary>
+        public int PortSecondMonitor { get; set; } = 8686;
+
         /// <summary>Priorité basse : le jeu passe toujours avant le collecteur.</summary>
         public bool PrioriteBasse { get; set; } = true;
 

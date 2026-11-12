@@ -31,6 +31,8 @@ export interface TrackDto {
   length: number;
   outline: [number, number][] | null;
   worldPositionsValid: boolean;
+  outlineSource: 'jeu' | 'bibliothèque' | null;
+  outlineCredit: string | null;
 }
 
 export interface WeatherDto {
@@ -128,9 +130,29 @@ export interface PlayerStrategy {
   recentLaps: PlayerLap[];
   tyreThermal: TyreThermal[];
   alerts: string[];
+  damage: DamagePart[];
+  damageEvent: { key: string; label: string; percent: number; lap: number; lossPerLap: number | null } | null;
+  pitPlan: PitPlan | null;
   deltaBest: number | null;
   deltaLast: number | null;
   speed: number;
+}
+
+export interface DamagePart {
+  key: string;
+  label: string;
+  group: 'aero' | 'engine' | 'gearbox' | 'suspension' | 'brakes' | 'tyres' | 'electronics';
+  percent: number;
+}
+
+export interface PitPlan {
+  pitLoss: number;
+  pitLossSource: string;
+  freshTyreGain: number | null;
+  freshTyreGainSource: string;
+  warmupPenalty: number;
+  rejoinNow: { position: number; aheadNumber: number | null; aheadName: string | null; aheadGap: number | null; behindNumber: number | null; behindName: string | null; behindGap: number | null; traffic: number; text: string } | null;
+  cuts: { kind: 'undercut' | 'overcut' | 'menace-undercut'; rivalId: string; number: number | null; name: string | null; gap: number; gainPerLap: number | null; lapsNeeded: number | null; feasible: boolean; text: string }[];
 }
 
 export interface TyreThermal {

@@ -114,10 +114,22 @@ En course multi-catégories, le tableau montre votre catégorie et les autres vo
 ## L'ingénieur IA
 
 - Il fonctionne **100 % en local** avec [Ollama](https://ollama.com), sans compte, sans abonnement et sans envoyer de données.
-- Pour lui parler, utilisez le bouton radio de l'écran, la barre d'espace ou **un bouton du volant** : un appui pour parler, un appui pour envoyer. Un appui pendant qu'il parle le coupe.
+- Pour lui parler, un appui sur le bouton radio pour parler, un second pour envoyer. Un appui pendant qu'il parle le coupe. Le bouton radio peut être :
+  - le bouton de l'écran, ou la barre d'espace ;
+  - un bouton du volant branché sur l'ordinateur qui affiche ;
+  - une **touche du clavier ou un bouton du volant du PC de jeu** : réglage dans la fenêtre du collecteur ; marche même pendant le jeu, sous Windows ;
+  - une touche **ClickDeck**.
 - Les chiffres sont calculés par SecondMonitor : l'IA ne les invente pas.
 - Il calcule le **rythme** : le vôtre, celui qu'il faut pour rattraper la voiture devant ou pour gagner, et ce que donne le rythme actuel à l'arrivée.
   Il donne aussi la tendance météo des 30 minutes suivantes. Il répond à plusieurs questions posées d'un coup.
+- Il calcule la **stratégie d'arrêt** :
+  - la position à la sortie si vous rentrez maintenant ;
+  - l'**undercut** et l'**overcut** sur la voiture devant ;
+  - la **menace d'undercut** de la voiture derrière.
+
+  Perte au stand et gain des pneus neufs sont mesurés sur tout le plateau. Il connaît le vocabulaire de course.
+- Il suit les **dégâts** pièce par pièce (F1 : ailerons, fond plat, éléments moteur… ; ACC et LMU : zones, suspension, crevaisons), mesure ce qu'ils coûtent au tour et dit si réparer vaut un arrêt.
+- Il s'adapte à la session : la voiture en essais (compte rendu de tour : pressions, carrossage), le tour lancé en qualification, le déroulé en course.
 - Il prend la parole de lui-même quand une décision se présente :
   - **pneus trop chauds sur tout un tour** ou en surchauffe depuis plus de 30 s, ou encore froids au tour de formation ;
   - pluie, relais à allonger, box dans deux tours, voiture qui revient, freins ou moteur trop chauds.
@@ -142,6 +154,18 @@ La fenêtre du collecteur indique ce qui manque quand un jeu est ouvert mais n'e
 | **Le Mans Ultimate**, **rFactor 2** | Le plugin de mémoire partagée du jeu doit être activé. |
 | **Forza Motorsport** | Réglages du jeu : *Data Out* activé, IP 127.0.0.1, port 20127. |
 | Les autres | Rien à faire. |
+
+## Cartes des circuits
+
+Dès le premier tour, SecondMonitor affiche le **tracé réel** de 40 circuits connus. Un tracé n'est retenu que si le nom et la longueur
+du circuit correspondent : il ne remplace jamais une version courte ou un circuit inconnu.
+Ensuite, la carte apprise en roulant dans le jeu prend le relais. Elle est exacte pour tous les circuits et gardée pour la fois suivante.
+Tracés : [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) (licence MIT).
+
+## ClickDeck
+
+Le boîtier ClickDeck peut afficher les données de course (position, classement, essence, pneus, météo…) sur des touches de plusieurs tailles. Il peut aussi
+servir de bouton radio et poser des questions à l'ingénieur. Il lit l'adresse `http://<ordinateur de SecondMonitor>:8686/api/deck`.
 
 ## Réseau et sécurité
 
@@ -197,5 +221,6 @@ Options de SecondMonitor :
 - [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) © 2023 Matus Celko (winzarten), licence MIT : écran d'origine, connecteurs de jeux, modèle de données, protocole réseau.
 - Nouvelle version (SecondMonitor multiplateforme, collecteur, ingénieur IA, analyses) © 2026 OneDrop3D, licence MIT.
 - Logos des marques automobiles : [Simple Icons](https://simpleicons.org) (CC0). Les marques appartiennent à leurs propriétaires.
+- Tracés des circuits : [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) © Tomislav Bacinger, licence MIT.
 
 Voir [LICENSE](LICENSE).
