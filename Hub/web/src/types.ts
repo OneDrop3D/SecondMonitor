@@ -126,9 +126,24 @@ export interface PlayerStrategy {
   engine: EngineDto | null;
   battles: BattleDto[];
   recentLaps: PlayerLap[];
+  tyreThermal: TyreThermal[];
+  alerts: string[];
   deltaBest: number | null;
   deltaLast: number | null;
   speed: number;
+}
+
+export interface TyreThermal {
+  position: 'FL' | 'FR' | 'RL' | 'RR';
+  surface: number | null;
+  currentLapAverage: number | null;
+  lastLapAverage: number | null;
+  lastLapCoreAverage: number | null;
+  min: number | null;
+  max: number | null;
+  hotSeconds: number;
+  state: 'froid' | 'bon' | 'chaud' | null;
+  lastLapState: 'froid' | 'bon' | 'chaud' | null;
 }
 
 export interface PlayerLap {
@@ -299,10 +314,15 @@ export interface HubStatus {
       peers: string[];
       manualHosts: string[];
       secondsSinceLastPacket: number | null;
+      secondsSinceLastData: number | null;
+      game: string | null;
+      kbPerSecond: number;
       localAddresses: string[];
     } | null;
     lastUpdateSecondsAgo: number | null;
     log: string[];
+    capture: string | null;
+    replay: string | null;
   };
   clients: number;
   version: string;

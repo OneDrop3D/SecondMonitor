@@ -319,7 +319,7 @@ const STEPS: { id: string; label: string; hint: string }[] = [
   { id: 'listen', label: 'Écoute', hint: 'Parlez 4 s : transcription de votre voix' },
 ];
 
-function TestCard() {
+export function TestCard() {
   const r = useRadio();
   const [results, setResults] = useState<Record<string, Diagnostic | 'running'>>({});
   const [recording, setRecording] = useState(false);

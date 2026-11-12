@@ -19,6 +19,9 @@ namespace SecondMonitor.Collector
 
         public static bool RestartRequested { get; private set; }
 
+        /// <summary>Relancer avec les droits administrateur (installation d'un plugin dans Program Files).</summary>
+        public static bool RestartAsAdmin { get; private set; }
+
         /// <summary>Affiche la fenêtre et bloque jusqu'à sa fermeture. Faux si la vue web manque (on passe alors en console).</summary>
         public static bool Run(CollectorRuntime runtime, bool minimized)
         {
@@ -37,6 +40,13 @@ namespace SecondMonitor.Collector
                     .SetDevToolsEnabled(false)
                     .SetLogVerbosity(0)
                     .SetMinimized(minimized);
+                // Windows : dossier de travail de WebView2 dans le profil de l'utilisateur (le dossier du programme peut être
+                // en lecture seule ; WebView2 ne peut alors pas démarrer et la fenêtre reste noire).
+                if (OperatingSystem.IsWindows())
+                {
+                    window.SetTemporaryFilesPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SecondMonitor", "WebView2"));
+                }
+
                 string icon = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "SecondMonitor.ico" : "icone.png");
                 if (!OperatingSystem.IsMacOS() && File.Exists(icon))
                 {
@@ -88,6 +98,9 @@ namespace SecondMonitor.Collector
                     dossier = runtime.DataDirectory,
                     systeme = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "mac" : "linux",
                     visualiseur = ViewerPath() != null || OperatingSystem.IsMacOS(),
+                    donnees = runtime.GameDataFlowing,
+                    voitures = runtime.Host.LastDriverCount,
+                    conseil = runtime.Advice() is { } a ? new { titre = a.Title, texte = a.Text, action = a.Action } : null,
                 });
             }
 
@@ -125,6 +138,15 @@ namespace SecondMonitor.Collector
                             break;
                         case "relancer":
                             RestartRequested = true;
+                            window.Close();
+                            break;
+                        case "installer":
+                            runtime.Host.RunDecision();
+                            SendState();
+                            break;
+                        case "admin":
+                            RestartRequested = true;
+                            RestartAsAdmin = true;
                             window.Close();
                             break;
                         case "dossier":

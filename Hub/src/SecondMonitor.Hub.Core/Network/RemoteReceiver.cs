@@ -34,6 +34,12 @@ namespace SecondMonitor.Hub.Core.Network
         private CancellationTokenSource _cts;
         private Task _loop;
         private DateTime _lastPacketUtc = DateTime.MinValue;
+        private DateTime _lastDataUtc = DateTime.MinValue;
+        private string _lastGame;
+        private long _bytes;
+        private long _bytesAtStatus;
+        private DateTime _statusUtc = DateTime.UtcNow;
+        private double _kbPerSecond;
 
         public RemoteReceiver(int port = DefaultPort, IEnumerable<string> manualHosts = null)
         {
@@ -43,7 +49,11 @@ namespace SecondMonitor.Hub.Core.Network
             _listener.ConnectionRequestEvent += r => r.AcceptIfKey(DatagramPayload.Version4);
             _listener.NetworkReceiveEvent += OnNetworkReceive;
             _listener.NetworkReceiveUnconnectedEvent += OnNetworkReceiveUnconnected;
-            _listener.PeerConnectedEvent += p => Log($"Connecté au PC de jeu {p.Address}:{p.Port}");
+            _listener.PeerConnectedEvent += p =>
+            {
+                Log($"Connecté au PC de jeu {p.Address}:{p.Port}");
+                Capture?.Split();
+            };
             _listener.PeerDisconnectedEvent += (p, info) => Log($"Déconnecté de {p.Address}:{p.Port} ({info.Reason})");
             _client = new NetManager(_listener, new PacketCompressionLayer())
             {
@@ -58,6 +68,10 @@ namespace SecondMonitor.Hub.Core.Network
         public event Action<SimulatorDataSet, DatagramPayloadKind> DataReceived;
 
         public event Action<string> LogMessage;
+
+        /// <summary>Enregistrement brut des paquets reçus (diagnostic, rejouable).</summary>
+        public CaptureWriter Capture { get; set; }
+
 
         public IReadOnlyList<string> ManualHosts
         {
@@ -76,9 +90,27 @@ namespace SecondMonitor.Hub.Core.Network
                     Peers = connected.Select(p => $"{p.Address}:{p.Port}").ToList(),
                     ManualHosts = _manualHosts.ToList(),
                     SecondsSinceLastPacket = _lastPacketUtc == DateTime.MinValue ? null : (DateTime.UtcNow - _lastPacketUtc).TotalSeconds,
+                    SecondsSinceLastData = _lastDataUtc == DateTime.MinValue ? null : (DateTime.UtcNow - _lastDataUtc).TotalSeconds,
+                    Game = _lastGame,
+                    KbPerSecond = Math.Round(KbRate(), 1),
                     LocalAddresses = GetLocalAddresses(),
                 };
             }
+        }
+
+        private double KbRate()
+        {
+            DateTime now = DateTime.UtcNow;
+            double dt = (now - _statusUtc).TotalSeconds;
+            if (dt >= 1)
+            {
+                long b = Interlocked.Read(ref _bytes);
+                _kbPerSecond = (b - _bytesAtStatus) / dt / 1024;
+                _bytesAtStatus = b;
+                _statusUtc = now;
+            }
+
+            return _lastPacketUtc != DateTime.MinValue && (now - _lastPacketUtc).TotalSeconds > 3 ? 0 : _kbPerSecond;
         }
 
         public void SetManualHosts(IEnumerable<string> hosts)
@@ -252,6 +284,9 @@ namespace SecondMonitor.Hub.Core.Network
             DatagramPayload payload;
             try
             {
+                Interlocked.Add(ref _bytes, reader.UserDataSize);
+                Capture?.Add(reader.RawData, reader.UserDataOffset, reader.UserDataSize);
+
                 // Identique au client Windows d'origine : tout le contenu utilisateur du paquet est le protobuf.
                 using var stream = new MemoryStream(reader.RawData, reader.UserDataOffset, reader.UserDataSize);
                 payload = Serializer.Deserialize<DatagramPayload>(stream);
@@ -272,9 +307,37 @@ namespace SecondMonitor.Hub.Core.Network
                 _unpackers[peer] = unpacker;
             }
 
-            SimulatorDataSet dataSet = unpacker.UnpackDatagramPayload(payload);
+            SimulatorDataSet dataSet;
+            try
+            {
+                dataSet = unpacker.UnpackDatagramPayload(payload);
+            }
+            catch (Exception ex)
+            {
+                Log("Paquet impossible à décoder : " + ex.Message);
+                return;
+            }
+
             _lastPacketUtc = DateTime.UtcNow;
-            DataReceived?.Invoke(dataSet, payload.PayloadKind);
+            if (!string.IsNullOrEmpty(dataSet?.Source))
+            {
+                _lastGame = dataSet.Source;
+            }
+
+            if (payload.PayloadKind != DatagramPayloadKind.HearthBeat && dataSet?.DriversInfo?.Length > 0)
+            {
+                _lastDataUtc = _lastPacketUtc;
+            }
+
+            try
+            {
+                DataReceived?.Invoke(dataSet, payload.PayloadKind);
+            }
+            catch (Exception ex)
+            {
+                // Une donnée inattendue d'un jeu ne doit jamais arrêter la réception : on la signale et on continue.
+                Log($"Donnée non traitée ({ex.GetType().Name} : {ex.Message}) {ex.StackTrace?.Split('\n').FirstOrDefault()?.Trim()}");
+            }
         }
 
         private void Log(string message) => LogMessage?.Invoke(message);
@@ -298,6 +361,19 @@ namespace SecondMonitor.Hub.Core.Network
         }
     }
 
+    /// <summary>Décode les paquets d'un enregistrement, dans l'ordre (le dépaquetage dépend des paquets précédents).</summary>
+    public sealed class PayloadDecoder
+    {
+        private readonly DatagramPayloadUnPacker _unpacker = new();
+
+        public (SimulatorDataSet Data, DatagramPayloadKind Kind) Decode(byte[] bytes)
+        {
+            using var stream = new MemoryStream(bytes);
+            DatagramPayload payload = Serializer.Deserialize<DatagramPayload>(stream);
+            return (_unpacker.UnpackDatagramPayload(payload), payload.PayloadKind);
+        }
+    }
+
     public sealed class ReceiverStatus
     {
         public int Port { get; set; }
@@ -309,6 +385,14 @@ namespace SecondMonitor.Hub.Core.Network
         public List<string> ManualHosts { get; set; } = new();
 
         public double? SecondsSinceLastPacket { get; set; }
+
+        /// <summary>Dernières vraies données de course (pas seulement des signes de vie du collecteur).</summary>
+        public double? SecondsSinceLastData { get; set; }
+
+        /// <summary>Jeu annoncé par le collecteur.</summary>
+        public string Game { get; set; }
+
+        public double KbPerSecond { get; set; }
 
         public List<string> LocalAddresses { get; set; } = new();
     }

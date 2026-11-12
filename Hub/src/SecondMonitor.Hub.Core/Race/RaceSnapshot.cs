@@ -285,6 +285,12 @@ namespace SecondMonitor.Hub.Core.Race
         public double? DeltaLast { get; set; }
 
         public double Speed { get; set; }
+
+        /// <summary>Températures des pneus dans la durée (moyenne du tour, surchauffe prolongée).</summary>
+        public List<TyreThermalDto> TyreThermal { get; set; } = new();
+
+        /// <summary>Alertes à afficher (pneus trop chauds sur un tour, surchauffe qui dure…).</summary>
+        public List<string> Alerts { get; set; } = new();
     }
 
     public sealed class FuelStrategy

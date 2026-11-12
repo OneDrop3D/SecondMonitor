@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { clock, compoundInfo, flagLabel, gap, lapTime, num, sessionLabel, thermal, thermalColor } from '../format';
-import type { DriverRow, EngineDto, RaceSnapshot, WheelStatus } from '../types';
+import type { DriverRow, EngineDto, HubStatus, RaceSnapshot, TyreThermal, WheelStatus } from '../types';
+import { collectorAddress, linkStage } from '../status';
 import { visibleDrivers, type ClassView } from '../classView';
 import { TrackMap } from './TrackMap';
 import { BattlePanel } from './BattlePanel';
@@ -64,7 +65,7 @@ export function TimingHeader({ snapshot }: { snapshot: RaceSnapshot }) {
       <div className="tm-box tm-weather">
         <span className="tm-wx" title="Température de l'air"><Icon name="air" /><b className="tnum">{num(s.weather.air, 1)} °C</b></span>
         <span className="tm-wx" title="Température de la piste"><Icon name="track" /><b className="tnum">{num(s.weather.trackTemp, 1)} °C</b></span>
-        <span className="tm-wx" title="Pluie"><Icon name="rain" /><b className="tnum">{s.weather.rain.toFixed(0)} %</b></span>
+        <span className="tm-wx" title="Pluie"><Icon name="rain" /><b className="tnum">{num(s.weather.rain, 0)} %</b></span>
       </div>
       <div className="tm-box tm-deltas">
         <DeltaBar label="Δ meilleur tour perso" value={s.player?.deltaBest ?? null} />
@@ -216,20 +217,22 @@ export function TimingGrid({ snapshot, classColor, onSelect, classView }: GridPr
 
 // ───────────────────────────── État de la voiture (bas gauche) ─────────────────────────────
 
-function WheelBox({ w, left }: { w: WheelStatus; left: boolean }) {
+function WheelBox({ w, left, th }: { w: WheelStatus; left: boolean; th?: TyreThermal }) {
   // Surface : extérieur, milieu, intérieur vus de dessus (l'extérieur est du côté de la carrosserie).
   const temps = left ? [w.tempOuter, w.tempMiddle, w.tempInner] : [w.tempInner, w.tempMiddle, w.tempOuter];
   const c = compoundInfo(w.compound);
-  const life = Math.max(0, 100 - w.wearPct);
+  const wear = w.wearPct ?? 0;
+  const life = Math.max(0, 100 - wear);
   const tColor = (v: number | null) => thermalColor(thermal(v, w.idealTemp, w.tempWindow));
   const pressureOff = w.pressure != null && w.idealPressure != null && Math.abs(w.pressure - w.idealPressure) > 5;
+  const alarm = th && (th.hotSeconds >= 30 || th.lastLapState === 'chaud');
   return (
-    <div className="tm-wheel" title={`${w.position} — ${c.label}`}>
+    <div className={`tm-wheel ${alarm ? 'alarm' : ''}`} title={`${w.position} — ${c.label}${th?.lastLapAverage != null ? ` — moyenne du dernier tour ${th.lastLapAverage.toFixed(0)}°` : ''}`}>
       <div className="tm-wheel-temps">
         {temps.map((v, i) => <span key={i} className="tnum" style={{ background: tColor(v) }}>{v != null ? v.toFixed(0) : '—'}</span>)}
       </div>
       <div className="tm-wheel-mid">
-        <div className="tm-wear" title={`Usure ${w.wearPct.toFixed(0)} %`}>
+        <div className="tm-wear" title={`Usure ${wear.toFixed(0)} %`}>
           <span className="tm-wear-fill" style={{ width: `${life}%` }} />
           <span className="tm-wear-text"><span className={`tyre-dot ${c.kind}`}>{c.letter}</span> {life.toFixed(0)} %</span>
         </div>
@@ -243,6 +246,11 @@ function WheelBox({ w, left }: { w: WheelStatus; left: boolean }) {
           {w.pressure != null ? `${w.pressure.toFixed(0)} kPa` : '—'}
         </span>
       </div>
+      {th?.lastLapAverage != null && (
+        <div className={`tm-wheel-avg ${th.lastLapState === 'chaud' ? 'hot' : th.lastLapState === 'froid' ? 'cold' : ''}`}>
+          moy. tour {th.lastLapAverage.toFixed(0)}°{th.hotSeconds >= 30 ? ` · chaud depuis ${th.hotSeconds.toFixed(0)} s` : ''}
+        </div>
+      )}
     </div>
   );
 }
@@ -259,7 +267,8 @@ export function CarStatus({ snapshot }: { snapshot: RaceSnapshot }) {
       <div className="tm-wheels">
         {(['FL', 'FR', 'RL', 'RR'] as const).map((pos) => {
           const w = byPos.get(pos);
-          return w ? <WheelBox key={pos} w={w} left={pos === 'FL' || pos === 'RL'} /> : <div key={pos} className="tm-wheel muted">—</div>;
+          const th = p.tyreThermal?.find((t) => t.position === pos);
+          return w ? <WheelBox key={pos} w={w} left={pos === 'FL' || pos === 'RL'} th={th} /> : <div key={pos} className="tm-wheel muted">—</div>;
         })}
       </div>
       <div className="tm-fuel">
@@ -267,7 +276,7 @@ export function CarStatus({ snapshot }: { snapshot: RaceSnapshot }) {
           <Icon name="fuel" />
           <div>
             <div className="tm-label">Carburant</div>
-            <div className="tm-big tnum">{fuel ? `${fuel.remaining.toFixed(1)} L` : p.energy ? `${p.energy.remainingPct.toFixed(0)} %` : '—'}</div>
+            <div className="tm-big tnum">{fuel ? num(fuel.remaining, 1, ' L') : p.energy ? num(p.energy.remainingPct, 0, ' %') : '—'}</div>
           </div>
         </div>
         <div className="tm-kv"><span>Tours</span><b className="tnum">{num(fuel?.lapsLeft ?? p.energy?.lapsLeft, 1)}</b></div>
@@ -277,8 +286,8 @@ export function CarStatus({ snapshot }: { snapshot: RaceSnapshot }) {
         {p.recommendedStopLap != null && <div className="tm-kv"><span>Arrêt conseillé</span><b className="tnum">T{p.recommendedStopLap}</b></div>}
       </div>
       <div className="tm-engine">
-        <div className="tm-gear"><span className="tm-gear-val">{e?.gear ?? 'N'}</span><span className="tnum muted">{Math.round(p.speed)} km/h</span></div>
-        <div className="tm-kv"><span>Régime</span><b className="tnum">{e ? Math.round(e.rpm) : '—'}</b></div>
+        <div className="tm-gear"><span className="tm-gear-val">{e?.gear ?? 'N'}</span><span className="tnum muted">{num(p.speed, 0, ' km/h')}</span></div>
+        <div className="tm-kv"><span>Régime</span><b className="tnum">{num(e?.rpm, 0)}</b></div>
         <div className="tm-kv" title="Eau"><span><Icon name="water" /> Eau</span><b className="tnum" style={{ color: e?.waterTemp != null ? thermalColor(thermal(e.waterTemp, e.waterIdeal, e.waterWindow)) : undefined }}>{num(e?.waterTemp, 0, ' °C')}</b></div>
         <div className="tm-kv" title="Huile"><span><Icon name="oil" /> Huile</span><b className="tnum" style={{ color: e?.oilTemp != null ? thermalColor(thermal(e.oilTemp, e.oilIdeal, e.oilWindow)) : undefined }}>{num(e?.oilTemp, 0, ' °C')}</b></div>
         {e?.oilPressure != null && <div className="tm-kv"><span>Pression huile</span><b className="tnum">{e.oilPressure.toFixed(0)} kPa</b></div>}
@@ -339,6 +348,7 @@ function NextStop({ snapshot }: { snapshot: RaceSnapshot }) {
   if (!p) return null;
   return (
     <div className="tm-panel tm-strategy">
+      {(p.alerts ?? []).map((a) => <div key={a} className="tm-alert" role="alert">⚠ {a}</div>)}
       <div className="tm-panel-title">Stratégie</div>
       <div className="tm-kv"><span>Tours restants</span><b className="tnum">{p.lapsRemaining != null ? `≈ ${p.lapsRemaining.toFixed(1)}` : '—'}</b></div>
       <div className="tm-kv"><span>Relais</span><b className="tnum">{p.stintLaps} tours</b></div>
@@ -351,10 +361,21 @@ function NextStop({ snapshot }: { snapshot: RaceSnapshot }) {
 
 // ───────────────────────────── Barre d'état (bas) ─────────────────────────────
 
-export function StatusBar({ snapshot, link, version }: { snapshot: RaceSnapshot | null; link: string; version: string | null }) {
+export function StatusBar({ snapshot, link, version, status, onConnection }: {
+  snapshot: RaceSnapshot | null; link: string; version: string | null; status: HubStatus | null; onConnection: () => void;
+}) {
   const s = snapshot?.hasData ? snapshot : null;
-  const linkColor = link === 'open' ? 'var(--good)' : link === 'connecting' ? 'var(--warning)' : 'var(--critical)';
-  const linkText = link === 'open' ? 'Connecté' : link === 'connecting' ? 'Connexion…' : 'Hors ligne';
+  const stage = linkStage(status, snapshot);
+  const pc = collectorAddress(status);
+  const game = status?.source.receiver?.game;
+  const [linkColor, linkText] = link !== 'open'
+    ? ['var(--critical)', 'SecondMonitor injoignable']
+    : stage === 'ok' ? ['var(--good)', `PC de jeu ${pc ?? ''} · données reçues`]
+      : stage === 'demo' ? ['var(--good)', 'Démonstration']
+        : stage === 'replay' ? ['var(--good)', 'Relecture']
+          : stage === 'no-data' ? ['var(--warning)', `${game ?? 'Jeu'} ouvert, en attente de données`]
+            : stage === 'no-game' ? ['var(--warning)', `Collecteur connecté (${pc}) · lancez le jeu`]
+              : ['var(--warning)', 'PC de jeu non connecté'];
   const progress = s && s.timeRemaining != null && s.sessionTime > 0 ? Math.min(1, s.sessionTime / (s.sessionTime + s.timeRemaining)) : s && s.totalLaps > 0 ? Math.min(1, s.leaderLap / s.totalLaps) : 0;
   return (
     <footer className="tm-status">
@@ -363,7 +384,10 @@ export function StatusBar({ snapshot, link, version }: { snapshot: RaceSnapshot 
       {s && <span className="tm-status-item tnum">{clock(s.sessionTime)}</span>}
       <span className="tm-progress" aria-hidden><span style={{ width: `${progress * 100}%` }} /></span>
       {s && s.dataRate.playerHz > 0 && <span className="tm-status-item muted tnum hide-sm" title="Fréquence des données reçues">vous {s.dataRate.playerHz} Hz · adversaires {s.dataRate.opponentsHz} Hz</span>}
-      <span className="tm-status-item"><span className="dot" style={{ background: linkColor }} /> {linkText}</span>
+      <button className="tm-status-item tm-status-link" onClick={onConnection} title="Connexion au PC de jeu">
+        <span className="dot" style={{ background: linkColor }} /> {linkText}
+        {status?.source.receiver?.kbPerSecond ? <span className="muted tnum"> · {status.source.receiver.kbPerSecond.toLocaleString('fr-FR')} Ko/s</span> : null}
+      </button>
     </footer>
   );
 }
@@ -380,6 +404,7 @@ const PATHS: Record<string, string> = {
   weather: 'M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 18z',
   strategy: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
   ai: 'M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
+  link: 'M9 15l6-6M10 6l1.5-1.5a4.2 4.2 0 0 1 6 6L16 12M14 18l-1.5 1.5a4.2 4.2 0 0 1-6-6L8 12',
   settings: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1',
   air: 'M3 8h11a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h7',
   track: 'M4 20 10 4h4l6 16M12 7v2M12 12v2M12 17v2',

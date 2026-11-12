@@ -33,10 +33,12 @@ namespace SecondMonitor.Hub.Core.Ai
             Speed,
             Performance,
             Rain,
+            Pace,
         }
 
         private static readonly (Topic Topic, string[] Words)[] Keywords =
         {
+            (Topic.Pace, new[] { "rythme", "allure", "chrono", "temps au tour", "tourner en", "dois tourner", "pour gagner", "gagner la course", "aller plus vite", "plus vite", "quel temps je", "en combien je" }),
             (Topic.Pit, new[] { "box", "stand", "rentre", "rentrer", "arrêt", "arret", "pit", "ravitaill" }),
             (Topic.Speed, new[] { "vitesse", "pointe", "vmax", "v max", "vmin", "v min", "km/h", "kilomètre", "top speed", "ligne droite", "lignes droites" }),
             (Topic.Performance, new[] { "perd", "gagner du temps", "amélior", "ameliorer", "plus lent", "secteur", "temps perdu", "où je", "ou je" }),
@@ -48,7 +50,7 @@ namespace SecondMonitor.Hub.Core.Ai
             (Topic.Gap, new[] { "écart", "ecart", "derrière", "derriere", "devant", "gap", "revient", "reprend", "attaque", "loin", "rattrape" }),
             (Topic.Position, new[] { "position", "place", "classement", "rang", "leader", "premier", "combientième" }),
             (Topic.Session, new[] { "temps restant", "tours restants", "tour rest", "il reste combien de tours", "combien de tour", "tours bouclés", "tour bouclé", "fin de course", "minutes", "drapeau", "safety", "arrivée" }),
-            (Topic.Weather, new[] { "pluie", "météo", "meteo", "température de piste", "pleuvoir", "pleut", "temps qu'il", "averse", "vent" }),
+            (Topic.Weather, new[] { "pluie", "météo", "meteo", "température de piste", "pleuvoir", "pleut", "temps qu'il", "averse", "vent", "prévision", "prevision", "évoluer", "evoluer", "évolution", "evolution", "tendance", "la piste va" }),
         };
 
         /// <summary>Sujets reconnus dans la question, dans l'ordre où ils apparaissent.</summary>
@@ -112,14 +114,12 @@ namespace SecondMonitor.Hub.Core.Ai
                 // « devant » / « derrière » : on privilégie la ligne qui en parle.
                 bool behind = q.Contains("derrière") || q.Contains("derriere");
                 bool ahead = q.Contains("devant");
-                Fact chosen = lines.FirstOrDefault(l => behind && l.Side == Side.Behind)
-                    ?? lines.FirstOrDefault(l => ahead && l.Side == Side.Ahead)
-                    ?? lines.First();
-                suggestion = chosen.Text;
-                Fact companion = lines.FirstOrDefault(l => l != chosen && l.Side == chosen.Side && l.Companion);
-                if (companion != null)
+                suggestion = Answer(lines, q, behind, ahead);
+
+                // Plusieurs sujets dans la même question (« ma position, la météo et les prévisions ? ») : on répond à chacun.
+                foreach (Topic other in topics.Where(t => t != main.Value && sections.ContainsKey(t)).Take(2))
                 {
-                    suggestion += " " + companion.Text;
+                    suggestion += " " + Answer(sections[other], q, behind, ahead);
                 }
             }
 
@@ -143,10 +143,43 @@ namespace SecondMonitor.Hub.Core.Ai
             return new BriefingResult { Facts = sb.ToString().TrimEnd(), Suggestion = suggestion, Topics = topics.ToList() };
         }
 
+        private static readonly Regex ForecastWords = new(@"prévision|prevision|évolu|evolu|tendance|va (pleuvoir|changer|monter|baisser|sécher|secher)|vont|reste de la course|plus tard|dans \d+ min", RegexOptions.Compiled);
+
+        /// <summary>Réponse à un sujet : la ligne la plus pertinente (devant / derrière / prévision) et ses compléments.</summary>
+        private static string Answer(List<Fact> lines, string q, bool behind, bool ahead)
+        {
+            Fact forecast = ForecastWords.IsMatch(q) ? lines.FirstOrDefault(l => l.Tag == "prévision") : null;
+            if (forecast != null)
+            {
+                // « La météo va évoluer ? » : la situation actuelle, puis la tendance.
+                Fact current = lines.FirstOrDefault(l => !l.Companion);
+                return current != null ? $"{current.Text} {forecast.Text}" : forecast.Text;
+            }
+
+            if (lines.Any(l => l.Tag?.StartsWith("objectif", StringComparison.Ordinal) == true))
+            {
+                // Rythme : le vôtre, puis l'objectif demandé (gagner, ou rattraper la voiture devant par défaut).
+                bool win = q.Contains("gagn") || q.Contains("victoire") || q.Contains("premier");
+                Fact goal = (win ? lines.FirstOrDefault(l => l.Tag == "objectif-gagner") : null)
+                    ?? lines.FirstOrDefault(l => l.Tag == "objectif-devant")
+                    ?? lines.FirstOrDefault(l => l.Tag == "objectif-gagner");
+                Fact base0 = lines.First();
+                return goal != null && goal != base0 ? $"{base0.Text} {goal.Text}" : base0.Text;
+            }
+
+            Fact chosen = lines.FirstOrDefault(l => behind && l.Side == Side.Behind)
+                ?? lines.FirstOrDefault(l => ahead && l.Side == Side.Ahead)
+                ?? lines.FirstOrDefault(l => !l.Companion)
+                ?? lines.First();
+            var parts = new List<string> { chosen.Text };
+            parts.AddRange(lines.Where(l => l != chosen && l.Side == chosen.Side && l.Companion && l.Tag != "prévision").Take(2).Select(l => l.Text));
+            return string.Join(" ", parts);
+        }
+
         private static Dictionary<Topic, List<Fact>> Collect(RaceSnapshot snap, BriefingExtras extras)
         {
             var sections = new Dictionary<Topic, List<Fact>>();
-            void Add(Topic t, string text, Side side = Side.None, bool companion = false)
+            void Add(Topic t, string text, Side side = Side.None, bool companion = false, string tag = null)
             {
                 if (string.IsNullOrWhiteSpace(text))
                 {
@@ -158,7 +191,7 @@ namespace SecondMonitor.Hub.Core.Ai
                     sections[t] = list = new List<Fact>();
                 }
 
-                list.Add(new Fact(text, side, companion));
+                list.Add(new Fact(text, side, companion, tag));
             }
 
             DriverRow me = snap.Drivers.FirstOrDefault(d => d.IsPlayer);
@@ -332,8 +365,8 @@ namespace SecondMonitor.Hub.Core.Ai
                     string t = $"Pneus {Compound(worst.Compound)} depuis {p.StintLaps} tours. Le plus usé est l'{name}, à {N(worst.WearPct, 0)} % d'usure";
                     t += worst.LapsToHeavyWear.HasValue ? $", encore environ {N(worst.LapsToHeavyWear.Value, 0)} tours avant d'être très usé." : ".";
                     Add(Topic.Tyres, t);
-                    var hot = p.Wheels.Where(w => w.TempMiddle.HasValue && w.IdealTemp.HasValue && w.TempMiddle > w.IdealTemp + 10).Select(w => w.Position).ToList();
-                    var cold = p.Wheels.Where(w => w.TempMiddle.HasValue && w.IdealTemp.HasValue && w.TempMiddle < w.IdealTemp - 15).Select(w => w.Position).ToList();
+                    var hot = p.Wheels.Where(w => w.TempMiddle.HasValue && w.IdealTemp.HasValue && w.TempMiddle > w.IdealTemp + 10).Select(w => WheelName(w.Position)).ToList();
+                    var cold = p.Wheels.Where(w => w.TempMiddle.HasValue && w.IdealTemp.HasValue && w.TempMiddle < w.IdealTemp - 15).Select(w => WheelName(w.Position)).ToList();
                     Add(Topic.Tyres, hot.Count > 0 ? "Pneus trop chauds : " + string.Join(", ", hot) + "." : cold.Count > 0 ? "Pneus trop froids : " + string.Join(", ", cold) + "." : "Températures des pneus correctes.", companion: true);
                     if (p.Wheels.All(w => w.TempMiddle.HasValue))
                     {
@@ -429,7 +462,171 @@ namespace SecondMonitor.Hub.Core.Ai
                 Add(Topic.Weather, $"Vent de {N(snap.Weather.Wind.Value, 0)} kilomètres heure.", companion: true);
             }
 
+            AddForecastFacts(extras.Weather, (t, s, c, tag) => Add(t, s, companion: c, tag: tag));
+            if (me != null)
+            {
+                AddPaceFacts(snap, me, p, extras, (t, s, side, tag) => Add(t, s, side, tag: tag));
+            }
+
+            if (p?.TyreThermal is { Count: > 0 } thermal)
+            {
+                var avg = thermal.Where(t => t.LastLapAverage.HasValue).ToList();
+                if (avg.Count > 0)
+                {
+                    Add(Topic.Tyres, "Moyenne de surface sur le dernier tour : " + string.Join(", ", avg.Select(t => $"{WheelName(t.Position)} {N(t.LastLapAverage.Value, 0)} degrés")) +
+                        (avg[0].Min.HasValue ? $", plage idéale {N(avg[0].Min.Value, 0)} à {N(avg[0].Max ?? 0, 0)}." : "."), companion: true);
+                }
+
+                foreach (string alert in p.Alerts ?? new List<string>())
+                {
+                    Add(Topic.Tyres, alert.Replace("°", " degrés").Replace("–", " à "), companion: true);
+                }
+            }
+
             return sections;
+        }
+
+        /// <summary>Tendance météo calculée sur l'évolution récente : température de piste, pluie, dans 30 minutes.</summary>
+        private static void AddForecastFacts(WeatherReportDto w, Action<Topic, string, bool, string> add)
+        {
+            if (w == null)
+            {
+                return;
+            }
+
+            if (w.Forecast.Count == 0)
+            {
+                add(Topic.Weather, "Prévision : pas encore assez d'historique pour une tendance, il faut quelques minutes de course.", true, "prévision");
+                return;
+            }
+
+            WeatherSample last = w.Forecast[^1];
+            WeatherSample first = w.History.Count > 0 ? w.History[^1] : w.Forecast[0];
+            double minutes = Math.Max(1, Math.Round((last.T - first.T) / 60));
+            var parts = new List<string>();
+            if (last.Track.HasValue && first.Track.HasValue)
+            {
+                double d = last.Track.Value - first.Track.Value;
+                parts.Add(Math.Abs(d) < 1 ? $"piste stable autour de {N(last.Track.Value, 0)} degrés" : $"piste à {N(last.Track.Value, 0)} degrés ({(d > 0 ? "plus" : "moins")} {N(Math.Abs(d), 0)})");
+            }
+
+            if (last.Air.HasValue)
+            {
+                parts.Add($"air à {N(last.Air.Value, 0)} degrés");
+            }
+
+            parts.Add(last.Rain > 0 ? $"pluie autour de {last.Rain} %" : "pas de pluie attendue");
+            if (last.Wetness > 0)
+            {
+                parts.Add($"piste humide à {last.Wetness} %");
+            }
+
+            add(Topic.Weather, $"Prévision dans {N(minutes, 0)} minutes : {string.Join(", ", parts)}. C'est une tendance calculée sur l'évolution récente, pas la prévision officielle du jeu.", true, "prévision");
+        }
+
+        /// <summary>
+        /// Rythme : le vôtre, celui qu'il faut pour rattraper la voiture devant ou pour gagner, et ce que donne le rythme actuel à l'arrivée.
+        /// En essais et qualification : écart au meilleur tour de la catégorie et meilleur tour théorique.
+        /// </summary>
+        private static void AddPaceFacts(RaceSnapshot snap, DriverRow me, PlayerStrategy p, BriefingExtras extras, Action<Topic, string, Side, string> add)
+        {
+            double? mine = me.PaceLast3 ?? p?.AverageLap ?? me.LastLap;
+            if (mine is not double myPace)
+            {
+                add(Topic.Pace, "Je n'ai pas encore de tour complet pour calculer votre rythme ; encore un tour.", Side.None, null);
+                return;
+            }
+
+            string deg = p?.Degradation is double dg && Math.Abs(dg) >= 0.05 ? (dg > 0 ? $", il baisse de {N(dg, 2)} seconde par tour" : $", il s'améliore de {N(-dg, 2)} seconde par tour") : string.Empty;
+            add(Topic.Pace, $"Votre rythme est de {LapSpoken(myPace)} sur les derniers tours (meilleur tour {LapSpoken(me.BestLap)}){deg}.", Side.None, null);
+
+            var cls = snap.Drivers.Where(d => d.ClassId == me.ClassId && d.FinishStatus is not ("Dnf" or "Dq")).OrderBy(d => d.ClassPosition).ToList();
+            if (snap.SessionType != "Race")
+            {
+                DriverRow best = cls.Where(d => d.BestLap > 0).OrderBy(d => d.BestLap).FirstOrDefault();
+                if (best != null && me.BestLap > 0 && best.Id != me.Id)
+                {
+                    add(Topic.Pace, $"Meilleur tour de la catégorie : {LapSpoken(best.BestLap)} par le numéro {best.Number} {best.Name}, vous êtes à {N(me.BestLap.Value - best.BestLap.Value, 3)} seconde.", Side.None, "objectif-devant");
+                }
+
+                var ms = extras.MicroSectors?.Drivers.FirstOrDefault(d => d.Id == me.Id);
+                if (ms?.TheoreticalBest is double theo && me.BestLap > theo)
+                {
+                    add(Topic.Pace, $"En assemblant vos meilleurs morceaux de tour, vous pouvez faire {LapSpoken(theo)}, soit {N(me.BestLap.Value - theo, 2)} seconde de mieux.", Side.None, "objectif-gagner");
+                }
+
+                return;
+            }
+
+            double? lapsLeft = p?.LapsRemaining;
+            int idx = cls.FindIndex(d => d.Id == me.Id);
+            if (idx < 0)
+            {
+                return;
+            }
+
+            if (idx == 0)
+            {
+                DriverRow next = cls.ElementAtOrDefault(1);
+                if (next?.PaceLast3 is double theirs && next.GapToPlayer is double g && g > 0)
+                {
+                    string keep = lapsLeft is double ll && ll >= 1 ? $" Pour rester devant jusqu'à l'arrivée, ne tournez pas plus lentement que {LapSpoken(theirs + (g / ll))}." : string.Empty;
+                    add(Topic.Pace, $"Vous menez avec {N(g, 1)} secondes d'avance sur le numéro {next.Number}, qui tourne en {LapSpoken(theirs)}.{keep}", Side.None, "objectif-devant");
+                }
+                else
+                {
+                    add(Topic.Pace, "Vous menez : gardez ce rythme.", Side.None, "objectif-devant");
+                }
+
+                return;
+            }
+
+            void Target(DriverRow rival, string goal, string tag)
+            {
+                if (rival.PaceLast3 is not double theirs || rival.GapToPlayer is not double g || me.GapToClassLeaderLaps != rival.GapToClassLeaderLaps)
+                {
+                    return;
+                }
+
+                double gap = -g; // positif : il est devant
+                if (gap <= 0)
+                {
+                    return;
+                }
+
+                string now = theirs > myPace + 0.05
+                    ? $" Au rythme actuel vous lui reprenez {N(theirs - myPace, 2)} seconde par tour : contact dans environ {N(Math.Ceiling(gap / (theirs - myPace)), 0)} tours."
+                    : theirs < myPace - 0.05 ? $" Au rythme actuel c'est lui qui vous reprend {N(myPace - theirs, 2)} seconde par tour." : " Vous tournez au même rythme.";
+                if (lapsLeft is double ll && ll >= 1)
+                {
+                    double need = gap / ll;
+                    add(Topic.Pace, $"{goal} : {N(gap, 1)} secondes à reprendre au numéro {rival.Number} en {N(Math.Floor(ll), 0)} tours, soit {N(need, 2)} seconde par tour. Il faut tourner en {LapSpoken(theirs - need)} ; il tourne en {LapSpoken(theirs)}.{now}", Side.None, tag);
+                }
+                else
+                {
+                    add(Topic.Pace, $"{goal} : le numéro {rival.Number} est {N(gap, 1)} secondes devant et tourne en {LapSpoken(theirs)}.{now}", Side.None, tag);
+                }
+            }
+
+            // Deuxième : rattraper la voiture devant, c'est aussi gagner.
+            Target(cls[idx - 1], idx == 1 ? "Pour gagner, il faut rattraper le leader" : "Pour rattraper la voiture devant", idx == 1 ? "objectif-gagner" : "objectif-devant");
+            if (idx > 1)
+            {
+                Target(cls[0], "Pour gagner", "objectif-gagner");
+            }
+        }
+
+        /// <summary>Temps au tour dit à la radio : « 1 minute 42,3 ».</summary>
+        private static string LapSpoken(double? seconds)
+        {
+            if (seconds is not double s || s <= 0)
+            {
+                return "inconnu";
+            }
+
+            int m = (int)(s / 60);
+            double rest = s - (m * 60);
+            return m > 0 ? $"{m} minute{(m > 1 ? "s" : string.Empty)} {N(rest, 1)}" : $"{N(rest, 1)} secondes";
         }
 
         private static string Load(PlayerStrategy p)
@@ -677,7 +874,7 @@ namespace SecondMonitor.Hub.Core.Ai
             Behind,
         }
 
-        private sealed record Fact(string Text, Side Side, bool Companion);
+        private sealed record Fact(string Text, Side Side, bool Companion, string Tag = null);
     }
 
     /// <summary>Analyses supplémentaires (calculées à la demande) pour enrichir la fiche de faits.</summary>

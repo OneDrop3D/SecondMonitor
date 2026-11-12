@@ -86,6 +86,9 @@ Pour les jeux lancés avec Proton, voir [Collector/LISEZ-MOI.md](Collector/LISEZ
    Sinon, saisissez l'adresse du PC de jeu dans *Réglages*.
 3. **Lancez une session** dans le jeu : le chronométrage se remplit.
 
+Au premier lancement, SecondMonitor ouvre un **guide de mise en route** : connexion, ingénieur IA, bouton radio. Il se rouvre avec le bouton **?** de la barre de droite.
+L'écran **Connexion** et la barre d'état en bas montrent à tout moment si le collecteur, le jeu et les données arrivent. Une notification apparaît dès que les données arrivent.
+
 **Un seul PC avec deux écrans** ? Ouvrez les deux applications sur ce PC et placez la fenêtre SecondMonitor sur le deuxième écran.
 **Un iPad ou un téléphone** ? Ouvrez dans son navigateur l'adresse indiquée dans *Réglages* de SecondMonitor.
 
@@ -113,7 +116,11 @@ En course multi-catégories, le tableau montre votre catégorie et les autres vo
 - Il fonctionne **100 % en local** avec [Ollama](https://ollama.com), sans compte, sans abonnement et sans envoyer de données.
 - Pour lui parler, utilisez le bouton radio de l'écran, la barre d'espace ou **un bouton du volant** : un appui pour parler, un appui pour envoyer. Un appui pendant qu'il parle le coupe.
 - Les chiffres sont calculés par SecondMonitor : l'IA ne les invente pas.
-- Il prend la parole de lui-même quand une décision se présente : pluie, relais à allonger, box dans deux tours, voiture qui revient, surchauffe…
+- Il calcule le **rythme** : le vôtre, celui qu'il faut pour rattraper la voiture devant ou pour gagner, et ce que donne le rythme actuel à l'arrivée.
+  Il donne aussi la tendance météo des 30 minutes suivantes. Il répond à plusieurs questions posées d'un coup.
+- Il prend la parole de lui-même quand une décision se présente :
+  - **pneus trop chauds sur tout un tour** ou en surchauffe depuis plus de 30 s, ou encore froids au tour de formation ;
+  - pluie, relais à allonger, box dans deux tours, voiture qui revient, freins ou moteur trop chauds.
 - Il garde une **mémoire de la course** et on peut changer de modèle à la voix. Les modèles peuvent tourner sur plusieurs machines (un Raspberry Pi par exemple).
 - Un **mode test** fonctionne sans jeu.
 
@@ -123,6 +130,18 @@ Mise en route : installez Ollama, téléchargez un modèle (`ollama pull lfm3-om
 
 Le Mans Ultimate · Assetto Corsa Competizione · rFactor 2 · Assetto Corsa · Automobilista 2 · Project CARS 1 et 2 · RaceRoom ·
 rFactor / Automobilista 1 · F1 2019, 2020, 2021, 24 · Forza Motorsport.
+
+### Réglages à faire dans certains jeux
+
+La fenêtre du collecteur indique ce qui manque quand un jeu est ouvert mais n'envoie rien.
+
+| Jeu | À faire une fois |
+|---|---|
+| **F1 24** (et F1 2019 à 2021) | Dans le jeu : *Options › Paramètres › Télémétrie* : Télémétrie UDP **Activée**, Mode diffusion **Désactivé**, IP **127.0.0.1**, Port **20777**, Format UDP **2024** (l'année du jeu). |
+| **Assetto Corsa** (aussi lancé par Content Manager) | Le collecteur propose d'installer le plugin SecondMonitor (bouton *Installer le plugin*, puis *Relancer en administrateur* si le jeu est dans Program Files). Activez ensuite l'application Python « SecondMonitor » dans le jeu ou dans Content Manager. |
+| **Le Mans Ultimate**, **rFactor 2** | Le plugin de mémoire partagée du jeu doit être activé. |
+| **Forza Motorsport** | Réglages du jeu : *Data Out* activé, IP 127.0.0.1, port 20127. |
+| Les autres | Rien à faire. |
 
 ## Réseau et sécurité
 
@@ -165,6 +184,9 @@ cd Hub/web && npm install && npm run dev                               # interfa
 dotnet run --project Hub/src/SecondMonitor.Hub -- --demo               # SecondMonitor avec la course de démonstration
 dotnet run --project Collector/src -- --demo                           # collecteur qui envoie la démonstration
 ```
+
+Diagnostic : SecondMonitor enregistre ce que le collecteur envoie (dossier `enregistrements` des données, 5 derniers fichiers) et tient un `journal.txt`.
+Une session peut être rejouée : `SecondMonitorHub --rejouer <fichier.smrec> [--vitesse 4]`.
 
 Options de SecondMonitor :
 - `--navigateur` ouvre l'interface dans le navigateur au lieu de la fenêtre ;

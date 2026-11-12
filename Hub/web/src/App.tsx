@@ -21,8 +21,12 @@ import { playBase64Wav, stopPlayback } from './audio';
 import { useSelection } from './selection';
 import type { ClassView } from './classView';
 import { Icon, StatusBar, TimingHeader, TimingScreen } from './components/Timing';
+import { ConnectionView, ConnectionHero } from './components/ConnectionView';
+import { GuideView } from './components/GuideView';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { collectorAddress, linkStage, useHubStatus } from './status';
 
-type Tab = 'timing' | 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'ai' | 'settings';
+type Tab = 'timing' | 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'ai' | 'connection' | 'settings';
 
 // Même organisation que SecondMonitor d'origine : le chronométrage d'abord, les autres écrans dans la barre de droite.
 const TABS: { id: Tab; label: string; icon: string }[] = [
@@ -35,6 +39,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'weather', label: 'Météo', icon: 'weather' },
   { id: 'strategy', label: 'Stratégies', icon: 'strategy' },
   { id: 'ai', label: 'Ingénieur IA', icon: 'ai' },
+  { id: 'connection', label: 'Connexion au PC de jeu', icon: 'link' },
   { id: 'settings', label: 'Réglages', icon: 'settings' },
 ];
 
@@ -74,10 +79,33 @@ function Shell() {
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [theme, setThemeState] = useState(() => readPref('smhub-theme', 'dark'));
-  const [version, setVersion] = useState<string | null>(null);
+  const status = useHubStatus();
+  const version = status?.version ? String(status.version).split('.').slice(0, 3).join('.') : null;
+  const [guide, setGuide] = useState(() => readPref('smhub-guide-vu', '') === '');
+  const closeGuide = () => { setGuide(false); writePref('smhub-guide-vu', '1'); };
+  const [toast, setToast] = useState<string | null>(null);
+  const stage = linkStage(status, snapshot);
+  const lastStage = useRef(stage);
   useEffect(() => {
-    fetch('/api/status').then((r) => r.json()).then((st) => setVersion(st.version ? String(st.version).split('.').slice(0, 3).join('.') : null)).catch(() => undefined);
-  }, []);
+    // Notification quand la chaîne se met à fonctionner (ou se coupe) : on voit tout de suite que ça marche.
+    const before = lastStage.current;
+    lastStage.current = stage;
+    let text: string | null = null;
+    if (stage === 'ok' && before !== 'ok' && before !== 'demo') {
+      const game = status?.source.receiver?.game ?? snapshot?.source;
+      const pc = collectorAddress(status);
+      text = `✓ Données reçues${game ? ` : ${game}` : ''}${pc ? ` (PC ${pc})` : ''}`;
+    } else if (before === 'no-collector' && stage !== 'no-collector' && stage !== 'demo') {
+      text = `✓ Collecteur connecté${collectorAddress(status) ? ` : ${collectorAddress(status)}` : ''}`;
+    } else if (before === 'ok' && stage === 'no-collector') {
+      text = 'Connexion au PC de jeu perdue : reconnexion automatique…';
+    }
+    if (text) {
+      setToast(text);
+      const t = window.setTimeout(() => setToast(null), 6000);
+      return () => window.clearTimeout(t);
+    }
+  }, [stage]); // eslint-disable-line react-hooks/exhaustive-deps
   const [classView, setClassViewState] = useState<ClassView>(() => readPref('smhub-classview', 'mine'));
   const setClassView = (v: ClassView) => { setClassViewState(v); writePref('smhub-classview', v === 'mine' || v === 'all' ? v : 'mine'); };
   const classOrder = useRef(new Map<string, number>());
@@ -103,19 +131,22 @@ function Shell() {
   const selection = useSelection(snapshot);
   const selected = snapshot?.drivers.find((d) => d.id === selectedId) ?? null;
   const onSelect = (d: DriverRow) => setSelectedId(d.id);
-  const needsData = !['ai', 'settings'].includes(tab);
+  const needsData = !['ai', 'settings', 'connection'].includes(tab);
 
   return (
     <div className="app sm-shell">
       {snapshot?.hasData && <TimingHeader snapshot={snapshot} />}
       <div className="sm-body">
         <main className={`content ${tab === 'timing' && snapshot?.hasData ? 'content-full' : ''}`}>
+          <ErrorBoundary label={TABS.find((t) => t.id === tab)?.label ?? tab} resetKey={tab}>
           {tab === 'settings' ? (
             <SettingsView theme={theme} setTheme={setThemeState} snapshot={snapshot} />
           ) : tab === 'ai' ? (
             <EngineerView radio={radio} hasLiveData={!!snapshot?.hasData} />
+          ) : tab === 'connection' ? (
+            <ConnectionView status={status} snapshot={snapshot} />
           ) : needsData && !snapshot?.hasData ? (
-            <Waiting link={link} onSettings={() => setTab('settings')} onAi={() => setTab('ai')} />
+            <Waiting link={link} status={status} snapshot={snapshot} onConnection={() => setTab('connection')} onSettings={() => setTab('settings')} onGuide={() => setGuide(true)} />
           ) : snapshot && tab === 'timing' ? (
             <TimingScreen snapshot={snapshot} classColor={classColor} onSelect={onSelect} classView={classView} setClassView={setClassView} />
           ) : snapshot && tab === 'race' ? (
@@ -140,6 +171,7 @@ function Shell() {
           ) : snapshot && tab === 'strategy' ? (
             <StrategyView snapshot={snapshot} classColor={classColor} onSelect={onSelect} />
           ) : null}
+          </ErrorBoundary>
         </main>
         <nav className="sm-rail" aria-label="Écrans">
           {TABS.map((t) => (
@@ -148,29 +180,39 @@ function Shell() {
               <span className="sm-rail-label">{t.label}</span>
             </button>
           ))}
+          <button className="sm-rail-btn sm-rail-guide" onClick={() => setGuide(true)} title="Guide de mise en route">
+            <span className="sm-rail-q" aria-hidden>?</span>
+            <span className="sm-rail-label">Guide de mise en route</span>
+          </button>
         </nav>
       </div>
-      <StatusBar snapshot={snapshot} link={link} version={version} />
+      <StatusBar snapshot={snapshot} link={link} version={version} status={status} onConnection={() => setTab('connection')} />
+      {toast && <div className="sm-toast" role="status" onClick={() => setToast(null)}>{toast}</div>}
+      {guide && <GuideView status={status} snapshot={snapshot} onClose={closeGuide} onNavigate={(t) => setTab(t)} />}
       <RadioDock onOpen={() => setTab('ai')} />
       {selected && <DriverDrawer driver={selected} onClose={() => setSelectedId(null)} />}
     </div>
   );
 }
 
-function Waiting({ link, onSettings, onAi }: { link: string; onSettings: () => void; onAi: () => void }) {
+function Waiting({ link, status, snapshot, onConnection, onSettings, onGuide }: {
+  link: string;
+  status: ReturnType<typeof useHubStatus>;
+  snapshot: Parameters<typeof linkStage>[1];
+  onConnection: () => void;
+  onSettings: () => void;
+  onGuide: () => void;
+}) {
+  if (link !== 'open') {
+    return <div className="empty"><div className="empty-icon" aria-hidden>…</div><h2>Connexion à SecondMonitor…</h2></div>;
+  }
   return (
-    <div className="empty">
-      <div className="empty-icon" aria-hidden>📡</div>
-      <h2>{link === 'open' ? 'En attente des données du jeu' : 'Connexion…'}</h2>
-      <p>SecondMonitor est prêt. Il attend les données du PC de jeu.</p>
-      <ol className="steps">
-        <li>Sur le PC de jeu, ouvrez <b>SecondMonitor Collecteur</b> (installé avec SecondMonitor). Rien d'autre à installer.</li>
-        <li>Lancez une session dans le jeu (LMU, ACC, rFactor 2, F1, AMS2, R3E…).</li>
-        <li>Si rien n'apparaît, indiquez l'adresse IP du PC dans les réglages.</li>
-      </ol>
+    <div className="waiting">
+      <ConnectionHero stage={linkStage(status, snapshot)} status={status} snapshot={snapshot} />
       <div className="row" style={{ justifyContent: 'center' }}>
-        <button className="btn primary" onClick={onSettings}>Ouvrir les réglages (ou lancer la démo)</button>
-        <button className="btn" onClick={onAi}>Tester l'ingénieur IA</button>
+        <button className="btn primary" onClick={onConnection}>Voir la connexion en détail</button>
+        <button className="btn" onClick={onGuide}>Guide de mise en route</button>
+        <button className="btn" onClick={onSettings}>Essayer avec la démo</button>
       </div>
     </div>
   );

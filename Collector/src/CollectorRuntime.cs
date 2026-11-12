@@ -34,7 +34,7 @@ namespace SecondMonitor.Collector
             var provider = new CollectorSettingsProvider(settings);
             _server = new BroadcastServer(provider);
             _host = new ConnectorHost(provider, _server, settings, Log);
-            _server.PeerConnected += ip => Log($"Hub connecté : {ip}");
+            _server.PeerConnected += ip => Log($"SecondMonitor connecté : {ip}");
             _server.PeerDisconnected += (ip, why) => Log($"Hub déconnecté : {ip} ({Reason(why)})");
         }
 
@@ -58,6 +58,76 @@ namespace SecondMonitor.Collector
         public bool Paused => !Demo && _host.Paused;
 
         public string[] Hubs => _server.Peers;
+
+        public ConnectorHost Host => _host;
+
+        /// <summary>Le jeu envoie-t-il de vraies données de course (pas seulement des signes de vie) ?</summary>
+        public bool GameDataFlowing => Demo || (_host.ActiveGame != null && (DateTime.UtcNow - _host.LastGameDataUtc).TotalSeconds < 5);
+
+        /// <summary>
+        /// Ce qui bloque, en clair, et quoi faire : plugin à installer, droits administrateur, télémétrie du jeu désactivée…
+        /// Null quand tout va bien.
+        /// </summary>
+        public (string Title, string Text, string Action)? Advice()
+        {
+            if (Demo)
+            {
+                return null;
+            }
+
+            if (_host.Decision is PendingDecision d)
+            {
+                return ($"{d.Game} : plugin à installer", d.Message, "installer");
+            }
+
+            if (_host.NeedsAdmin)
+            {
+                return ("Droits administrateur nécessaires", "Le jeu est installé dans un dossier protégé. Relancez le collecteur en administrateur une seule fois : le plugin s'installera, puis vous pourrez le relancer normalement.", "admin");
+            }
+
+            if (_host.WaitingGame is string w && (DateTime.UtcNow - _host.WaitingSinceUtc).TotalSeconds > 8)
+            {
+                return ($"{w} est lancé, mais pas encore lisible", GameHint(w, connected: false), null);
+            }
+
+            if (_host.ActiveGame is string g && !GameDataFlowing && (DateTime.UtcNow - _host.ActiveSinceUtc).TotalSeconds > 10)
+            {
+                return ($"{g} est détecté, mais n'envoie pas de données", GameHint(g, connected: true), null);
+            }
+
+            return null;
+        }
+
+        private static string GameHint(string game, bool connected)
+        {
+            if (game.StartsWith("F1", StringComparison.Ordinal))
+            {
+                string year = game.Contains("24", StringComparison.Ordinal) ? "2024" : game.Replace("F1 ", string.Empty, StringComparison.Ordinal);
+                return $"Activez la télémétrie dans le jeu : Options › Paramètres › Télémétrie. Télémétrie UDP : Activée · Mode diffusion : Désactivé · "
+                    + $"Adresse IP : 127.0.0.1 · Port : 20777 · Format UDP : {year}. Les données arrivent dès que vous êtes en piste (tour de formation compris).";
+            }
+
+            if (game == "Assetto Corsa")
+            {
+                return "Assetto Corsa ne partage ses données qu'avec le plugin SecondMonitor actif. S'il n'est pas installé, le bouton « Installer le plugin » apparaît ici. "
+                    + "Ensuite, activez l'application Python « SecondMonitor » (Content Manager : réglages d'Assetto Corsa, applications Python ; ou dans le jeu : Options › Général › Modules d'interface), puis relancez la session.";
+            }
+
+            if (game is "Le Mans Ultimate" or "rFactor 2")
+            {
+                return "Le plugin de mémoire partagée du jeu doit être activé (rFactor2SharedMemoryMapPlugin64, dans UserData\\player\\CustomPluginVariables.JSON : \" Enabled\":1). "
+                    + "Les données arrivent une fois la session chargée.";
+            }
+
+            if (game == "Forza Motorsport")
+            {
+                return "Activez « Data Out » dans les réglages du jeu (HUD et jouabilité) : adresse IP 127.0.0.1, port 20127.";
+            }
+
+            return connected
+                ? "Les données arrivent une fois en piste (pas dans les menus ou au chargement)."
+                : "Le jeu est peut-être encore en train de charger. Si cela dure, fermez-le et relancez-le après le collecteur.";
+        }
 
         public bool Start()
         {

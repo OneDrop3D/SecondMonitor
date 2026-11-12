@@ -12,6 +12,8 @@ namespace SecondMonitor.Collector
     /// Cherche le jeu lancé, branche le bon connecteur SecondMonitor et transmet ses données au serveur de diffusion.
     /// Pour ménager le PC de jeu : rien n'est lu tant qu'aucun hub n'écoute, et la lecture s'arrête quand le hub part.
     /// </summary>
+    internal sealed record PendingDecision(string Game, string Message, Action Action);
+
     internal sealed class ConnectorHost
     {
         private readonly List<(string Name, IRawTelemetryConnector Connector)> _connectors;
@@ -28,14 +30,64 @@ namespace SecondMonitor.Collector
             _connectors = Create(provider, log)
                 .Where(c => !settings.JeuxDesactives.Any(d => string.Equals(d, c.Name, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
-            foreach (var (_, connector) in _connectors)
+            foreach (var (name, connector) in _connectors)
             {
                 if (connector is AbstractGameConnector game)
                 {
                     game.TickTime = settings.Rates.TickMs;
                 }
+
+                // Abonnement dès le départ : certains jeux (Assetto Corsa, rFactor) demandent l'installation de leur plugin
+                // AVANT d'avoir pu se connecter. Sans cela, la demande était perdue et le jeu n'était jamais détecté.
+                string gameName = name;
+                connector.DisplayMessage += (_, e) => OnMessage(gameName, e);
             }
         }
+
+        /// <summary>Une action proposée par un jeu (installer son plugin), en attente d'un clic.</summary>
+        public PendingDecision Decision { get; private set; }
+
+        /// <summary>Windows a refusé l'installation : il faut relancer le collecteur en administrateur.</summary>
+        public bool NeedsAdmin { get; private set; }
+
+        /// <summary>Jeu lancé mais pas encore lisible (plugin absent, télémétrie désactivée…).</summary>
+        public string WaitingGame { get; private set; }
+
+        public DateTime WaitingSinceUtc { get; private set; }
+
+        /// <summary>Dernières vraies données de course reçues du jeu (pas les signes de vie).</summary>
+        public DateTime LastGameDataUtc { get; private set; } = DateTime.MinValue;
+
+        public int LastDriverCount { get; private set; }
+
+        public DateTime ActiveSinceUtc { get; private set; }
+
+        /// <summary>Exécute l'action proposée par le jeu (installation du plugin).</summary>
+        public void RunDecision()
+        {
+            PendingDecision d = Decision;
+            if (d == null)
+            {
+                return;
+            }
+
+            Decision = null;
+            NeedsAdmin = false;
+            Log($"{d.Game} : installation du plugin…");
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    d.Action();
+                }
+                catch (Exception ex)
+                {
+                    OnInstallFailure(d.Game, ex.Message);
+                }
+            });
+        }
+
+        public void DismissDecision() => Decision = null;
 
         public Action<string> Log { get; }
 
@@ -97,8 +149,14 @@ namespace SecondMonitor.Collector
                 return;
             }
 
+            string waiting = null;
             foreach (var (name, connector) in _connectors)
             {
+                if (connector is AbstractGameConnector g && !g.IsProcessRunning())
+                {
+                    continue;
+                }
+
                 bool connected;
                 try
                 {
@@ -112,6 +170,13 @@ namespace SecondMonitor.Collector
 
                 if (!connected)
                 {
+                    // Le jeu tourne (processus vu) mais ne se laisse pas lire : plugin absent ou désactivé, jeu encore au chargement.
+                    // Les connecteurs qui ne savent pas voir le processus du jeu ne sont jamais signalés.
+                    if (connector is AbstractGameConnector)
+                    {
+                        waiting ??= name;
+                    }
+
                     continue;
                 }
 
@@ -120,10 +185,22 @@ namespace SecondMonitor.Collector
                 connector.DataLoaded += OnData;
                 connector.SessionStarted += OnSession;
                 connector.Disconnected += OnDisconnected;
-                connector.DisplayMessage += OnMessage;
                 connector.StartConnectorLoop();
-                Log($"Jeu détecté : {name}. Les données partent vers le hub.");
+                WaitingGame = null;
+                ActiveSinceUtc = DateTime.UtcNow;
+                LastGameDataUtc = DateTime.MinValue;
+                Log($"Jeu détecté : {name}. Les données partent vers SecondMonitor.");
                 return;
+            }
+
+            if (waiting != WaitingGame)
+            {
+                WaitingGame = waiting;
+                WaitingSinceUtc = DateTime.UtcNow;
+                if (waiting != null)
+                {
+                    Log($"{waiting} est lancé, mais ses données ne sont pas encore lisibles.");
+                }
             }
         }
 
@@ -139,7 +216,6 @@ namespace SecondMonitor.Collector
             c.DataLoaded -= OnData;
             c.SessionStarted -= OnSession;
             c.Disconnected -= OnDisconnected;
-            c.DisplayMessage -= OnMessage;
             try
             {
                 await c.FinnishConnectorAsync();
@@ -152,7 +228,17 @@ namespace SecondMonitor.Collector
             ActiveGame = null;
         }
 
-        private void OnData(object sender, DataEventArgs e) => _server.SendData(e.Data);
+        private void OnData(object sender, DataEventArgs e)
+        {
+            int drivers = e.Data?.DriversInfo?.Length ?? 0;
+            if (drivers > 0)
+            {
+                LastGameDataUtc = DateTime.UtcNow;
+                LastDriverCount = drivers;
+            }
+
+            _server.SendData(e.Data);
+        }
 
         private void OnSession(object sender, DataEventArgs e)
         {
@@ -166,7 +252,48 @@ namespace SecondMonitor.Collector
             _ = StopActiveAsync();
         }
 
-        private void OnMessage(object sender, MessageArgs e) => Log($"{ActiveGame} : {e.Message}");
+        private void OnMessage(string game, MessageArgs e)
+        {
+            string text = e.Message ?? string.Empty;
+            if (e.IsDecision)
+            {
+                Decision = new PendingDecision(game, $"{game} a besoin du petit plugin SecondMonitor dans le dossier du jeu pour envoyer ses données. Installez-le, puis redémarrez le jeu.", e.Action);
+                Log($"{game} : plugin SecondMonitor à installer (bouton dans la fenêtre).");
+                if (AutoInstall)
+                {
+                    RunDecision();
+                }
+
+                return;
+            }
+
+            if (text.StartsWith("Operation Completed", StringComparison.OrdinalIgnoreCase))
+            {
+                Log($"{game} : plugin installé. Redémarrez le jeu.");
+            }
+            else if (text.StartsWith("Unable to install", StringComparison.OrdinalIgnoreCase))
+            {
+                OnInstallFailure(game, text);
+            }
+            else
+            {
+                Log($"{game} : {text}");
+            }
+        }
+
+        /// <summary>Console (Proton, --sans-fenetre) : pas de bouton, on installe directement.</summary>
+        public bool AutoInstall { get; set; }
+
+        private void OnInstallFailure(string game, string detail)
+        {
+            bool denied = detail.Contains("denied", StringComparison.OrdinalIgnoreCase) || detail.Contains("refus", StringComparison.OrdinalIgnoreCase)
+                || detail.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase);
+            NeedsAdmin = denied && OperatingSystem.IsWindows();
+            Log(NeedsAdmin
+                ? $"{game} : Windows refuse d'écrire dans le dossier du jeu. Cliquez « Relancer en administrateur » une seule fois pour installer le plugin."
+                : $"{game} : installation du plugin impossible ({detail}).");
+        }
+
 
         /// <summary>Tous les jeux pris en charge par SecondMonitor. Un connecteur qui ne peut pas démarrer est simplement ignoré.</summary>
         private static IEnumerable<(string Name, IRawTelemetryConnector Connector)> Create(IPluginSettingsProvider p, Action<string> log)

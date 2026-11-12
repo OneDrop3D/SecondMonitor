@@ -31,6 +31,10 @@ public class BriefingTests
     [TestCase("C'est combien l'écart avec la voiture derrière ?", RaceBriefing.Topic.Gap)]
     [TestCase("Quelle est la stratégie de la voiture derrière ?", RaceBriefing.Topic.Opponents)]
     [TestCase("Comment vont mes pneus ?", RaceBriefing.Topic.Tyres)]
+    [TestCase("Quel rythme dois-je faire pour gagner la course ?", RaceBriefing.Topic.Pace)]
+    [TestCase("Voilà, j'aurais quoi comme rythme, à peu près ?", RaceBriefing.Topic.Pace)]
+    [TestCase("Comment la météo va-t-elle évoluer durant la course ?", RaceBriefing.Topic.Weather)]
+    [TestCase("La piste va évoluer durant toute la course", RaceBriefing.Topic.Weather)]
     public void DetectsMainTopic(string question, RaceBriefing.Topic expected)
     {
         Assert.That(RaceBriefing.DetectTopics(question).First(), Is.EqualTo(expected));
@@ -67,5 +71,52 @@ public class BriefingTests
         {
             Assert.That(fuel.NextStopAdd.Value, Is.LessThanOrEqualTo(fuel.Capacity + 0.01));
         }
+    }
+
+    [Test]
+    public void Pace_IsComputed_WithTargetToCatchOrToStayAhead()
+    {
+        BriefingResult r = RaceBriefing.Prepare(_snap, "Quel rythme dois-je faire pour gagner la course ?");
+        Assert.That(r.Suggestion, Does.Contain("Votre rythme est de"));
+        Assert.That(r.Suggestion, Does.Contain("minute"));
+        Assert.That(r.Facts, Does.Contain("Pour rattraper").Or.Contain("Vous menez"));
+    }
+
+    [Test]
+    public void SeveralQuestions_AreAllAnswered()
+    {
+        BriefingResult r = RaceBriefing.Prepare(_snap, "Quelle est ma position, quelle est la météo, quelles sont les prévisions météo pour la course ?");
+        Assert.That(r.Suggestion, Does.Contain("Vous êtes P"));
+        Assert.That(r.Suggestion, Does.Contain("Air "));
+    }
+
+    [TestCase("La piste va évoluer durant toute la course", true)]
+    [TestCase("J'aurais quoi comme rythme à peu près", true)]
+    [TestCase("Je dois tourner en combien pour gagner", true)]
+    [TestCase("L'arrière glisse beaucoup", false)]
+    public void Dictation_WithoutQuestionMark_IsStillAQuestion(string text, bool question)
+    {
+        Assert.That(RadioCommands.IsQuestion(text), Is.EqualTo(question));
+        if (question)
+        {
+            Assert.That(RadioCommands.IsFeedback(text), Is.False);
+        }
+    }
+
+    [Test]
+    public void TyreWatch_FlagsAWholeLapAboveRange()
+    {
+        var watch = new TyreThermalWatch();
+        var wheel = new WheelStatus { Position = "FL", TempInner = 104, TempMiddle = 102, TempOuter = 100, IdealTemp = 90, TempWindow = 5 };
+        List<TyreThermalDto> t = new();
+        for (double now = 0; now <= 60; now += 0.5)
+        {
+            t = watch.Update(now, 0, true, new[] { wheel });
+        }
+
+        t = watch.Update(60.5, 1, true, new[] { wheel });
+        Assert.That(t[0].LastLapState, Is.EqualTo("chaud"));
+        Assert.That(t[0].HotSeconds, Is.GreaterThanOrEqualTo(30));
+        Assert.That(TyreThermalWatch.Alerts(t)[0], Does.Contain("tout le dernier tour"));
     }
 }

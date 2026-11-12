@@ -116,6 +116,8 @@ namespace SecondMonitor.Hub.Core.Race
             }
         }
 
+        private readonly TyreThermalWatch _thermal = new();
+
         public RaceSnapshot BuildSnapshot()
         {
             lock (_lock)
@@ -172,6 +174,7 @@ namespace SecondMonitor.Hub.Core.Race
 
         private void ResetInternal()
         {
+            _thermal.Reset();
             _trackers.Clear();
             _player.Reset();
             _telemetry.Reset();
@@ -214,8 +217,14 @@ namespace SecondMonitor.Hub.Core.Race
             bool isRace = session.SessionType == SessionType.Race;
             bool worldValid = data.SimulatorSourceInfo?.WorldPositionInvalid != true;
 
-            snap.HasData = true;
+            // Le collecteur peut annoncer un jeu sans voiture (menus, télémétrie du jeu coupée) : ce ne sont pas encore des données.
             snap.Source = data.Source;
+            snap.HasData = data.DriversInfo?.Any(d => d != null) == true;
+            if (!snap.HasData)
+            {
+                return snap;
+            }
+
             snap.SessionType = session.SessionType.ToString();
             snap.SessionPhase = session.SessionPhase.ToString();
             snap.LengthType = session.SessionLengthType.ToString();
@@ -278,6 +287,10 @@ namespace SecondMonitor.Hub.Core.Race
                 {
                     snap.ThermalProfile = string.Join(" · ", new[] { profile.Game, profile.Car }.Where(x => !string.IsNullOrWhiteSpace(x)).DefaultIfEmpty("tous les jeux"));
                 }
+
+                bool moving = !playerInfo.InPits && (playerInfo.Speed?.InKph ?? 0) > 20;
+                playerStrategy.TyreThermal = _thermal.Update(now, playerInfo.CompletedLaps, moving, playerStrategy.Wheels);
+                playerStrategy.Alerts = TyreThermalWatch.Alerts(playerStrategy.TyreThermal);
             }
 
             DriverTracker leader = current.FirstOrDefault();

@@ -22,8 +22,12 @@ Sans fenêtre (serveur, script) : `SecondMonitor-Collecteur.exe --sans-fenetre`.
 
 > Le SecondMonitor complet et le collecteur utilisent le même port (52642) : n'en lancez qu'un des deux à la fois.
 
-Rfactor 2, rFactor et Assetto Corsa ont besoin d'un petit plugin dans le dossier du jeu. Comme SecondMonitor, le collecteur
-propose de l'installer la première fois (une autorisation administrateur est demandée).
+rFactor 2, rFactor et Assetto Corsa ont besoin d'un petit plugin dans le dossier du jeu. La fenêtre du collecteur le signale avec un bouton
+**Installer le plugin**. Si le jeu est dans un dossier protégé (Program Files), le bouton **Relancer en administrateur** fait l'installation une fois.
+Assetto Corsa : activez ensuite l'application Python « SecondMonitor » dans le jeu ou dans Content Manager.
+
+F1 24 : activez la télémétrie UDP dans le jeu (*Options › Paramètres › Télémétrie* : Activée, diffusion Désactivée, IP 127.0.0.1, port 20777, format 2024).
+Tant qu'un jeu est ouvert sans envoyer de données, la fenêtre l'indique avec le réglage à faire.
 
 ## Linux / SteamOS
 

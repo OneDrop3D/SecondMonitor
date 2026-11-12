@@ -11,6 +11,17 @@ using SecondMonitor.Hub.Services;
 //   --sans-fenetre   serveur seul (machine sans écran, Raspberry Pi…)
 bool headless = args.Contains("--sans-fenetre") || args.Contains("--serveur");
 bool useBrowser = args.Contains("--navigateur") || args.Contains("--ouvrir");
+// Diagnostic : rejoue un enregistrement (dossier « enregistrements ») au lieu d'écouter le réseau.
+int replayIndex = Array.IndexOf(args, "--rejouer");
+if (replayIndex >= 0 && replayIndex + 1 < args.Length)
+{
+    DataSourceService.ReplayFile = Path.GetFullPath(args[replayIndex + 1]);
+    int speedIndex = Array.IndexOf(args, "--vitesse");
+    if (speedIndex >= 0 && speedIndex + 1 < args.Length && double.TryParse(args[speedIndex + 1], System.Globalization.CultureInfo.InvariantCulture, out double speed))
+    {
+        DataSourceService.ReplaySpeed = speed;
+    }
+}
 string dataDir = Environment.GetEnvironmentVariable("SMHUB_DATA") ?? SettingsStore.DefaultDataDirectory();
 Directory.CreateDirectory(dataDir);
 var settings = new SettingsStore(dataDir);
@@ -72,7 +83,7 @@ builder.Services.AddHostedService<ProactiveService>();
 builder.Services.ConfigureHttpJsonOptions(o =>
 {
     o.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-    o.SerializerOptions.NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals;
+    FiniteNumbers.Register(o.SerializerOptions); // NaN / infini → null, jamais « "NaN" » (faisait planter l'interface)
 });
 
 var app = builder.Build();
@@ -216,6 +227,12 @@ app.MapPost("/api/quit", (IHostApplicationLifetime life, HttpContext ctx) =>
     _ = Task.Run(async () => { await Task.Delay(300); life.StopApplication(); AppWindow.Close(); });
     return Results.Ok();
 });
+app.MapPost("/api/client-log", (ClientLog entry) =>
+{
+    // Erreurs de l'interface (écran noir, plantage d'un écran) : gardées dans journal.txt pour comprendre après coup.
+    HubJournal.Write(dataDir, "interface", $"{entry.Message} {entry.Detail}".Trim());
+    return Results.Ok();
+});
 app.MapPost("/api/radio/stop", async (EngineerService engineer) =>
 {
     await engineer.StopSpeakingAsync();
@@ -238,6 +255,7 @@ catch (Exception ex)
 }
 
 Console.WriteLine($"SecondMonitor prêt : {localUrl}  (données : {dataDir})");
+HubJournal.Write(dataDir, "démarrage", $"SecondMonitor {typeof(Program).Assembly.GetName().Version} sur {Environment.OSVersion} : {localUrl}");
 if (httpsCertificate != null)
 {
     Console.WriteLine($"Depuis le PC de jeu, un iPad ou un téléphone (micro et volant) : https://<adresse-de-cet-ordinateur>:{settings.Current.HttpsPort}  — acceptez l'avertissement de certificat la première fois.");
@@ -265,3 +283,5 @@ public sealed record AskRequest(string Text, bool Speak = true, string? From = n
 public sealed record DiagnosticRequest(string Step);
 
 public sealed record MemoryNote(string Text, string? Source = null);
+
+public sealed record ClientLog(string Message, string? Detail = null);

@@ -31,16 +31,20 @@ namespace SecondMonitor.Hub.Core.Ai
         /// <summary>Message à dire maintenant, ou null. À appeler toutes les quelques secondes.</summary>
         public ProactiveMessage Evaluate(RaceSnapshot snap, WeatherReportDto weather, RaceMemory memory, ProactiveOptions options, DateTime nowUtc)
         {
-            if (snap?.HasData != true || snap.SessionType != "Race" || snap.Player == null || snap.SessionPhase == "Checkered")
+            // Pneus, freins et moteur : dans toutes les sessions (essais, qualification, tour de formation compris).
+            // Stratégie (relais, arrêts, duels) : en course seulement.
+            if (snap?.HasData != true || snap.Player == null || snap.SessionPhase == "Checkered")
             {
                 return null;
             }
 
             DriverRow me = snap.Drivers.FirstOrDefault(d => d.IsPlayer);
-            if (me == null || me.InPits || me.Laps < 1 || me.FinishStatus is "Finished" or "Dnf" or "Dq")
+            if (me == null || me.InPits || me.FinishStatus is "Finished" or "Dnf" or "Dq")
             {
                 return null;
             }
+
+            bool race = snap.SessionType == "Race" && me.Laps >= 1;
 
             int rain = snap.Weather.Rain;
             bool rainStarted = _previousRain is >= 0 and < 5 && rain >= 5;
@@ -53,11 +57,12 @@ namespace SecondMonitor.Hub.Core.Ai
 
             var candidates = new List<ProactiveMessage>();
             PlayerStrategy p = snap.Player;
+            TyreAlerts(p, me, candidates);
             bool onWets = IsWetCompound(me.Tyres.Compound);
             int threshold = options.WetThresholdPct;
 
             // ── Pluie ──
-            if (rainStarted && !onWets)
+            if (rainStarted && !onWets && me.Laps >= 1)
             {
                 candidates.Add(Q("rain-start", "pluie", $"Il commence à pleuvoir, intensité {rain} %. Comment est la piste de votre côté ? On peut rester en pneus secs ?", 600));
             }
@@ -72,7 +77,7 @@ namespace SecondMonitor.Hub.Core.Ai
             }
 
             // ── Relais : on peut aller plus loin côté essence, est-ce que ça vaut le coup ? ──
-            ProactiveMessage extend = StintExtension(snap, me, p, memory);
+            ProactiveMessage extend = race ? StintExtension(snap, me, p, memory) : null;
             if (extend != null)
             {
                 candidates.Add(extend);
@@ -80,14 +85,14 @@ namespace SecondMonitor.Hub.Core.Ai
 
             // ── Arrêt dans deux tours ──
             int? stopLap = memory?.PlannedStopLap > me.Laps ? memory.PlannedStopLap : p.RecommendedStopLap;
-            if (memory?.NoStopPlanned != true && stopLap is int sl && sl - me.Laps is 1 or 2)
+            if (race && memory?.NoStopPlanned != true && stopLap is int sl && sl - me.Laps is 1 or 2)
             {
                 string load = Load(p);
                 candidates.Add(Info($"pit-{me.Laps - p.StintLaps}", "stand", $"Box dans {sl - me.Laps} tour{(sl - me.Laps > 1 ? "s" : string.Empty)}, au tour {sl}.{load}", 100000, urgent: true));
             }
 
             // ── Duels ──
-            foreach (BattleDto b in p.Battles.Where(b => b.LapsToContact is <= 3 && (b.Gap ?? 0) >= 1.0))
+            foreach (BattleDto b in p.Battles.Where(b => race && b.LapsToContact is <= 3 && (b.Gap ?? 0) >= 1.0))
             {
                 string pace = N(Math.Abs(b.PaceDelta ?? 0), 1);
                 double n = Math.Max(1, Math.Ceiling(b.LapsToContact.Value));
@@ -132,6 +137,66 @@ namespace SecondMonitor.Hub.Core.Ai
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Pneus : tour entier au-dessus de la plage (moyenne), surchauffe de plus de 30 s d'affilée, pneus froids au départ
+        /// (tour de formation, sortie des stands). Un seul message à la fois : le pneu le plus touché, les autres cités.
+        /// </summary>
+        private static void TyreAlerts(PlayerStrategy p, DriverRow me, List<ProactiveMessage> candidates)
+        {
+            var thermal = p.TyreThermal ?? new List<TyreThermalDto>();
+            var lapHot = thermal.Where(t => t.LastLapState == "chaud" && t.LastLapAverage > t.Max).OrderByDescending(t => t.LastLapAverage - t.Max).ToList();
+            if (lapHot.Count > 0)
+            {
+                TyreThermalDto t = lapHot[0];
+                string others = lapHot.Count > 1 ? $" Aussi : {string.Join(", ", lapHot.Skip(1).Select(x => TyreThermalWatch.WheelName(x.Position)))}." : string.Empty;
+                candidates.Add(Info(
+                    $"tyre-lap-{t.Position}-{me.Laps}",
+                    "pneus",
+                    $"Pneu {TyreThermalWatch.WheelName(t.Position)} trop chaud sur tout le dernier tour : {N(t.LastLapAverage.Value, 0)} degrés de moyenne, pour une plage de {N(t.Min ?? 0, 0)} à {N(t.Max ?? 0, 0)}.{others} {TyreAdvice(lapHot)}",
+                    240,
+                    urgent: true));
+            }
+
+            TyreThermalDto hot = thermal.Where(t => t.HotSeconds >= 30).OrderByDescending(t => t.HotSeconds).FirstOrDefault();
+            if (hot != null && lapHot.Count == 0)
+            {
+                candidates.Add(Info(
+                    $"tyre-hot-{hot.Position}",
+                    "pneus",
+                    $"Le pneu {TyreThermalWatch.WheelName(hot.Position)} surchauffe depuis {N(hot.HotSeconds, 0)} secondes : {N(hot.Surface ?? 0, 0)} degrés pour {N(hot.Max ?? 0, 0)} au maximum. {TyreAdvice(new List<TyreThermalDto> { hot })}",
+                    180,
+                    urgent: true));
+            }
+
+            // Pneus froids au départ : tour de formation (0 tour bouclé) ou relais tout neuf.
+            if (me.Laps == 0 || p.StintLaps == 0)
+            {
+                TyreThermalDto cold = thermal.Where(t => t.Surface.HasValue && t.Min.HasValue && t.Surface < t.Min - 10).OrderBy(t => t.Surface - t.Min).FirstOrDefault();
+                if (cold != null && me.Speed > 40)
+                {
+                    candidates.Add(Info(
+                        "tyre-cold",
+                        "pneus",
+                        $"Pneus encore froids : {N(cold.Surface.Value, 0)} degrés à l'{TyreThermalWatch.WheelName(cold.Position)}, il en faut au moins {N(cold.Min.Value, 0)}. Faites-les chauffer : zigzags et freinages appuyés.",
+                        600));
+                }
+            }
+        }
+
+        private static string TyreAdvice(List<TyreThermalDto> hot)
+        {
+            bool front = hot.Any(t => t.Position is "FL" or "FR");
+            bool rear = hot.Any(t => t.Position is "RL" or "RR");
+            if (front && rear)
+            {
+                return "Rythme à calmer un tour, et vérifiez les pressions au prochain arrêt.";
+            }
+
+            return front
+                ? "Moins de glisse en entrée de virage, n'attaquez pas le train avant."
+                : "Doucement sur l'accélérateur en sortie de virage, évitez le patinage.";
         }
 
         /// <summary>Réponse du pilote à une question de l'IA : décision, réponse radio et note pour la mémoire.</summary>

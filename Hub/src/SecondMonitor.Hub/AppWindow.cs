@@ -32,6 +32,13 @@ public static class AppWindow
                 .SetContextMenuEnabled(false)
                 .SetDevToolsEnabled(false)
                 .SetLogVerbosity(0);
+
+            // Windows : dossier de travail de WebView2 dans le profil de l'utilisateur (le dossier du programme peut être
+            // en lecture seule ; WebView2 ne peut alors pas démarrer et la fenêtre reste noire).
+            if (OperatingSystem.IsWindows())
+            {
+                window.SetTemporaryFilesPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SecondMonitor", "WebView2"));
+            }
             string icon = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "SecondMonitor.ico" : "icone.png");
             if (!OperatingSystem.IsMacOS() && File.Exists(icon))
             {

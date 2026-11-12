@@ -157,7 +157,13 @@ namespace SecondMonitor.Hub.Core.Ai
         public static bool IsQuestion(string text)
         {
             string t = Normalize(text);
-            return (text ?? string.Empty).Contains('?') || Regex.IsMatch(t, @"^(est ce|quand|combien|comment|quel|quelle|quels|quelles|ou |pourquoi|qui|c est quoi|on fait quoi|tu penses|dis moi|donne moi|il reste|j ai combien|je rentre|je boxe|je box)") || Regex.IsMatch(t, @"\b(combien|quand|quel|quelle|est ce que)\b");
+            // La dictée oublie souvent le « ? » : on reconnaît aussi les tournures de question (« j'aurais quoi comme rythme »,
+            // « la piste va évoluer », « je dois tourner en combien »).
+            return (text ?? string.Empty).Contains('?')
+                || Regex.IsMatch(t, @"^(est ce|quand|combien|comment|quel|quelle|quels|quelles|ou |pourquoi|qui|c est quoi|on fait quoi|tu penses|dis moi|donne moi|il reste|j ai combien|je rentre|je boxe|je box)")
+                || Regex.IsMatch(t, @"\b(combien|quand|quel|quelle|est ce que|quoi|a peu pres|prevision|previsions|tendance)\b")
+                || Regex.IsMatch(t, @"\b(va|vont|devrait|devraient) (evoluer|changer|pleuvoir|secher|monter|baisser|tenir|durer|chauffer|refroidir|s ameliorer|se degrader)\b")
+                || Regex.IsMatch(t, @"\b(je dois|dois je|il faut|faut il|je peux|peut on|on peut) (faire|tourner|rouler|aller|gagner|rattraper|tenir|rentrer)\b");
         }
 
         /// <summary>

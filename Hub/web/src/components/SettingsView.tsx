@@ -7,12 +7,11 @@ import { WheelBindingCard } from './EngineerView';
 export function SettingsView({ theme, setTheme, snapshot }: { theme: string; setTheme: (t: string) => void; snapshot: RaceSnapshot | null }) {
   const [settings, setSettings] = useState<HubSettings | null>(null);
   const [status, setStatus] = useState<HubStatus | null>(null);
-  const [hostsText, setHostsText] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    api<HubSettings>('/api/settings').then((s) => { setSettings(s); setHostsText(s.gameHosts.join('\n')); });
+    api<HubSettings>('/api/settings').then(setSettings);
     const load = () => api<HubStatus>('/api/status').then(setStatus).catch(() => {});
     load();
     const t = window.setInterval(load, 2000);
@@ -35,64 +34,10 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
   };
 
   if (!settings) return <div className="empty">Chargement…</div>;
-  const rx = status?.source.receiver;
-  const macAddresses = rx?.localAddresses ?? [];
 
   return (
     <div className="stack" style={{ maxWidth: 900 }}>
-      <div className="card">
-        <div className="card-head"><span className="card-title">Connexion au PC de jeu</span></div>
-        <div className="card-body">
-          <p className="row" style={{ gap: 8 }}>
-            État :
-            {settings.demoMode ? (
-              <span className="pill">Mode démo actif</span>
-            ) : rx?.isConnected ? (
-              <span className="status ok"><span className="ico">✓</span>Connecté à {rx.peers.join(', ')}</span>
-            ) : (
-              <span className="status short"><span className="ico">…</span>Recherche du PC de jeu…</span>
-            )}
-          </p>
-
-          <ol className="secondary" style={{ lineHeight: 1.7, paddingLeft: 18 }}>
-            <li>Sur le PC de jeu : copiez le dossier <span className="code">Collector/dist/win-x64</span> et lancez <b>SecondMonitor-Collecteur.exe</b> (rien à installer, très léger). Linux / SteamOS : voir LISEZ-MOI du collecteur.</li>
-            <li>Si Windows le demande, autorisez l'accès au <b>réseau privé</b>. Pour qu'il démarre tout seul : <span className="code">SecondMonitor-Collecteur.exe --autostart on</span>.</li>
-            <li>Le Mac le trouve tout seul sur le même réseau. Sinon (Wi-Fi ≠ Ethernet, autre sous-réseau, Tailscale), indiquez ci-dessous l'adresse IP du PC.</li>
-            <li>Autre possibilité : le SecondMonitor complet avec le plugin <b>« Data Broadcast Server »</b> (port <span className="code">{settings.gamePort}</span>).</li>
-          </ol>
-
-          <div className="field">
-            <label htmlFor="hosts">Adresse(s) du PC de jeu (une par ligne, optionnel)</label>
-            <textarea id="hosts" className="input" rows={3} value={hostsText} onChange={(e) => setHostsText(e.target.value)} placeholder="192.168.1.20" />
-          </div>
-          <div className="row">
-            <button className="btn primary" disabled={saving} onClick={() => save({ gameHosts: hostsText.split(/\s+/).filter(Boolean) })}>Enregistrer</button>
-            {message && <span className="secondary">{message}</span>}
-          </div>
-
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="card-head"><span className="card-title">Ouvrir sur un autre appareil</span><span className="muted">PC de jeu, iPad, téléphone</span></div>
-        <div className="card-body stack-sm">
-          <div className="addr-grid">
-            <span className="secondary">Affichage seul</span>
-            <span>{macAddresses.length ? macAddresses.map((a) => <span key={a} className="code addr">http://{a}:{settings.webPort}</span>) : '—'}</span>
-            <span className="secondary">Avec micro et volant</span>
-            <span>
-              {status?.httpsPort
-                ? macAddresses.map((a) => <a key={a} className="code addr" href={`https://${a}:${status.httpsPort}`} target="_blank" rel="noreferrer">https://{a}:{status.httpsPort}</a>)
-                : <span className="muted">HTTPS désactivé</span>}
-            </span>
-          </div>
-          <p className="secondary small" style={{ margin: 0 }}>
-            Le navigateur n'autorise le micro et le volant qu'en HTTPS (ou sur ce Mac via localhost). La première fois, il affiche un avertissement
-            car le certificat est créé par le hub : cliquez sur « Paramètres avancés » puis « Continuer vers le site ». Rien ne sort de votre réseau.
-          </p>
-        </div>
-      </div>
-
+      {message && <div className="cx-advice">{message}</div>}
       <WheelBindingCard />
 
       <ThermalProfiles snapshot={snapshot} />
@@ -129,11 +74,11 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
 
       {['localhost', '127.0.0.1'].includes(location.hostname) && (
         <div className="card">
-          <div className="card-head"><span className="card-title">Arrêter le hub</span></div>
+          <div className="card-head"><span className="card-title">Quitter SecondMonitor</span></div>
           <div className="card-body row">
-            <span className="secondary">Ferme le serveur sur ce Mac (les autres écrans perdent la connexion).</span>
+            <span className="secondary">Ferme SecondMonitor sur cet ordinateur (les autres écrans perdent la connexion).</span>
             <span className="spacer" />
-            <button className="btn" onClick={() => { if (confirm('Arrêter SecondMonitor Hub ?')) fetch('/api/quit', { method: 'POST' }); }}>Quitter le hub</button>
+            <button className="btn" onClick={() => { if (confirm('Quitter SecondMonitor ?')) fetch('/api/quit', { method: 'POST' }); }}>Quitter</button>
           </div>
         </div>
       )}

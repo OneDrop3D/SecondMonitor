@@ -12,10 +12,14 @@ using SecondMonitor.Hub.Core.Race;
 /// </summary>
 public sealed class LiveHub : BackgroundService
 {
-    public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+    public static readonly JsonSerializerOptions Json = CreateJson();
+
+    private static JsonSerializerOptions CreateJson()
     {
-        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals,
-    };
+        var o = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        FiniteNumbers.Register(o); // jamais de « "NaN" » vers l'interface (écran noir)
+        return o;
+    }
 
     private readonly ConcurrentDictionary<Guid, WebSocket> _clients = new();
     private readonly RaceEngine _engine;

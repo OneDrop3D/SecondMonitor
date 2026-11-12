@@ -88,6 +88,7 @@ namespace SecondMonitor.Collector
                 return 2;
             }
 
+            runtime.Host.AutoInstall = console; // sans fenêtre : pas de bouton, les plugins s'installent directement
             runtime.SetDemo(args.Contains("--demo"));
 
             if (!console && CollectorWindow.Run(runtime, minimized: args.Contains("--reduit")))
@@ -123,7 +124,13 @@ namespace SecondMonitor.Collector
             mutex.ReleaseMutex();
             try
             {
-                Process.Start(new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false });
+                var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = CollectorWindow.RestartAsAdmin };
+                if (CollectorWindow.RestartAsAdmin)
+                {
+                    start.Verb = "runas"; // Windows demande l'autorisation (UAC)
+                }
+
+                Process.Start(start);
             }
             catch (Exception)
             {

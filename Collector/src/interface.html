@@ -7,116 +7,151 @@
 <style>
   :root {
     color-scheme: dark;
-    --page: #0f0f0f; --panel: #1e1e1e; --panel-2: #262626; --head: #3a3128; --line: #3a3a3a;
+    --page: #0f0f0f; --panel: #1b1b1b; --panel-2: #242424; --head: #3a3128; --line: #333;
     --text: #f2f2f2; --muted: #a3a3a3; --good: #2fb34a; --warn: #f0b429; --bad: #e0493e; --accent: #3d8be0;
+    --radius: 6px; --radius-sm: 4px;
     --font: "Segoe UI", -apple-system, system-ui, Roboto, sans-serif; --mono: Consolas, ui-monospace, Menlo, monospace;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--page); color: var(--text); font: 13px/1.4 var(--font); height: 100%; }
+  html, body { margin: 0; background: var(--page); color: var(--text); font: 13px/1.45 var(--font); height: 100%; }
   body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; height: 100vh; overflow: hidden; }
-  header { display: flex; align-items: center; gap: 12px; }
-  .logo { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; font-weight: 800; font-size: 14px;
+  header { display: flex; align-items: center; gap: 10px; }
+  .logo { width: 30px; height: 30px; border-radius: var(--radius); display: grid; place-items: center; font-weight: 800; font-size: 12px;
           background: linear-gradient(135deg, #2f80d8, #174a85); color: #fff; flex: none; }
   h1 { font-size: 15px; margin: 0; font-weight: 650; }
-  .sub { color: var(--muted); font-size: 12.5px; }
   .version { margin-left: auto; color: var(--muted); font-size: 12px; }
-  section { background: var(--panel); border: 1px solid var(--line); }
-  section > h2 { margin: 0; padding: 3px 10px; background: var(--head); font-size: 12.5px; font-weight: 650; letter-spacing: .02em; }
+
+  .hero { border-radius: var(--radius); padding: 12px 14px; display: flex; gap: 12px; align-items: center; border: 1px solid var(--line); background: var(--panel); }
+  .hero .big { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; font-weight: 800; flex: none; color: #0b0b0b; }
+  .hero.good { border-color: color-mix(in oklab, var(--good) 55%, var(--line)); background: color-mix(in oklab, var(--good) 12%, var(--panel)); }
+  .hero.good .big { background: var(--good); }
+  .hero.warn { border-color: color-mix(in oklab, var(--warn) 55%, var(--line)); background: color-mix(in oklab, var(--warn) 10%, var(--panel)); }
+  .hero.warn .big { background: var(--warn); }
+  .hero.wait .big { background: var(--accent); color: #fff; }
+  .hero-title { font-size: 15px; font-weight: 700; }
+  .hero-text { color: var(--muted); margin-top: 2px; }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 9px; min-width: 0; }
+  .step-head { display: flex; align-items: center; gap: 6px; font-weight: 650; }
+  .tick { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; flex: none; background: #3a3a3a; color: #bbb; }
+  .step.ok .tick { background: var(--good); color: #0b0b0b; }
+  .step.todo .tick { background: var(--warn); color: #0b0b0b; }
+  .step-detail { color: var(--muted); font-size: 12px; margin-top: 2px; overflow-wrap: anywhere; }
+
+  .advice { display: none; border-radius: var(--radius); border: 1px solid #6d5414; background: #2e2510; padding: 10px 12px; }
+  .advice.show { display: block; }
+  .advice-title { font-weight: 700; color: var(--warn); margin-bottom: 3px; }
+  .advice .btn { margin-top: 8px; }
+
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  section > h2 { margin: 0; padding: 3px 10px; background: var(--head); font-size: 12px; font-weight: 650; letter-spacing: .02em; }
   .body { padding: 7px 10px; }
-  .status { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; }
-  .label { color: var(--muted); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
-  .dot.good { background: var(--good); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
-  .value { font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-  .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
-  .seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); }
+  .ip { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
   .seg button { background: var(--panel-2); color: var(--text); border: 0; border-right: 1px solid var(--line); padding: 6px 4px; cursor: pointer; font: inherit; }
   .seg button:last-child { border-right: 0; }
   .seg button.on { background: var(--accent); color: #fff; font-weight: 650; }
-  .seg button:hover:not(.on) { background: #303030; }
   .switch { display: flex; align-items: center; gap: 10px; padding: 3px 0; cursor: pointer; user-select: none; }
-  .switch input { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
-  .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-  .btn { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); padding: 6px 12px; cursor: pointer; font: inherit; }
+  .switch input { width: 17px; height: 17px; accent-color: var(--accent); margin: 0; }
+  .btn { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer; font: inherit; }
   .btn:hover { background: #303030; }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-  .notice { display: none; background: #3a2f12; border: 1px solid #6d5414; padding: 8px 10px; align-items: center; gap: 10px; }
+  .notice { display: none; margin-top: 6px; align-items: center; gap: 10px; color: var(--warn); }
   .notice.show { display: flex; }
-  .log { flex: 1; min-height: 90px; display: flex; flex-direction: column; }
+  details { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+  summary { cursor: pointer; padding: 5px 10px; font-weight: 650; font-size: 12px; background: var(--head); border-radius: var(--radius); }
+  details[open] summary { border-radius: var(--radius) var(--radius) 0 0; }
+  .log { flex: 1; min-height: 80px; display: flex; flex-direction: column; }
   .log .body { flex: 1; padding: 0; min-height: 0; }
   pre { margin: 0; padding: 8px 10px; font: 12px/1.5 var(--mono); color: #cfcfcf; white-space: pre-wrap; overflow-y: auto; height: 100%; }
-  .games { color: var(--muted); font-size: 12px; }
 </style>
 </head>
 <body>
   <header>
     <div class="logo" aria-hidden="true">SM</div>
-    <div>
-      <h1>SecondMonitor Collecteur</h1>
-      <div class="sub">Lit le jeu sur ce PC et envoie les données à SecondMonitor.</div>
-    </div>
+    <h1>SecondMonitor Collecteur</h1>
     <span class="version" id="version"></span>
   </header>
 
+  <div class="hero wait" id="hero">
+    <div class="big" id="hero-icon">…</div>
+    <div>
+      <div class="hero-title" id="hero-title">Démarrage…</div>
+      <div class="hero-text" id="hero-text"></div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step" id="step-hub"><div class="step-head"><span class="tick">1</span>SecondMonitor</div><div class="step-detail" id="d-hub">—</div></div>
+    <div class="step" id="step-jeu"><div class="step-head"><span class="tick">2</span>Jeu</div><div class="step-detail" id="d-jeu">—</div></div>
+    <div class="step" id="step-data"><div class="step-head"><span class="tick">3</span>Données</div><div class="step-detail" id="d-data">—</div></div>
+  </div>
+
+  <div class="advice" id="advice">
+    <div class="advice-title" id="advice-title"></div>
+    <div id="advice-text"></div>
+    <button class="btn primary" id="advice-btn" style="display:none"></button>
+  </div>
+
   <section>
-    <h2>État</h2>
-    <div class="body status">
-      <span class="label"><span class="dot" id="dot-hub"></span>SecondMonitor</span><span class="value" id="hub">—</span>
-      <span class="label"><span class="dot" id="dot-jeu"></span>Jeu</span><span class="value" id="jeu">—</span>
-      <span class="label"><span class="dot" id="dot-envoi"></span>Envoi</span><span class="value" id="envoi">—</span>
+    <h2>Adresse de ce PC</h2>
+    <div class="body">
+      <div class="ip" id="adresses">—</div>
+      <div class="hint">SecondMonitor trouve ce PC tout seul sur le réseau local. Sinon, saisissez cette adresse dans SecondMonitor (bouton « Connexion »).</div>
     </div>
   </section>
 
-  <section>
-    <h2>Ce PC</h2>
+  <details id="options">
+    <summary>Réglages</summary>
     <div class="body">
-      <div class="value" id="adresses">—</div>
-      <div class="hint">SecondMonitor trouve ce PC tout seul sur le réseau local. Sinon, saisissez cette adresse dans <b>SecondMonitor › Réglages › Adresse du PC de jeu</b>.</div>
-    </div>
-  </section>
-
-  <section>
-    <h2>Qualité des données</h2>
-    <div class="body">
+      <div style="margin-bottom:4px">Qualité des données</div>
       <div class="seg" role="group" aria-label="Qualité">
         <button data-q="econome">Économe</button>
         <button data-q="equilibre">Équilibré</button>
         <button data-q="precis">Précis</button>
       </div>
       <div class="hint" id="qualite-detail"></div>
-      <div class="notice" id="relancer"><span>La nouvelle qualité s'applique au prochain démarrage.</span><button class="btn" id="btn-relancer">Redémarrer maintenant</button></div>
-    </div>
-  </section>
-
-  <section>
-    <h2>Options</h2>
-    <div class="body">
-      <label class="switch"><input type="checkbox" id="autostart"><span id="autostart-label">Lancer à l'ouverture de session (fenêtre réduite)</span></label>
-      <label class="switch"><input type="checkbox" id="demo"><span>Démonstration : envoyer une course fictive (tester la liaison sans jeu)</span></label>
-      <div class="buttons" style="margin-top:6px">
+      <div class="notice" id="relancer"><span>Prise en compte au prochain démarrage.</span><button class="btn" id="btn-relancer">Redémarrer maintenant</button></div>
+      <div style="margin-top:6px">
+        <label class="switch"><input type="checkbox" id="autostart"><span id="autostart-label">Lancer à l'ouverture de session (fenêtre réduite)</span></label>
+        <label class="switch"><input type="checkbox" id="demo"><span>Démonstration : envoyer une course fictive (tester la liaison sans jeu)</span></label>
+      </div>
+      <div class="row" style="margin-top:6px">
         <button class="btn primary" id="btn-visualiseur">Ouvrir SecondMonitor sur ce PC</button>
         <button class="btn" id="btn-dossier">Dossier des réglages</button>
       </div>
+      <div class="hint" id="jeux"></div>
     </div>
-  </section>
+  </details>
 
   <section class="log">
     <h2>Journal</h2>
     <div class="body"><pre id="journal"></pre></div>
   </section>
-  <div class="games" id="jeux"></div>
 
 <script>
   const $ = (id) => document.getElementById(id);
   const send = (cmd, valeur) => window.external.sendMessage(JSON.stringify({ cmd, valeur }));
-  const QUALITES = {
-    econome: 'le plus léger pour le PC',
-    equilibre: 'conseillé',
-    precis: 'Vmax et trajectoires des adversaires plus fines, un peu plus de réseau',
-  };
+  const QUALITES = { econome: 'le plus léger pour le PC', equilibre: 'conseillé', precis: 'Vmax et trajectoires plus fines, un peu plus de réseau' };
   let lignes = [];
 
-  function setDot(id, kind) { $(id).className = 'dot ' + (kind || ''); }
+  function step(id, state, detail) {
+    $(id).className = 'step ' + state;
+    $(id).querySelector('.tick').textContent = state === 'ok' ? '✓' : state === 'todo' ? '!' : $(id).querySelector('.tick').dataset.n;
+    $('d-' + id.split('-')[1]).textContent = detail;
+  }
+  document.querySelectorAll('.tick').forEach((t, i) => (t.dataset.n = String(i + 1)));
+
+  function hero(kind, icon, title, text) {
+    $('hero').className = 'hero ' + kind;
+    $('hero-icon').textContent = icon;
+    $('hero-title').textContent = title;
+    $('hero-text').textContent = text;
+  }
+
   function journal() {
     const pre = $('journal');
     const bas = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20;
@@ -126,19 +161,30 @@
 
   function etat(e) {
     $('version').textContent = e.version ? 'version ' + e.version : '';
-    if (e.hubs.length) { $('hub').textContent = 'Connecté : ' + e.hubs.join(', '); setDot('dot-hub', 'good'); }
-    else { $('hub').textContent = 'En attente… (ouvrez SecondMonitor sur l\'ordinateur qui affiche)'; setDot('dot-hub', 'warn'); }
+    const hub = e.hubs.length > 0;
+    const jeu = e.demo ? 'Course de démonstration' : e.jeu;
+    const ip = e.adresses[0] || '?';
 
-    if (e.demo) { $('jeu').textContent = 'Course de démonstration'; setDot('dot-jeu', 'good'); }
-    else if (e.jeu) { $('jeu').textContent = e.jeu; setDot('dot-jeu', 'good'); }
-    else if (e.pause) { $('jeu').textContent = 'En pause : aucun SecondMonitor connecté (aucune charge sur le PC)'; setDot('dot-jeu', ''); }
-    else { $('jeu').textContent = 'Aucun jeu détecté : lancez une session'; setDot('dot-jeu', 'warn'); }
+    step('step-hub', hub ? 'ok' : 'todo', hub ? 'Connecté : ' + e.hubs.join(', ') : 'Pas encore connecté');
+    step('step-jeu', jeu ? 'ok' : (hub ? 'todo' : ''), jeu || (e.pause ? 'En pause (aucune charge)' : 'Aucun jeu lancé'));
+    step('step-data', e.donnees ? 'ok' : (jeu ? 'todo' : ''), e.donnees ? `${e.envois} envois/s · ${String(e.ko).replace('.', ',')} Ko/s` : jeu ? 'En attente des données du jeu' : '—');
 
-    const envoi = e.envois > 0;
-    $('envoi').textContent = envoi ? `${e.envois} envois/s · ${e.ko.toLocaleString('fr-FR')} Ko/s` : 'Rien à envoyer pour le moment';
-    setDot('dot-envoi', envoi ? 'good' : '');
+    if (hub && e.donnees) hero('good', '✓', 'Tout fonctionne', `${jeu} → SecondMonitor (${e.hubs[0]})${e.voitures ? ` · ${e.voitures} voitures` : ''} · ${e.envois} envois/s`);
+    else if (!hub) hero('wait', '1', 'Ouvrez SecondMonitor sur l\'ordinateur qui affiche', `Il trouvera ce PC tout seul. Sinon, saisissez-y l'adresse ${ip}.`);
+    else if (!jeu) hero('wait', '2', 'Connecté. Lancez le jeu', `SecondMonitor (${e.hubs[0]}) attend. Démarrez une session : elle apparaîtra automatiquement.`);
+    else hero('warn', '3', `${jeu} détecté, en attente de ses données`, 'Prenez la piste. Si rien n\'arrive, suivez le conseil ci-dessous.');
 
-    $('adresses').textContent = (e.adresses.length ? e.adresses.join(' · ') : 'aucun réseau') + '   (port ' + e.port + ')';
+    const c = e.conseil;
+    $('advice').classList.toggle('show', !!c);
+    if (c) {
+      $('advice-title').textContent = c.titre;
+      $('advice-text').textContent = c.texte;
+      $('advice-btn').style.display = c.action ? '' : 'none';
+      $('advice-btn').textContent = c.action === 'installer' ? 'Installer le plugin' : c.action === 'admin' ? 'Relancer en administrateur' : '';
+      $('advice-btn').dataset.action = c.action || '';
+    }
+
+    $('adresses').textContent = (e.adresses.length ? e.adresses.join('  ·  ') : 'aucun réseau');
     document.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.q === e.qualite));
     $('qualite-detail').textContent = `${e.lectures} lectures/s · vous ${e.joueurHz}×/s · adversaires ${String(e.adversairesHz).replace('.', ',')}×/s — ${QUALITES[e.qualite]}`;
     $('autostart').checked = e.autostart;
@@ -153,7 +199,7 @@
     if (m.type === 'etat') etat(m);
     else if (m.type === 'journalComplet') { lignes = m.lignes; journal(); }
     else if (m.type === 'journal') { lignes.push(m.ligne); if (lignes.length > 300) lignes.shift(); journal(); }
-    else if (m.type === 'relancer') $('relancer').classList.toggle('show', m.necessaire);
+    else if (m.type === 'relancer') { $('relancer').classList.toggle('show', m.necessaire); $('options').open = true; }
   });
 
   document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => send('qualite', b.dataset.q)));
@@ -162,6 +208,7 @@
   $('btn-relancer').addEventListener('click', () => send('relancer'));
   $('btn-dossier').addEventListener('click', () => send('dossier'));
   $('btn-visualiseur').addEventListener('click', () => send('visualiseur'));
+  $('advice-btn').addEventListener('click', (e) => { const a = e.target.dataset.action; if (a) send(a); });
   send('pret');
 </script>
 </body>
