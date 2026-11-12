@@ -87,6 +87,7 @@ namespace SecondMonitor.Hub.Core.Race
 
             TrackPits(driver, now);
             TrackLaps(driver, now);
+            TrackSectors(driver);
 
             bool hasPosition = worldValid && driver.WorldPosition != null && !(driver.WorldPosition.X.InMeters == 0 && driver.WorldPosition.Z.InMeters == 0);
             Analysis.Update(
@@ -98,6 +99,37 @@ namespace SecondMonitor.Hub.Core.Race
                 hasPosition ? driver.WorldPosition.X.InMeters : null,
                 hasPosition ? driver.WorldPosition.Z.InMeters : null,
                 driver.InPits);
+        }
+
+        /// <summary>Meilleur temps de chaque secteur (S1, S2, S3) sur la session, et le tour où il a été fait.</summary>
+        public double?[] BestSectors { get; } = new double?[3];
+
+        public int?[] BestSectorLaps { get; } = new int?[3];
+
+        private void TrackSectors(DriverInfo driver)
+        {
+            var timing = driver.Timing;
+            if (timing == null || driver.InPits)
+            {
+                return;
+            }
+
+            TimeSpan?[] sectors = { timing.LastSector1Time, timing.LastSector2Time, timing.LastSector3Time };
+            for (int i = 0; i < 3; i++)
+            {
+                if (sectors[i] is not TimeSpan ts || ts <= TimeSpan.Zero)
+                {
+                    continue;
+                }
+
+                double v = Math.Round(ts.TotalSeconds, 3);
+                if (BestSectors[i] == null || v < BestSectors[i] - 0.0005)
+                {
+                    BestSectors[i] = v;
+                    // S1 et S2 appartiennent au tour en cours ; S3 se termine sur la ligne (tour qui vient d'être bouclé).
+                    BestSectorLaps[i] = i < 2 ? driver.CompletedLaps + 1 : driver.CompletedLaps;
+                }
+            }
         }
 
         /// <summary>Régression linéaire des temps du relais en cours (pour la projection des prochains tours).</summary>

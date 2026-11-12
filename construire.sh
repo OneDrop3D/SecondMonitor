@@ -1,14 +1,17 @@
 #!/bin/zsh
-# Construit SecondMonitor pour tous les systèmes, depuis ce Mac (aucune machine Windows ou Linux nécessaire).
+# Construit SecondMonitor pour tous les systèmes, depuis ce Mac (aucune machine Windows ou Linux nécessaire,
+# sauf l'installateur Windows .exe, fabriqué par Inno Setup sur GitHub ou sur un PC Windows).
 # Utilisé par OneDrop3D (Publieur › SecondMonitor) ou à la main :
 #
-#   ./construire.sh mac      → dist/SecondMonitor-Hub-<v>-mac-arm64.zip (+ mac-x64) et dist/mac-arm64/SecondMonitor Hub.app
-#   ./construire.sh win      → dist/SecondMonitor-Collecteur-<v>-windows-x64.zip et dist/SecondMonitor-Hub-<v>-windows-x64.zip
-#   ./construire.sh linux    → dist/SecondMonitor-Collecteur-<v>-linux-x64.tar.gz et dist/SecondMonitor-Hub-<v>-linux-x64.tar.gz
+#   ./construire.sh mac      → dist/SecondMonitor-<v>-mac-arm64.dmg (+ mac-x64) : les deux applications à glisser dans Applications
+#   ./construire.sh win      → dist/SecondMonitor-<v>-windows-x64.zip (les deux applications, sans installation)
+#                              + dist/SecondMonitor-<v>-windows-x64-installation.exe si Inno Setup (iscc) est disponible
+#   ./construire.sh linux    → dist/SecondMonitor-<v>-linux-x64.tar.gz (les deux applications + installer.sh)
 #   ./construire.sh tous     → les trois
 #
-# Hub : l'écran d'ingénieur (Mac de préférence, mais aussi Windows ou Linux).
-# Collecteur : le petit programme du PC de jeu (Windows ; Linux/SteamOS).
+# Chaque téléchargement installe DEUX applications :
+#   SecondMonitor            l'application qui affiche les données (chronométrage, stratégie, ingénieur IA)
+#   SecondMonitor Collecteur la petite application du PC de jeu qui lit le jeu et envoie les données
 # Tout est autonome : .NET est inclus, rien à installer chez l'utilisateur.
 
 set -e
@@ -32,7 +35,7 @@ echo "SecondMonitor $V"
 
 etape() { echo; echo "== $*"; }
 
-# Verrou pour la partie commune (interface web + hub) : deux constructions en parallèle ne la touchent pas en même temps.
+# Verrou pour la partie commune (interface web) : deux constructions en parallèle ne la touchent pas en même temps.
 VERROU="$DIST/.verrou-hub"
 TIENT_VERROU=""
 prendre_verrou() { until mkdir "$VERROU" 2>/dev/null; do sleep 1; done; TIENT_VERROU=1; }
@@ -50,53 +53,65 @@ interface_web() {
   INTERFACE_FAITE=1
 }
 
-# hub <rid> <dossier> : serveur autonome (un seul exécutable + l'interface web à côté)
+# hub <rid> <dossier> [unique] : SecondMonitor (l'application qui affiche). « unique » = un seul exécutable (Mac).
 hub() {
   prendre_verrou
   INTERFACE_FAITE=""
   interface_web
-  etape "Hub $1"
+  etape "SecondMonitor $1"
   rm -rf "$2"
-  dotnet publish Hub/src/SecondMonitor.Hub -c Release -r "$1" --self-contained \
-    -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true \
+  local unique=()
+  if [ "$3" = "unique" ]; then unique=(-p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true); fi
+  dotnet publish Hub/src/SecondMonitor.Hub -c Release -r "$1" --self-contained "${unique[@]}" \
     -p:DebugType=embedded -p:SatelliteResourceLanguages=fr -o "$2" -v q -nologo
   rm -f "$2"/*.pdb
   rendre_verrou
 }
 
-# collecteur <rid> <dossier>
+# collecteur <rid> <dossier> [unique]
 collecteur() {
-  etape "Collecteur $1"
+  etape "SecondMonitor Collecteur $1"
   rm -rf "$2"
-  dotnet publish Collector/src -c Release -r "$1" -o "$2" -v q -nologo
+  local unique=(-p:PublishSingleFile=false)
+  if [ "$3" = "unique" ]; then unique=(); fi
+  dotnet publish Collector/src -c Release -r "$1" -o "$2" -v q -nologo "${unique[@]}"
+  rm -f "$2"/*.pdb
   cp Collector/LISEZ-MOI.md "$2/"
 }
 
-construire_mac() {
-  for arch in x64 arm64; do  # arm64 en dernier : c'est l'application que OneDrop3D installe sur ce Mac
-    hub "osx-$arch" "$TMP/hub-osx-$arch"
-    etape "Application Mac ($arch)"
-    local dossier="$DIST/mac-$arch"
-    local app="$dossier/SecondMonitor Hub.app"
-    rm -rf "$dossier"; mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-    cp -R "$TMP/hub-osx-$arch/." "$app/Contents/MacOS/"
-    cp packaging/SecondMonitor.icns "$app/Contents/Resources/"
-    cat > "$app/Contents/MacOS/SecondMonitor-Hub" <<'EOS'
-#!/bin/zsh
-# Démarre le hub et ouvre l'interface dans le navigateur. Pour l'arrêter : Réglages › Quitter le hub.
-DIR="${0:A:h}"
-exec "$DIR/SecondMonitorHub" --ouvrir
-EOS
-    chmod +x "$app/Contents/MacOS/SecondMonitor-Hub" "$app/Contents/MacOS/SecondMonitorHub"
-    cat > "$app/Contents/Info.plist" <<EOS
+# ensemble <rid> <dossier> : les deux applications dans un même dossier, avec un seul exemplaire de .NET.
+# Les deux sont construites avec le même SDK et les mêmes paquets : un fichier commun différent est une erreur.
+ensemble() {
+  hub "$1" "$TMP/ens-hub-$1"
+  collecteur "$1" "$TMP/ens-coll-$1"
+  etape "Assemblage des deux applications ($1)"
+  rm -rf "$2"; mkdir -p "$2"
+  cp -R "$TMP/ens-hub-$1/." "$2/"
+  (cd "$TMP/ens-coll-$1" && find . -type f) | while read -r f; do
+    if [ -f "$2/$f" ] && ! cmp -s "$2/$f" "$TMP/ens-coll-$1/$f"; then
+      echo "Conflit : $f diffère entre SecondMonitor et le collecteur." >&2
+      exit 1
+    fi
+    mkdir -p "$2/$(dirname "$f")"
+    cp "$TMP/ens-coll-$1/$f" "$2/$f"
+  done
+}
+
+# Info.plist d'une application Mac : plist <app> <nom> <identifiant> <exécutable> <micro oui|non>
+plist() {
+  local micro=""
+  if [ "$5" = "oui" ]; then
+    micro="  <key>NSMicrophoneUsageDescription</key><string>Le micro sert à parler à l'ingénieur IA (bouton radio).</string>"
+  fi
+  cat > "$1/Contents/Info.plist" <<EOS
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>SecondMonitor Hub</string>
-  <key>CFBundleDisplayName</key><string>SecondMonitor Hub</string>
-  <key>CFBundleIdentifier</key><string>fr.onedrop3d.secondmonitor-hub</string>
-  <key>CFBundleExecutable</key><string>SecondMonitor-Hub</string>
+  <key>CFBundleName</key><string>$2</string>
+  <key>CFBundleDisplayName</key><string>$2</string>
+  <key>CFBundleIdentifier</key><string>$3</string>
+  <key>CFBundleExecutable</key><string>$4</string>
   <key>CFBundleIconFile</key><string>SecondMonitor</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$V</string>
@@ -104,61 +119,91 @@ EOS
   <key>LSMinimumSystemVersion</key><string>12.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.sports</string>
   <key>NSHighResolutionCapable</key><true/>
+  <key>NSLocalNetworkUsageDescription</key><string>SecondMonitor échange les données de course avec le PC de jeu sur le réseau local.</string>
+$micro
 </dict>
 </plist>
 EOS
-    # Signature : identité OneDrop3D si elle existe (autorisations gardées d'une version à l'autre), sinon ad hoc.
-    local id="${ONEDROP3D_SIGN_IDENTITY:-$(security find-identity -v -p codesigning 2>/dev/null | grep -oE '"(Multibook|ClickDeck|OneDrop3D)[^"]*"' | head -1 | tr -d '"')}"
-    codesign --force --deep --sign "${id:--}" --identifier fr.onedrop3d.secondmonitor-hub "$app" >/dev/null 2>&1 || codesign --force --deep --sign - "$app"
-    codesign --verify --deep --strict "$app"
-    rm -f "$DIST/SecondMonitor-Hub-$V-mac-$arch.zip"
-    ditto -c -k --sequesterRsrc --keepParent "$app" "$DIST/SecondMonitor-Hub-$V-mac-$arch.zip"
-    echo "→ dist/SecondMonitor-Hub-$V-mac-$arch.zip"
+}
+
+signer() {
+  # Identité OneDrop3D si elle existe (autorisations gardées d'une version à l'autre), sinon signature ad hoc.
+  local id="${ONEDROP3D_SIGN_IDENTITY:-$(security find-identity -v -p codesigning 2>/dev/null | grep -oE '"(Multibook|ClickDeck|OneDrop3D)[^"]*"' | head -1 | tr -d '"')}"
+  codesign --force --deep --sign "${id:--}" --identifier "$2" "$1" >/dev/null 2>&1 || codesign --force --deep --sign - --identifier "$2" "$1"
+  codesign --verify --deep --strict "$1"
+}
+
+construire_mac() {
+  for arch in x64 arm64; do  # arm64 en dernier : ce sont les applications que OneDrop3D installe sur ce Mac
+    hub "osx-$arch" "$TMP/hub-osx-$arch" unique
+    collecteur "osx-$arch" "$TMP/coll-osx-$arch" unique
+    etape "Applications Mac ($arch)"
+    local dossier="$DIST/mac-$arch"
+    rm -rf "$dossier"; mkdir -p "$dossier"
+
+    local app="$dossier/SecondMonitor.app"
+    mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+    cp -R "$TMP/hub-osx-$arch/." "$app/Contents/MacOS/"
+    cp packaging/SecondMonitor.icns "$app/Contents/Resources/"
+    plist "$app" "SecondMonitor" "fr.onedrop3d.secondmonitor" "SecondMonitorHub" oui
+    chmod +x "$app/Contents/MacOS/SecondMonitorHub"
+    signer "$app" fr.onedrop3d.secondmonitor
+
+    local coll="$dossier/SecondMonitor Collecteur.app"
+    mkdir -p "$coll/Contents/MacOS" "$coll/Contents/Resources"
+    cp -R "$TMP/coll-osx-$arch/." "$coll/Contents/MacOS/"
+    rm -f "$coll/Contents/MacOS/LISEZ-MOI.md"
+    cp packaging/SecondMonitor.icns "$coll/Contents/Resources/"
+    plist "$coll" "SecondMonitor Collecteur" "fr.onedrop3d.secondmonitor-collecteur" "SecondMonitor-Collecteur" non
+    chmod +x "$coll/Contents/MacOS/SecondMonitor-Collecteur"
+    signer "$coll" fr.onedrop3d.secondmonitor-collecteur
+
+    # Image disque : les deux applications et un raccourci vers Applications, à glisser.
+    local img="$TMP/dmg-$arch"
+    rm -rf "$img"; mkdir -p "$img"
+    ditto "$app" "$img/SecondMonitor.app"
+    ditto "$coll" "$img/SecondMonitor Collecteur.app"
+    ln -s /Applications "$img/Applications"
+    rm -f "$DIST/SecondMonitor-$V-mac-$arch.dmg"
+    hdiutil create -quiet -volname "SecondMonitor $V" -srcfolder "$img" -ov -format UDZO "$DIST/SecondMonitor-$V-mac-$arch.dmg"
+    echo "→ dist/SecondMonitor-$V-mac-$arch.dmg"
   done
-  rm -rf "$DIST/mac-x64"  # seule l'application de ce Mac reste dépliée (pour « Installer sur ce Mac »)
+  rm -rf "$DIST/mac-x64"  # seules les applications de ce Mac restent dépliées (pour « Installer sur ce Mac »)
 }
 
 construire_win() {
-  hub win-x64 "$TMP/hub-win"
-  cat > "$TMP/hub-win/Lancer SecondMonitor Hub.cmd" <<'EOS'
-@echo off
-rem Démarre le hub et ouvre l'interface dans le navigateur. Laissez la fenêtre ouverte (ou réduite).
-cd /d "%~dp0"
-SecondMonitorHub.exe --ouvrir
-EOS
-  rm -rf "$TMP/zip-hub"; mkdir -p "$TMP/zip-hub"; cp -R "$TMP/hub-win" "$TMP/zip-hub/SecondMonitor Hub"
-  rm -f "$DIST/SecondMonitor-Hub-$V-windows-x64.zip"
-  (cd "$TMP/zip-hub" && zip -qr -X "$DIST/SecondMonitor-Hub-$V-windows-x64.zip" "SecondMonitor Hub")
-  echo "→ dist/SecondMonitor-Hub-$V-windows-x64.zip"
+  local dossier="$DIST/windows-x64/SecondMonitor"
+  ensemble win-x64 "$dossier"
+  cp packaging/windows/LISEZ-MOI.txt "$dossier/"
+  rm -f "$DIST/SecondMonitor-$V-windows-x64.zip"
+  (cd "$DIST/windows-x64" && zip -qr -X "$DIST/SecondMonitor-$V-windows-x64.zip" SecondMonitor)
+  echo "→ dist/SecondMonitor-$V-windows-x64.zip"
 
-  collecteur win-x64 "$TMP/coll-win"
-  rm -rf "$TMP/zip-coll"; mkdir -p "$TMP/zip-coll"; cp -R "$TMP/coll-win" "$TMP/zip-coll/SecondMonitor Collecteur"
-  rm -f "$DIST/SecondMonitor-Collecteur-$V-windows-x64.zip"
-  (cd "$TMP/zip-coll" && zip -qr -X "$DIST/SecondMonitor-Collecteur-$V-windows-x64.zip" "SecondMonitor Collecteur")
-  echo "→ dist/SecondMonitor-Collecteur-$V-windows-x64.zip"
+  # Installateur : Inno Setup (sur Windows, ou sur Mac/Linux avec Wine).
+  local iscc=""
+  if command -v iscc >/dev/null 2>&1; then iscc="iscc"; fi
+  if [ -z "$iscc" ] && [ -n "$ISCC_EXE" ]; then iscc="$ISCC_EXE"; fi
+  if [ -n "$iscc" ]; then
+    etape "Installateur Windows"
+    $iscc /Qp "/DVersion=$V" "/DSource=$dossier" "/DSortie=$DIST" packaging/windows/SecondMonitor.iss
+    echo "→ dist/SecondMonitor-$V-windows-x64-installation.exe"
+  else
+    echo "(Installateur .exe non construit ici : Inno Setup absent. GitHub le construit automatiquement.)"
+  fi
 }
 
 construire_linux() {
-  hub linux-x64 "$TMP/hub-linux"
-  cat > "$TMP/hub-linux/lancer-hub.sh" <<'EOS'
-#!/bin/sh
-# Démarre le hub et ouvre l'interface dans le navigateur.
-cd "$(dirname "$0")" && exec ./SecondMonitorHub --ouvrir
-EOS
-  chmod +x "$TMP/hub-linux/lancer-hub.sh" "$TMP/hub-linux/SecondMonitorHub"
-  rm -rf "$TMP/tar-hub"; mkdir -p "$TMP/tar-hub"; cp -R "$TMP/hub-linux" "$TMP/tar-hub/secondmonitor-hub"
-  tar -C "$TMP/tar-hub" -czf "$DIST/SecondMonitor-Hub-$V-linux-x64.tar.gz" secondmonitor-hub
-  echo "→ dist/SecondMonitor-Hub-$V-linux-x64.tar.gz"
-
-  # Linux/SteamOS : collecteur Linux (F1, Forza) + collecteur Windows à lancer dans Proton (LMU, ACC, rF2, AMS2…)
-  collecteur linux-x64 "$TMP/coll-linux"
-  collecteur win-x64 "$TMP/coll-linux/win-x64"
-  rm -f "$TMP/coll-linux/win-x64/LISEZ-MOI.md"
-  cp Collector/linux/lancer-avec-proton.sh "$TMP/coll-linux/"
-  chmod +x "$TMP/coll-linux/SecondMonitor-Collecteur" "$TMP/coll-linux/lancer-avec-proton.sh"
-  rm -rf "$TMP/tar-coll"; mkdir -p "$TMP/tar-coll"; cp -R "$TMP/coll-linux" "$TMP/tar-coll/secondmonitor-collecteur"
-  tar -C "$TMP/tar-coll" -czf "$DIST/SecondMonitor-Collecteur-$V-linux-x64.tar.gz" secondmonitor-collecteur
-  echo "→ dist/SecondMonitor-Collecteur-$V-linux-x64.tar.gz"
+  local dossier="$TMP/linux/secondmonitor"
+  ensemble linux-x64 "$dossier"
+  # Jeux lancés avec Proton (LMU, ACC, rFactor 2, AMS2…) : collecteur Windows à lancer dans le préfixe du jeu.
+  collecteur win-x64 "$dossier/collecteur-windows" unique
+  rm -f "$dossier/collecteur-windows/LISEZ-MOI.md"
+  cp Collector/linux/lancer-avec-proton.sh packaging/linux/installer.sh packaging/linux/desinstaller.sh "$dossier/"
+  cp packaging/icone.png "$dossier/"
+  chmod +x "$dossier/SecondMonitorHub" "$dossier/SecondMonitor-Collecteur" "$dossier"/*.sh
+  rm -f "$DIST/SecondMonitor-$V-linux-x64.tar.gz"
+  tar -C "$TMP/linux" -czf "$DIST/SecondMonitor-$V-linux-x64.tar.gz" secondmonitor
+  echo "→ dist/SecondMonitor-$V-linux-x64.tar.gz"
 }
 
 case "${1:-tous}" in
@@ -171,4 +216,4 @@ esac
 
 rm -rf "$TMP"
 etape "Terminé : SecondMonitor $V"
-ls -lh "$DIST" | grep -E "SecondMonitor-.*$V" || true
+ls -lh "$DIST" | grep -E "SecondMonitor-$V" || true

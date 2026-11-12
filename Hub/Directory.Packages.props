@@ -9,6 +9,8 @@
     <PackageVersion Include="protobuf-net" Version="3.2.45" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="NLog" Version="5.3.4" />
+    <!-- Fenêtre de l'application : la page web dans la vue web du système (WebKit, WebView2, WebKitGTK). -->
+    <PackageVersion Include="Photino.NET" Version="4.0.16" />
     <!-- Tests -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
     <PackageVersion Include="NUnit" Version="4.5.1" />

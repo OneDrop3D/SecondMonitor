@@ -7,7 +7,7 @@ namespace SecondMonitor.Collector
     using System.Text.Json.Serialization;
 
     /// <summary>
-    /// Réglages du collecteur (fichier « collecteur.json » à côté du programme, créé au premier lancement).
+    /// Réglages du collecteur (« collecteur.json » dans le dossier de données de l'utilisateur, créé au premier lancement).
     /// Tout a une valeur par défaut : il n'y a normalement rien à régler.
     /// </summary>
     public sealed class CollectorSettings
@@ -49,6 +49,44 @@ namespace SecondMonitor.Collector
             "precis" or "précis" => (33, 33, 66, 100),
             _ => (50, 50, 100, 250),
         };
+
+        /// <summary>
+        /// Dossier des réglages et du journal : celui de l'utilisateur (l'application installée peut être en lecture seule).
+        /// Une ancienne version « portable » qui avait son collecteur.json à côté du programme le garde.
+        /// </summary>
+        public static string DataDirectory(string programDirectory)
+        {
+            if (File.Exists(Path.Combine(programDirectory, "collecteur.json")))
+            {
+                return programDirectory;
+            }
+
+            string root = OperatingSystem.IsMacOS()
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support")
+                : Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string dir = Path.Combine(root, "SecondMonitor Collecteur");
+            try
+            {
+                Directory.CreateDirectory(dir);
+                return dir;
+            }
+            catch (Exception)
+            {
+                return programDirectory;
+            }
+        }
+
+        public void Save()
+        {
+            try
+            {
+                File.WriteAllText(FilePath, JsonSerializer.Serialize(this, Options));
+            }
+            catch (Exception)
+            {
+                // Dossier en lecture seule : le réglage vaut jusqu'à la fermeture.
+            }
+        }
 
         public static CollectorSettings LoadOrCreate(string directory)
         {

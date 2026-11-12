@@ -1,0 +1,19 @@
+SecondMonitor pour Windows (version sans installation)
+=======================================================
+
+Ce dossier contient les deux applications. Rien d'autre à installer (.NET est inclus).
+Vous n'avez PAS besoin du SecondMonitor d'origine.
+
+  SecondMonitorHub.exe           SecondMonitor : l'application qui affiche les données
+                                 (chronométrage, stratégie, télémétrie, ingénieur IA).
+  SecondMonitor-Collecteur.exe   SecondMonitor Collecteur : à ouvrir sur le PC de jeu.
+                                 Il lit le jeu et envoie les données à SecondMonitor.
+
+Sur le PC de jeu : ouvrez SecondMonitor-Collecteur.exe. Si Windows le demande, autorisez le « réseau privé ».
+Sur l'ordinateur qui affiche (ou sur le même PC, sur un deuxième écran) : ouvrez SecondMonitorHub.exe.
+SecondMonitor trouve le collecteur tout seul sur le réseau local.
+
+Préférez l'installateur (SecondMonitor-<version>-windows-x64-installation.exe) : il crée les raccourcis
+dans le menu Démarrer et se désinstalle proprement.
+
+Aide : https://github.com/OneDrop3D/SecondMonitor

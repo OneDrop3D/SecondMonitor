@@ -317,6 +317,9 @@ namespace SecondMonitor.Hub.Core.Race
                     CurrentLap = Seconds(d.Timing?.CurrentLapTime),
                     Sector = d.Timing?.CurrentSector ?? 0,
                     LastSectors = new[] { Seconds(d.Timing?.LastSector1Time), Seconds(d.Timing?.LastSector2Time), Seconds(d.Timing?.LastSector3Time) },
+                    BestSectors = (double?[])t.BestSectors.Clone(),
+                    BestSectorLaps = (int?[])t.BestSectorLaps.Clone(),
+                    BestLapNumber = t.Laps.Where(l => l.Time > 0 && !l.IsPitLap).OrderBy(l => l.Time).FirstOrDefault()?.Lap,
                     Speed = d.Speed?.InKph ?? 0,
                     X = worldValid && d.WorldPosition != null ? Math.Round(d.WorldPosition.X.InMeters, 1) : null,
                     Z = worldValid && d.WorldPosition != null ? Math.Round(d.WorldPosition.Z.InMeters, 1) : null,
@@ -401,6 +404,12 @@ namespace SecondMonitor.Hub.Core.Race
                 snap.Drivers.Add(row);
                 previous = t;
                 classPrevious[classId] = t;
+            }
+
+            if (playerStrategy != null && playerTracker != null)
+            {
+                (playerStrategy.DeltaBest, playerStrategy.DeltaLast) = playerTracker.Analysis.LiveDelta();
+                playerStrategy.Speed = Math.Round(playerInfo.Speed?.InKph ?? 0, 1);
             }
 
             if (playerStrategy != null && playerTracker != null && isRace)

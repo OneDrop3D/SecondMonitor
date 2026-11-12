@@ -6,7 +6,17 @@
     <InvariantGlobalization>false</InvariantGlobalization>
     <ApplicationIcon>$(MSBuildThisFileDirectory)..\..\..\packaging\SecondMonitor.ico</ApplicationIcon>
   </PropertyGroup>
+  <!-- Windows : application à fenêtre, sans console noire derrière. -->
+  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">
+    <OutputType>WinExe</OutputType>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\SecondMonitor.Hub.Core\SecondMonitor.Hub.Core.csproj" />
+    <PackageReference Include="Photino.NET" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Icône de la fenêtre (Windows, Linux ; sur Mac c'est celle de l'application). -->
+    <None Include="..\..\..\packaging\icone.png" Link="icone.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="..\..\..\packaging\SecondMonitor.ico" Link="SecondMonitor.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 </Project>

@@ -46,6 +46,11 @@ namespace SecondMonitor.Hub.Core.Race
 
         public double?[] BestMs { get; } = new double?[MicroSectorCount];
 
+        /// <summary>Micro-secteurs du meilleur tour complet (hors stands) : référence du delta en direct.</summary>
+        public double?[] BestLapMs { get; private set; }
+
+        private double _bestLapMsSum = double.MaxValue;
+
         /// <summary>Index du micro-secteur en cours (0..N-1), -1 si inconnu.</summary>
         public int CurrentMsIndex { get; private set; } = -1;
 
@@ -180,8 +185,54 @@ namespace SecondMonitor.Hub.Core.Race
                 }
             }
 
+            if (LastMs.All(v => v.HasValue) && !LastMsPit.Any(p => p))
+            {
+                double sum = LastMs.Sum(v => v.Value);
+                if (sum < _bestLapMsSum)
+                {
+                    _bestLapMsSum = sum;
+                    BestLapMs = LastMs;
+                }
+            }
+
             CurrentMs = new double?[MicroSectorCount];
             CurrentMsPit = new bool[MicroSectorCount];
+        }
+
+        /// <summary>
+        /// Delta en direct (s, négatif = plus rapide) au dernier micro-secteur franchi : par rapport au meilleur tour et au tour précédent.
+        /// Mis à jour 24 fois par tour, comme les barres « Δ » de SecondMonitor.
+        /// </summary>
+        public (double? VsBest, double? VsLast) LiveDelta()
+        {
+            int k = CurrentMsIndex;
+            if (k <= 0)
+            {
+                return (null, null);
+            }
+
+            return (Delta(BestLapMs, k), Delta(LastMs.All(v => v.HasValue) && !LastMsPit.Any(p => p) ? LastMs : null, k));
+        }
+
+        private double? Delta(double?[] reference, int k)
+        {
+            if (reference == null)
+            {
+                return null;
+            }
+
+            double d = 0;
+            for (int i = 0; i < k; i++)
+            {
+                if (CurrentMs[i] is not double c || reference[i] is not double r || CurrentMsPit[i])
+                {
+                    return null;
+                }
+
+                d += c - r;
+            }
+
+            return Math.Round(d, 3);
         }
 
         private void FillBins(double u0, double u1, double v1, double? x1, double? z1, bool inPits)

@@ -172,6 +172,14 @@ namespace SecondMonitor.Hub.Core.Race
 
         public double?[] LastSectors { get; set; }
 
+        /// <summary>Meilleurs secteurs de la session (S1, S2, S3) et le tour où chacun a été fait.</summary>
+        public double?[] BestSectors { get; set; }
+
+        public int?[] BestSectorLaps { get; set; }
+
+        /// <summary>Tour du meilleur temps (affiché « L3/1:27.951 » comme dans SecondMonitor).</summary>
+        public int? BestLapNumber { get; set; }
+
         public double Speed { get; set; }
 
         public double? X { get; set; }
@@ -269,6 +277,14 @@ namespace SecondMonitor.Hub.Core.Race
         public List<BattleDto> Battles { get; set; } = new();
 
         public List<LapDto> RecentLaps { get; set; } = new();
+
+        /// <summary>Delta en direct par rapport au meilleur tour personnel (s, négatif = plus rapide).</summary>
+        public double? DeltaBest { get; set; }
+
+        /// <summary>Delta en direct par rapport au tour précédent.</summary>
+        public double? DeltaLast { get; set; }
+
+        public double Speed { get; set; }
     }
 
     public sealed class FuelStrategy

@@ -75,6 +75,9 @@ export interface DriverRow {
   hasClassBest: boolean;
   sector: number;
   lastSectors: (number | null)[];
+  bestSectors: (number | null)[] | null;
+  bestSectorLaps: (number | null)[] | null;
+  bestLapNumber: number | null;
   speed: number;
   x: number | null;
   z: number | null;
@@ -123,6 +126,9 @@ export interface PlayerStrategy {
   engine: EngineDto | null;
   battles: BattleDto[];
   recentLaps: PlayerLap[];
+  deltaBest: number | null;
+  deltaLast: number | null;
+  speed: number;
 }
 
 export interface PlayerLap {

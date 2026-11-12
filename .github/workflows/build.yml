@@ -1,13 +1,14 @@
 # SecondMonitor : tests à chaque envoi, construction de tous les systèmes à la demande et sur les étiquettes v*.
 #
-# - Windows et Linux se construisent sur Linux (machines GitHub toujours disponibles) : .NET compile pour tous.
-# - Mac se construit à part sur macOS (application .app signée) : ces machines sont parfois saturées chez GitHub ;
-#   si la file d'attente dépasse 45 min, ce seul système échoue, Windows et Linux sont quand même livrés.
+# Chaque système donne UN téléchargement qui installe les DEUX applications (SecondMonitor + SecondMonitor Collecteur) :
+# - Mac : image disque .dmg (construite sur macOS, applications signées) ;
+# - Windows : dossier .zip construit sur Linux, puis installateur .exe fabriqué par Inno Setup sur Windows ;
+# - Linux : archive .tar.gz avec installer.sh (construite sur Linux).
 #
 # Lancée par le Publieur OneDrop3D (workflow_dispatch) : chaque système part dans une release provisoire
-# « ci-<run>-secondmonitor-mac|windows|linux » (une archive .tar avec le dossier dist/), que le Publieur télécharge
-# puis supprime. Pas d'artefacts : leur stockage est compté sur tout le compte.
-# Lancée par une étiquette v* : les archives vont dans la release publique « v<version> » (préversion).
+# « ci-<run>-secondmonitor-mac|windows|linux » (une archive .tar avec les fichiers de dist/), que le Publieur télécharge
+# puis supprime. Seul le dossier Windows passe d'une machine à l'autre par un artefact gardé un jour.
+# Lancée par une étiquette v* : les fichiers vont dans la release publique « v<version> » (préversion).
 name: Construction
 on:
   workflow_dispatch:
@@ -35,14 +36,14 @@ jobs:
       - name: Compilation du collecteur
         run: dotnet build Collector/src -c Release
 
-  # Liste des systèmes demandés : le Publieur OneDrop3D ne demande que ceux qu'il ne construit pas sur le Mac
-  # (pas de machine macOS réservée pour rien, pas de release provisoire orpheline).
+  # Liste des systèmes demandés : le Publieur OneDrop3D ne demande que ceux qu'il ne construit pas sur le Mac.
   plan:
     needs: tests
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     outputs:
       matrice: ${{ steps.m.outputs.matrice }}
+      windows: ${{ steps.m.outputs.windows }}
     steps:
       - id: m
         env:
@@ -53,10 +54,11 @@ jobs:
           tous = [
             {"systeme": "windows", "machine": "ubuntu-24.04", "commande": "win", "fichiers": "dist/SecondMonitor-*-windows-x64.zip"},
             {"systeme": "linux", "machine": "ubuntu-24.04", "commande": "linux", "fichiers": "dist/SecondMonitor-*-linux-x64.tar.gz"},
-            {"systeme": "mac", "machine": "macos-latest", "commande": "mac", "fichiers": "dist/SecondMonitor-Hub-*-mac-*.zip"},
+            {"systeme": "mac", "machine": "macos-latest", "commande": "mac", "fichiers": "dist/SecondMonitor-*-mac-*.dmg"},
           ]
           voulus = {x.strip() for x in os.environ["DEMANDE"].split(",") if x.strip()}
           print("matrice=" + json.dumps({"include": [x for x in tous if x["systeme"] in voulus]}))
+          print("windows=" + ("true" if "windows" in voulus else "false"))
           PY
 
   construction:
@@ -80,8 +82,18 @@ jobs:
       - name: Construire (${{ matrix.systeme }})
         run: ./construire.sh ${{ matrix.commande }}
 
+      # Windows : le dossier part vers la machine Windows qui fabrique l'installateur.
+      - name: Dossier Windows pour l'installateur
+        if: matrix.systeme == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: dist/SecondMonitor-*-windows-x64.zip
+          retention-days: 1
+          compression-level: 0
+
       - name: Envoi au Publieur (release provisoire)
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && matrix.systeme != 'windows'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -101,23 +113,59 @@ jobs:
           fi
 
       - name: Release publique
+        if: startsWith(github.ref, 'refs/tags/v') && matrix.systeme != 'windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: .github/release-publique.sh ${{ matrix.fichiers }}
+
+  installateur-windows:
+    needs: [plan, construction]
+    if: always() && needs.plan.outputs.windows == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-zip
+          path: dist
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress | Out-Null }
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /? | Select-Object -First 1
+      - name: Installateur
+        shell: pwsh
+        run: |
+          $v = ([regex]'<Version>([^<]+)</Version>').Match((Get-Content Hub/Directory.Build.props -Raw)).Groups[1].Value
+          $zip = Get-ChildItem dist/SecondMonitor-*-windows-x64.zip | Select-Object -First 1
+          Expand-Archive $zip.FullName -DestinationPath dist/windows-x64 -Force
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Qp "/DVersion=$v" "/DSource=$PWD\dist\windows-x64\SecondMonitor" "/DSortie=$PWD\dist" packaging\windows\SecondMonitor.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem dist/*.exe, dist/*.zip | Format-Table Name, Length
+
+      - name: Envoi au Publieur (release provisoire)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          NOM: secondmonitor-windows
+        run: |
+          set -e
+          tar -cf "$NOM.tar" dist/SecondMonitor-*-windows-x64.zip dist/SecondMonitor-*-windows-x64-installation.exe
+          tar -tvf "$NOM.tar"
+          tag="ci-$GITHUB_RUN_ID-$NOM"
+          gh release create "$tag" "$NOM.tar" --target "$GITHUB_SHA" --prerelease \
+            --title "Construction $GITHUB_RUN_ID ($NOM)" \
+            --notes "Transit vers le Publieur OneDrop3D : supprimée dès qu'elle est téléchargée."
+
+      - name: Release publique
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: |
-          set -e
-          v="${GITHUB_REF_NAME#v}"
-          awk -v t="## Version $v" '$0==t{f=1;next} f&&/^## Version /{exit} f&&/^---$/{exit} f' CHANGELOG.md > notes.md
-          [ -s notes.md ] || echo "SecondMonitor $v" > notes.md
-          # Release déjà publiée avec ses fichiers (par OneDrop3D ou à la main) : on n'y touche pas.
-          n=$(gh release view "$GITHUB_REF_NAME" --json assets -q '.assets | length' 2>/dev/null || echo 0)
-          if [ "$n" -ge 6 ]; then echo "Release $GITHUB_REF_NAME déjà complète : fichiers conservés."; exit 0; fi
-          # les trois systèmes se construisent en parallèle : le premier crée la release, les autres y ajoutent leurs fichiers
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
-            gh release create "$GITHUB_REF_NAME" --prerelease --title "SecondMonitor $v" --notes-file notes.md || true
-          for i in 1 2 3 4 5; do
-            gh release upload "$GITHUB_REF_NAME" ${{ matrix.fichiers }} --clobber && break
-            sleep 10
-          done
+        run: .github/release-publique.sh dist/SecondMonitor-*-windows-x64.zip dist/SecondMonitor-*-windows-x64-installation.exe

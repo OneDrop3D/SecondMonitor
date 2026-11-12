@@ -4,29 +4,30 @@ namespace SecondMonitor.Collector
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
-    using System.Net;
-    using System.Net.NetworkInformation;
-    using System.Net.Sockets;
     using System.Text;
     using System.Threading;
-    using System.Threading.Tasks;
     using NLog;
 
     /// <summary>
-    /// SecondMonitor Collecteur — à lancer sur le PC de jeu (Windows, ou Linux/SteamOS).
-    /// Détecte le jeu, lit ses données avec les connecteurs de SecondMonitor et les envoie au hub (Mac) sur le réseau local.
-    /// Aucun écran, aucun calcul : le strict minimum pour ne pas gêner le jeu.
+    /// SecondMonitor Collecteur — à lancer sur le PC de jeu (Windows, Linux/SteamOS ; Mac pour les consoles).
+    /// Détecte le jeu, lit ses données avec les connecteurs de SecondMonitor et les envoie à SecondMonitor sur le réseau local.
+    /// Une petite fenêtre d'état, aucun calcul : le strict minimum pour ne pas gêner le jeu.
     /// </summary>
     public static class Program
     {
-        private static readonly object ConsoleLock = new();
-
-        public static async Task<int> Main(string[] args)
+        [STAThread]
+        public static int Main(string[] args)
         {
             string baseDir = AppContext.BaseDirectory;
             Environment.CurrentDirectory = baseDir; // les connecteurs cherchent leurs plugins dans « Connectors\… »
-            Console.OutputEncoding = Encoding.UTF8;
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+            bool console = args.Any(a => a is "--sans-fenetre" or "--console" or "-h" or "--help" or "/?" or "--aide") || Arg(args, "--autostart") != null;
+            if (console)
+            {
+                Native.EnsureConsole();
+                Console.OutputEncoding = Encoding.UTF8;
+            }
 
             if (args.Any(a => a is "-h" or "--help" or "/?" or "--aide"))
             {
@@ -37,25 +38,19 @@ namespace SecondMonitor.Collector
             string autostart = Arg(args, "--autostart") ?? Arg(args, "--demarrage-auto");
             if (autostart != null)
             {
-                bool on = autostart is "on" or "oui" or "1" or "true";
-                Console.WriteLine(Autostart.Set(on));
+                Console.WriteLine(Autostart.Set(autostart is "on" or "oui" or "1" or "true"));
                 return 0;
             }
 
             using var mutex = new Mutex(true, "SecondMonitorCollecteur", out bool first);
             if (!first)
             {
-                Console.WriteLine("Le collecteur tourne déjà sur ce PC.");
-                Pause(args);
+                Say(console, "SecondMonitor Collecteur", "Le collecteur tourne déjà sur cet ordinateur.");
                 return 1;
             }
 
-            if (args.Contains("--reduit"))
-            {
-                Native.MinimizeConsole();
-            }
-
-            CollectorSettings settings = CollectorSettings.LoadOrCreate(baseDir);
+            string dataDir = CollectorSettings.DataDirectory(baseDir);
+            CollectorSettings settings = CollectorSettings.LoadOrCreate(dataDir);
             if (Arg(args, "--qualite") is string q)
             {
                 settings.Qualite = q;
@@ -66,8 +61,8 @@ namespace SecondMonitor.Collector
                 settings.Port = port;
             }
 
-            ConfigureLogging(baseDir);
-            LiteNetLib.NetDebug.Logger = new QuietNetLogger(); // pas de messages techniques du réseau dans la fenêtre
+            ConfigureLogging(dataDir);
+            LiteNetLib.NetDebug.Logger = new QuietNetLogger(); // pas de messages techniques du réseau
             if (settings.PrioriteBasse)
             {
                 try
@@ -80,145 +75,114 @@ namespace SecondMonitor.Collector
                 }
             }
 
-            var provider = new CollectorSettingsProvider(settings);
-            using var server = new BroadcastServer(provider);
-            var host = new ConnectorHost(provider, server, settings, Log);
-
-            PrintHeader(settings, host);
-            if (!server.Start(settings.Port))
+            using var runtime = new CollectorRuntime(settings, dataDir);
+            if (console)
             {
-                Log($"Impossible d'ouvrir le port {settings.Port} : SecondMonitor (plugin « Data Broadcast Server ») est peut-être déjà lancé. Fermez-le, ou changez le port dans collecteur.json.");
-                Pause(args);
+                runtime.LogAdded += Console.WriteLine;
+                PrintHeader(runtime);
+            }
+
+            if (!runtime.Start())
+            {
+                Say(console, "SecondMonitor Collecteur", runtime.LogLines().LastOrDefault() ?? "Démarrage impossible.");
                 return 2;
             }
 
-            server.PeerConnected += ip => Log($"Hub connecté : {ip}");
-            server.PeerDisconnected += (ip, why) => Log($"Hub déconnecté : {ip} ({Reason(why)})");
-            Log("Prêt. En attente du hub (lancez « SecondMonitor Hub » sur le Mac)…");
+            runtime.SetDemo(args.Contains("--demo"));
 
-            using var cts = new CancellationTokenSource();
+            if (!console && CollectorWindow.Run(runtime, minimized: args.Contains("--reduit")))
+            {
+                // Fenêtre fermée : on arrête (et on libère le port avant une éventuelle relance).
+                runtime.Dispose();
+                return CollectorWindow.RestartRequested ? Restart(mutex) : 0;
+            }
+
+            // Console (option « --sans-fenetre », ou pas de vue web sur ce système) : Ctrl+C pour quitter.
+            if (!console)
+            {
+                Native.EnsureConsole();
+                runtime.LogAdded += Console.WriteLine;
+                PrintHeader(runtime);
+            }
+
+            using var quit = new ManualResetEventSlim();
             Console.CancelKeyPress += (_, e) =>
             {
                 e.Cancel = true;
-                cts.Cancel();
+                quit.Set();
             };
-
-            Task status = StatusLoop(server, host, cts.Token);
-            try
-            {
-                if (args.Contains("--demo"))
-                {
-                    await RunDemoAsync(server, settings, cts.Token);
-                }
-                else
-                {
-                    await host.RunAsync(cts.Token);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-            }
-
-            Log("Arrêt du collecteur.");
-            await status.ContinueWith(_ => { });
+            var title = new Timer(_ => ConsoleTitle(runtime), null, 2000, 2000);
+            quit.Wait();
+            title.Dispose();
+            runtime.Log("Arrêt du collecteur.");
             return 0;
         }
 
-        /// <summary>Course fictive envoyée au hub : pour vérifier la liaison PC ↔ Mac sans lancer de jeu.</summary>
-        private static async Task RunDemoAsync(BroadcastServer server, CollectorSettings settings, CancellationToken token)
+        private static int Restart(Mutex mutex)
         {
-            Log("Mode démonstration : une course fictive est envoyée au hub (aucun jeu lu).");
-            var sim = new SecondMonitor.Hub.Core.Demo.DemoRaceSimulator(seed: Environment.TickCount, raceDurationSeconds: 3600);
-            double dt = settings.Rates.TickMs / 1000.0;
-            bool started = false;
-            while (!token.IsCancellationRequested)
+            mutex.ReleaseMutex();
+            try
             {
-                var data = sim.Step(dt);
-                if (server.PeerCount > 0)
-                {
-                    if (!started)
-                    {
-                        server.SendSessionStarted(data);
-                        started = true;
-                    }
+                Process.Start(new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false });
+            }
+            catch (Exception)
+            {
+                // Relance impossible : l'utilisateur relancera lui-même.
+            }
 
-                    server.SendData(data);
-                }
-                else
-                {
-                    started = false;
-                }
+            return 0;
+        }
 
-                await Task.Delay(settings.Rates.TickMs, token).ConfigureAwait(false);
+        private static void ConsoleTitle(CollectorRuntime runtime)
+        {
+            runtime.UpdateStats();
+            string game = runtime.ActiveGame ?? (runtime.Paused ? "en pause" : "aucun jeu");
+            string hub = runtime.Hubs.Length == 0 ? "pas de SecondMonitor" : $"{runtime.Hubs.Length} SecondMonitor";
+            try
+            {
+                Console.Title = $"SecondMonitor Collecteur — {game} — {hub} — {runtime.PackagesPerSecond:0} envois/s, {runtime.KilobytesPerSecond:0.0} Ko/s";
+            }
+            catch (Exception)
+            {
+                // Terminal sans titre.
             }
         }
 
-        private static void Log(string message)
+        private static void Say(bool console, string title, string text)
         {
-            lock (ConsoleLock)
+            if (console || !CollectorWindow.Message(title, text))
             {
-                Console.WriteLine($"{DateTime.Now:HH:mm:ss}  {message}");
+                Native.EnsureConsole();
+                Console.WriteLine(text);
             }
         }
 
-        private static async Task StatusLoop(BroadcastServer server, ConnectorHost host, CancellationToken token)
+        private static void PrintHeader(CollectorRuntime runtime)
         {
-            long lastPackages = 0;
-            long lastBytes = 0;
-            while (!token.IsCancellationRequested)
-            {
-                try
-                {
-                    await Task.Delay(2000, token);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-
-                long p = server.PackagesSent;
-                long b = server.BytesSent;
-                double rate = (p - lastPackages) / 2.0;
-                double kb = (b - lastBytes) / 2.0 / 1024;
-                lastPackages = p;
-                lastBytes = b;
-                string game = host.ActiveGame ?? (host.Paused ? "en pause" : "aucun jeu");
-                string hub = server.PeerCount == 0 ? "pas de hub" : $"{server.PeerCount} hub(s)";
-                try
-                {
-                    Console.Title = $"SecondMonitor Collecteur — {game} — {hub} — {rate:0} envois/s, {kb:0.0} Ko/s";
-                }
-                catch (Exception)
-                {
-                    // Terminal sans titre.
-                }
-            }
-        }
-
-        private static void PrintHeader(CollectorSettings settings, ConnectorHost host)
-        {
+            CollectorSettings settings = runtime.Settings;
             var (tick, _, player, others) = settings.Rates;
             Console.WriteLine();
             Console.WriteLine("  ┌──────────────────────────────────────────────────────────┐");
-            Console.WriteLine("  │  SecondMonitor Collecteur — envoie le jeu au hub (Mac)    │");
+            Console.WriteLine("  │  SecondMonitor Collecteur — envoie le jeu à SecondMonitor │");
             Console.WriteLine("  └──────────────────────────────────────────────────────────┘");
-            Console.WriteLine($"  Ce PC : {string.Join(", ", LocalAddresses())}   ·   port {settings.Port}");
+            Console.WriteLine($"  Ce PC : {string.Join(", ", CollectorRuntime.LocalAddresses())}   ·   port {settings.Port}");
             Console.WriteLine($"  Qualité « {settings.Qualite} » : jeu lu {1000 / tick} fois/s, vous {1000 / player}×/s, adversaires {1000.0 / others:0.#}×/s");
-            Console.WriteLine($"  Jeux surveillés : {string.Join(", ", host.GameNames)}");
-            Console.WriteLine("  Laissez cette fenêtre ouverte (ou réduite). Ctrl+C pour quitter. Réglages : collecteur.json");
+            Console.WriteLine($"  Jeux surveillés : {string.Join(", ", runtime.GameNames)}");
+            Console.WriteLine($"  Ctrl+C pour quitter. Réglages : {settings.FilePath}");
             Console.WriteLine();
         }
 
         private static void PrintHelp()
         {
-            Console.WriteLine("SecondMonitor Collecteur — lit le jeu et envoie les données au SecondMonitor Hub.");
+            Console.WriteLine("SecondMonitor Collecteur — lit le jeu et envoie les données à SecondMonitor.");
             Console.WriteLine();
-            Console.WriteLine("  (sans option)            démarre le collecteur");
-            Console.WriteLine("  --qualite econome|equilibre|precis   moins de ressources ↔ données plus fines");
-            Console.WriteLine("  --port 52642             port réseau (celui du hub)");
+            Console.WriteLine("  (sans option)            démarre le collecteur avec sa fenêtre");
+            Console.WriteLine("  --sans-fenetre           sans fenêtre, journal dans la console (Proton, serveur)");
             Console.WriteLine("  --reduit                 démarre fenêtre réduite");
+            Console.WriteLine("  --qualite econome|equilibre|precis   moins de ressources ↔ données plus fines");
+            Console.WriteLine("  --port 52642             port réseau");
             Console.WriteLine("  --autostart on|off       lancer (ou non) le collecteur à l'ouverture de session");
-            Console.WriteLine("  --demo                   envoie une course fictive (tester la liaison avec le Mac sans jeu)");
+            Console.WriteLine("  --demo                   envoie une course fictive (tester la liaison sans jeu)");
         }
 
         private static string Arg(string[] args, string name)
@@ -227,49 +191,14 @@ namespace SecondMonitor.Collector
             return i >= 0 && i + 1 < args.Length ? args[i + 1].ToLowerInvariant() : null;
         }
 
-        private static void Pause(string[] args)
-        {
-            if (!args.Contains("--reduit") && !Console.IsInputRedirected)
-            {
-                Console.WriteLine("Appuyez sur Entrée pour fermer.");
-                Console.ReadLine();
-            }
-        }
-
-        private static string Reason(string why) => why switch
-        {
-            "Timeout" => "plus de réponse",
-            "RemoteConnectionClose" => "hub fermé",
-            "DisconnectPeerCalled" => "fermé",
-            _ => why,
-        };
-
-        private static string[] LocalAddresses()
-        {
-            try
-            {
-                return NetworkInterface.GetAllNetworkInterfaces()
-                    .Where(n => n.OperationalStatus == OperationalStatus.Up && n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-                    .SelectMany(n => n.GetIPProperties().UnicastAddresses)
-                    .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(a.Address))
-                    .Select(a => a.Address.ToString())
-                    .Distinct()
-                    .ToArray();
-            }
-            catch (Exception)
-            {
-                return new[] { "?" };
-            }
-        }
-
         /// <summary>Journal des connecteurs : seulement avertissements et erreurs, dans un petit fichier qui ne grossit pas.</summary>
-        private static void ConfigureLogging(string baseDir)
+        private static void ConfigureLogging(string dataDir)
         {
             try
             {
                 LogManager.Setup().LoadConfiguration(b =>
                     b.ForLogger().FilterMinLevel(LogLevel.Warn).WriteToFile(
-                        Path.Combine(baseDir, "collecteur.log"),
+                        Path.Combine(dataDir, "collecteur.log"),
                         layout: "${longdate} ${level} ${logger:shortName=true} ${message} ${exception}",
                         archiveAboveSize: 1_000_000,
                         maxArchiveFiles: 1));

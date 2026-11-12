@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLive } from './live';
-import { classColorVar, clock, flagLabel, num, sessionLabel } from './format';
-import type { DriverRow, RaceSnapshot } from './types';
+import { classColorVar } from './format';
+import type { DriverRow } from './types';
 import { Leaderboard } from './components/Leaderboard';
 import { TrackMap } from './components/TrackMap';
 import { PlayerPanel } from './components/PlayerPanel';
@@ -20,20 +20,22 @@ import { RadioProvider, type RadioMessage } from './radio';
 import { playBase64Wav, stopPlayback } from './audio';
 import { useSelection } from './selection';
 import type { ClassView } from './classView';
-import { BrandLogo } from './components/BrandLogo';
+import { Icon, StatusBar, TimingHeader, TimingScreen } from './components/Timing';
 
-type Tab = 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'ai' | 'settings';
+type Tab = 'timing' | 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'ai' | 'settings';
 
+// Même organisation que SecondMonitor d'origine : le chronométrage d'abord, les autres écrans dans la barre de droite.
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'race', label: 'Course', icon: '🏁' },
-  { id: 'analysis', label: 'Tours & prévisions', icon: '📈' },
-  { id: 'speeds', label: 'Vitesses & trajectoires', icon: '⚡' },
-  { id: 'sectors', label: 'Micro-secteurs', icon: '▦' },
-  { id: 'car', label: 'Voiture', icon: '🌡' },
-  { id: 'weather', label: 'Météo', icon: '☁' },
-  { id: 'strategy', label: 'Stratégies', icon: '⏱' },
-  { id: 'ai', label: 'Ingénieur IA', icon: '🎙' },
-  { id: 'settings', label: 'Réglages', icon: '⚙' },
+  { id: 'timing', label: 'Chronométrage', icon: 'timing' },
+  { id: 'race', label: 'Classement & duels', icon: 'race' },
+  { id: 'analysis', label: 'Tours & prévisions', icon: 'analysis' },
+  { id: 'speeds', label: 'Vitesses & trajectoires', icon: 'speeds' },
+  { id: 'sectors', label: 'Micro-secteurs', icon: 'sectors' },
+  { id: 'car', label: 'Voiture', icon: 'car' },
+  { id: 'weather', label: 'Météo', icon: 'weather' },
+  { id: 'strategy', label: 'Stratégies', icon: 'strategy' },
+  { id: 'ai', label: 'Ingénieur IA', icon: 'ai' },
+  { id: 'settings', label: 'Réglages', icon: 'settings' },
 ];
 
 function readPref(key: string, fallback: string) {
@@ -68,10 +70,14 @@ function Shell() {
   });
   const [tab, setTabState] = useState<Tab>(() => {
     const h = location.hash.slice(1) as Tab;
-    return TABS.some((t) => t.id === h) ? h : 'race';
+    return TABS.some((t) => t.id === h) ? h : 'timing';
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [theme, setThemeState] = useState(() => readPref('smhub-theme', 'auto'));
+  const [theme, setThemeState] = useState(() => readPref('smhub-theme', 'dark'));
+  const [version, setVersion] = useState<string | null>(null);
+  useEffect(() => {
+    fetch('/api/status').then((r) => r.json()).then((st) => setVersion(st.version ? String(st.version).split('.').slice(0, 3).join('.') : null)).catch(() => undefined);
+  }, []);
   const [classView, setClassViewState] = useState<ClassView>(() => readPref('smhub-classview', 'mine'));
   const setClassView = (v: ClassView) => { setClassViewState(v); writePref('smhub-classview', v === 'mine' || v === 'all' ? v : 'mine'); };
   const classOrder = useRef(new Map<string, number>());
@@ -100,104 +106,54 @@ function Shell() {
   const needsData = !['ai', 'settings'].includes(tab);
 
   return (
-    <div className="app">
-      <div className="app-header">
-      <TopBar snapshot={snapshot} link={link} />
-      <nav className="tabs" aria-label="Sections">
-        <div className="tabs-inner">
+    <div className="app sm-shell">
+      {snapshot?.hasData && <TimingHeader snapshot={snapshot} />}
+      <div className="sm-body">
+        <main className={`content ${tab === 'timing' && snapshot?.hasData ? 'content-full' : ''}`}>
+          {tab === 'settings' ? (
+            <SettingsView theme={theme} setTheme={setThemeState} snapshot={snapshot} />
+          ) : tab === 'ai' ? (
+            <EngineerView radio={radio} hasLiveData={!!snapshot?.hasData} />
+          ) : needsData && !snapshot?.hasData ? (
+            <Waiting link={link} onSettings={() => setTab('settings')} onAi={() => setTab('ai')} />
+          ) : snapshot && tab === 'timing' ? (
+            <TimingScreen snapshot={snapshot} classColor={classColor} onSelect={onSelect} classView={classView} setClassView={setClassView} />
+          ) : snapshot && tab === 'race' ? (
+            <div className="layout-race">
+              <div className="area-board"><Leaderboard snapshot={snapshot} classColor={classColor} onSelect={onSelect} classView={classView} setClassView={setClassView} /></div>
+              <div className="area-side">
+                <TrackMap snapshot={snapshot} classColor={classColor} onSelect={onSelect} classView={classView} />
+                <BattlePanel snapshot={snapshot} onSelect={onSelect} />
+                <PlayerPanel player={snapshot.player} compact />
+              </div>
+            </div>
+          ) : snapshot && tab === 'analysis' ? (
+            <AnalysisView snapshot={snapshot} selection={selection} onSelect={onSelect} />
+          ) : snapshot && tab === 'speeds' ? (
+            <SpeedView snapshot={snapshot} selection={selection} classColor={classColor} />
+          ) : snapshot && tab === 'sectors' ? (
+            <SectorsView snapshot={snapshot} classColor={classColor} onSelect={onSelect} />
+          ) : snapshot && tab === 'car' ? (
+            <CarView snapshot={snapshot} />
+          ) : snapshot && tab === 'weather' ? (
+            <WeatherView snapshot={snapshot} />
+          ) : snapshot && tab === 'strategy' ? (
+            <StrategyView snapshot={snapshot} classColor={classColor} onSelect={onSelect} />
+          ) : null}
+        </main>
+        <nav className="sm-rail" aria-label="Écrans">
           {TABS.map((t) => (
-            <button key={t.id} className={`tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)} aria-current={tab === t.id ? 'page' : undefined}>
-              <span className="tab-icon" aria-hidden>{t.icon}</span>
-              <span className="tab-label">{t.label}</span>
+            <button key={t.id} className={`sm-rail-btn ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)} aria-current={tab === t.id ? 'page' : undefined} title={t.label}>
+              <Icon name={t.icon} size={22} />
+              <span className="sm-rail-label">{t.label}</span>
             </button>
           ))}
-        </div>
-      </nav>
+        </nav>
       </div>
-      <main className="content">
-        {tab === 'settings' ? (
-          <SettingsView theme={theme} setTheme={setThemeState} snapshot={snapshot} />
-        ) : tab === 'ai' ? (
-          <EngineerView radio={radio} hasLiveData={!!snapshot?.hasData} />
-        ) : needsData && !snapshot?.hasData ? (
-          <Waiting link={link} onSettings={() => setTab('settings')} onAi={() => setTab('ai')} />
-        ) : snapshot && tab === 'race' ? (
-          <div className="layout-race">
-            <div className="area-board"><Leaderboard snapshot={snapshot} classColor={classColor} onSelect={onSelect} classView={classView} setClassView={setClassView} /></div>
-            <div className="area-side">
-              <TrackMap snapshot={snapshot} classColor={classColor} onSelect={onSelect} classView={classView} />
-              <BattlePanel snapshot={snapshot} onSelect={onSelect} />
-              <PlayerPanel player={snapshot.player} compact />
-            </div>
-          </div>
-        ) : snapshot && tab === 'analysis' ? (
-          <AnalysisView snapshot={snapshot} selection={selection} onSelect={onSelect} />
-        ) : snapshot && tab === 'speeds' ? (
-          <SpeedView snapshot={snapshot} selection={selection} classColor={classColor} />
-        ) : snapshot && tab === 'sectors' ? (
-          <SectorsView snapshot={snapshot} classColor={classColor} onSelect={onSelect} />
-        ) : snapshot && tab === 'car' ? (
-          <CarView snapshot={snapshot} />
-        ) : snapshot && tab === 'weather' ? (
-          <WeatherView snapshot={snapshot} />
-        ) : snapshot && tab === 'strategy' ? (
-          <StrategyView snapshot={snapshot} classColor={classColor} onSelect={onSelect} />
-        ) : null}
-      </main>
+      <StatusBar snapshot={snapshot} link={link} version={version} />
       <RadioDock onOpen={() => setTab('ai')} />
       {selected && <DriverDrawer driver={selected} onClose={() => setSelectedId(null)} />}
     </div>
-  );
-}
-
-function TopBar({ snapshot, link }: { snapshot: RaceSnapshot | null; link: string }) {
-  const s = snapshot?.hasData ? snapshot : null;
-  const linkColor = link === 'open' ? 'var(--good)' : link === 'connecting' ? 'var(--warning)' : 'var(--critical)';
-  const linkText = link === 'open' ? 'Hub connecté' : link === 'connecting' ? 'Connexion…' : 'Hub injoignable';
-  const remaining = s?.lengthType === 'Laps' && s.totalLaps > 0 ? `Tour ${s.leaderLap}/${s.totalLaps}` : clock(s?.timeRemaining);
-  const me = useMemo(() => s?.drivers.find((d) => d.isPlayer), [s]);
-  return (
-    <header className="topbar">
-      <div className="brand"><span className="brand-mark" aria-hidden>SM</span><span className="brand-name">SecondMonitor <span className="muted">Hub</span></span></div>
-      {s && (
-        <div className="session">
-          <div className="session-block">
-            <span className="session-label">{sessionLabel(s.sessionType)} · {s.track.name ?? 'Circuit'}</span>
-            <span className="session-clock tnum">{remaining}</span>
-          </div>
-          {me && (
-            <div className="session-block">
-              <span className="session-label">Vous{s.isMultiClass ? ` · ${me.className ?? 'catégorie'}` : ''}</span>
-              <span className="session-value tnum row nowrap" style={{ gap: 6 }}>
-                <BrandLogo car={me.car} team={me.team} size={15} />
-                P{s.isMultiClass ? me.classPosition : me.position}
-                {s.isMultiClass && <span className="muted hide-sm">· P{me.position} gén.</span>}
-              </span>
-            </div>
-          )}
-          {me && (
-            <div className="session-block">
-              <span className="session-label">Tours</span>
-              <span className="session-value tnum">
-                {me.laps} bouclés{s.player?.lapsRemaining != null && <span className="muted"> · ~{Math.ceil(s.player.lapsRemaining)} restants</span>}
-              </span>
-            </div>
-          )}
-          {s.weather.trackTemp != null && (
-            <div className="session-block hide-sm">
-              <span className="session-label">Piste · Air</span>
-              <span className="session-value tnum">{num(s.weather.trackTemp, 0)}° · {num(s.weather.air, 0)}°</span>
-            </div>
-          )}
-          {s.weather.rain > 0 && <span className="pill rain">🌧 Pluie {s.weather.rain} %</span>}
-          {s.flags.map((f) => <span key={f} className="pill flag">⚑ {flagLabel(f)}</span>)}
-          {s.safetyCar && s.safetyCar !== 'None' && <span className="pill flag">SC</span>}
-        </div>
-      )}
-      <span className="spacer" />
-      {s && <span className="pill hide-sm">{s.source}</span>}
-      <span className="link-state" title={linkText}><span className="dot" style={{ background: linkColor }} /><span className="hide-xs">{linkText}</span></span>
-    </header>
   );
 }
 
@@ -205,10 +161,10 @@ function Waiting({ link, onSettings, onAi }: { link: string; onSettings: () => v
   return (
     <div className="empty">
       <div className="empty-icon" aria-hidden>📡</div>
-      <h2>{link === 'open' ? 'En attente des données du jeu' : 'Connexion au hub…'}</h2>
-      <p>Le hub tourne. Il attend que le PC de jeu diffuse ses données.</p>
+      <h2>{link === 'open' ? 'En attente des données du jeu' : 'Connexion…'}</h2>
+      <p>SecondMonitor est prêt. Il attend les données du PC de jeu.</p>
       <ol className="steps">
-        <li>Sur le PC de jeu, lancez <b>SecondMonitor-Collecteur</b> (ou SecondMonitor avec le plugin « Data Broadcast Server »).</li>
+        <li>Sur le PC de jeu, ouvrez <b>SecondMonitor Collecteur</b> (installé avec SecondMonitor). Rien d'autre à installer.</li>
         <li>Lancez une session dans le jeu (LMU, ACC, rFactor 2, F1, AMS2, R3E…).</li>
         <li>Si rien n'apparaît, indiquez l'adresse IP du PC dans les réglages.</li>
       </ol>

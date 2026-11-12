@@ -3,8 +3,14 @@ using SecondMonitor.Hub;
 using SecondMonitor.Hub.Core.Race;
 using SecondMonitor.Hub.Services;
 
-// SecondMonitor Hub — tourne sur le Mac (ou tout autre ordinateur qui ne joue pas).
-// Reçoit les données du PC de jeu, calcule la stratégie, sert l'interface web et parle à Ollama.
+// SecondMonitor — l'application qui affiche les données (Mac, Windows ou Linux).
+// Reçoit les données du collecteur, calcule la stratégie, affiche l'interface dans sa fenêtre et parle à Ollama.
+// Les autres écrans du réseau (iPad, téléphone, PC de jeu) peuvent aussi l'ouvrir dans un navigateur.
+//   (sans option)    fenêtre de l'application
+//   --navigateur     interface dans le navigateur au lieu de la fenêtre
+//   --sans-fenetre   serveur seul (machine sans écran, Raspberry Pi…)
+bool headless = args.Contains("--sans-fenetre") || args.Contains("--serveur");
+bool useBrowser = args.Contains("--navigateur") || args.Contains("--ouvrir");
 string dataDir = Environment.GetEnvironmentVariable("SMHUB_DATA") ?? SettingsStore.DefaultDataDirectory();
 Directory.CreateDirectory(dataDir);
 var settings = new SettingsStore(dataDir);
@@ -18,7 +24,32 @@ string installedRoot = AppContext.BaseDirectory;
 var builder = Directory.Exists(Path.Combine(installedRoot, "wwwroot"))
     ? WebApplication.CreateBuilder(new WebApplicationOptions { Args = args, ContentRootPath = installedRoot, WebRootPath = Path.Combine(installedRoot, "wwwroot") })
     : WebApplication.CreateBuilder(args);
-var httpsCertificate = settings.Current.EnableHttps ? HttpsCertificate.LoadOrCreate(dataDir) : null;
+int webPort = settings.Current.WebPort;
+string localUrl = $"http://localhost:{webPort}";
+var (portFree, alreadyRunning) = AppWindow.ProbePort(webPort);
+if (!portFree)
+{
+    if (alreadyRunning && !headless)
+    {
+        // SecondMonitor tourne déjà (autre fenêtre, ou lancé sans fenêtre) : on ouvre simplement son interface.
+        if (useBrowser || !AppWindow.Run(localUrl, "SecondMonitor"))
+        {
+            AppWindow.OpenBrowser(localUrl);
+        }
+
+        return;
+    }
+
+    AppWindow.Message(
+        "SecondMonitor ne peut pas démarrer",
+        alreadyRunning
+            ? $"SecondMonitor tourne déjà sur cet ordinateur : {localUrl}"
+            : $"Le port {webPort} est déjà utilisé par un autre programme.\nFermez-le, ou changez « webPort » dans {Path.Combine(dataDir, "settings.json")}.");
+    return;
+}
+
+// HTTPS facultatif : si son port est pris, on démarre quand même (sans micro depuis les autres appareils).
+var httpsCertificate = settings.Current.EnableHttps && AppWindow.ProbePort(settings.Current.HttpsPort).Free ? HttpsCertificate.LoadOrCreate(dataDir) : null;
 builder.WebHost.ConfigureKestrel(k =>
 {
     k.Listen(IPAddress.Any, settings.Current.WebPort); // accessible depuis l'iPad/téléphone du réseau local
@@ -182,7 +213,7 @@ app.MapPost("/api/quit", (IHostApplicationLifetime life, HttpContext ctx) =>
         return Results.StatusCode(403);
     }
 
-    _ = Task.Run(async () => { await Task.Delay(300); life.StopApplication(); });
+    _ = Task.Run(async () => { await Task.Delay(300); life.StopApplication(); AppWindow.Close(); });
     return Results.Ok();
 });
 app.MapPost("/api/radio/stop", async (EngineerService engineer) =>
@@ -196,42 +227,38 @@ app.MapPost("/api/ai/say", async (EngineerService engineer, AskRequest req, Canc
 // Toute autre route → l'application web (navigation côté client).
 app.MapFallbackToFile("index.html");
 
-Console.WriteLine($"SecondMonitor Hub prêt : http://localhost:{settings.Current.WebPort}  (données : {dataDir})");
+try
+{
+    app.Start();
+}
+catch (Exception ex)
+{
+    AppWindow.Message("SecondMonitor ne peut pas démarrer", ex.Message);
+    return;
+}
+
+Console.WriteLine($"SecondMonitor prêt : {localUrl}  (données : {dataDir})");
 if (httpsCertificate != null)
 {
-    Console.WriteLine($"Depuis le PC de jeu, un iPad ou un téléphone (micro et volant) : https://<adresse-du-mac>:{settings.Current.HttpsPort}  — acceptez l'avertissement de certificat la première fois.");
+    Console.WriteLine($"Depuis le PC de jeu, un iPad ou un téléphone (micro et volant) : https://<adresse-de-cet-ordinateur>:{settings.Current.HttpsPort}  — acceptez l'avertissement de certificat la première fois.");
 }
 
-if (args.Contains("--ouvrir"))
+if (headless)
 {
-    // Lancé depuis l'application installée : on ouvre l'interface dans le navigateur dès que le serveur écoute.
-    app.Lifetime.ApplicationStarted.Register(() => OpenBrowser($"http://localhost:{settings.Current.WebPort}"));
+    app.WaitForShutdown();
+    return;
 }
 
-app.Run();
-
-static void OpenBrowser(string url)
+if (useBrowser || !AppWindow.Run(localUrl, "SecondMonitor"))
 {
-    try
-    {
-        if (OperatingSystem.IsMacOS())
-        {
-            System.Diagnostics.Process.Start("open", url);
-        }
-        else if (OperatingSystem.IsWindows())
-        {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
-        }
-        else
-        {
-            System.Diagnostics.Process.Start("xdg-open", url);
-        }
-    }
-    catch (Exception)
-    {
-        Console.WriteLine($"Ouvrez {url} dans votre navigateur.");
-    }
+    // Pas de fenêtre : interface dans le navigateur. Pour arrêter : Réglages › Quitter.
+    AppWindow.OpenBrowser(localUrl);
+    app.WaitForShutdown();
+    return;
 }
+
+// Fenêtre fermée : on arrête tout proprement.
+app.StopAsync(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
 
 public sealed record AskRequest(string Text, bool Speak = true, string? From = null, bool Test = false);
 

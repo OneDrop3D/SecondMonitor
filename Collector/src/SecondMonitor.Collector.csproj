@@ -38,6 +38,18 @@
     <Compile Include="..\..\Remote\SecondMonitor.Remote\PacketCompressionLayer.cs;..\..\Remote\SecondMonitor.Remote\Adapter\*.cs;..\..\Remote\SecondMonitor.Remote\Comparators\*.cs" LinkBase="Linked\Remote" />
   </ItemGroup>
 
+  <!-- Windows : application à fenêtre (pas de console noire). L'option sans-fenetre ouvre une console à la demande. -->
+  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">
+    <OutputType>WinExe</OutputType>
+  </PropertyGroup>
+
+  <!-- Fenêtre d'état (page incorporée) et icônes. -->
+  <ItemGroup>
+    <EmbeddedResource Include="interface.html" LogicalName="SecondMonitor.Collector.interface.html" />
+    <None Include="..\..\packaging\icone.png" Link="icone.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="..\..\packaging\SecondMonitor.ico" Link="SecondMonitor.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
   <!-- Données incorporées dans les connecteurs (mêmes noms de ressource que dans SecondMonitor). -->
   <ItemGroup>
     <EmbeddedResource Include="..\..\Connectors\ForzaMotorsportConnector\DataModels\ForzaMotorsportCarsTrackWidthKeys.json" LogicalName="SecondMonitor.ForzaMotorsportConnector.DataModels.ForzaMotorsportCarsTrackWidthKeys.json" />
@@ -55,6 +67,7 @@
 
   <ItemGroup>
     <PackageReference Include="LiteNetLib" />
+    <PackageReference Include="Photino.NET" />
     <PackageReference Include="K4os.Compression.LZ4" />
     <PackageReference Include="protobuf-net" />
     <PackageReference Include="Newtonsoft.Json" />
