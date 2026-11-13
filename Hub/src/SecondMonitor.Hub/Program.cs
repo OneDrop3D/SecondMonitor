@@ -258,6 +258,8 @@ app.MapPost("/api/radio/stop", async (EngineerService engineer) =>
 app.MapPost("/api/ai/say", async (EngineerService engineer, AskRequest req, CancellationToken ct) =>
     Results.Json(await engineer.SayAsync(req.Text, req.From ?? "ingénieur", ct)));
 
+MusicApi.Map(app, dataDir); // Musique Deezer (/api/music/*, commandes vocales, priorité radio)
+
 // Toute autre route → l'application web (navigation côté client).
 app.MapFallbackToFile("index.html");
 

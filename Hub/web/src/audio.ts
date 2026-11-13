@@ -133,6 +133,9 @@ export function playBase64Wav(b64: string) {
   current?.pause();
   const audio = new Audio(`data:audio/wav;base64,${b64}`);
   current = audio;
+  // Musique : la voix de l'ingénieur passe avant (music/music.ts met Deezer en pause puis le relance).
+  audio.addEventListener('playing', () => window.dispatchEvent(new CustomEvent('sm-voix', { detail: true })));
+  for (const ev of ['ended', 'pause', 'error']) audio.addEventListener(ev, () => window.dispatchEvent(new CustomEvent('sm-voix', { detail: false })));
   const sink = audioPref('speaker');
   const withSink = audio as HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> };
   const ready = sink && withSink.setSinkId ? withSink.setSinkId(sink).catch(() => { /* sortie indisponible : sortie par défaut */ }) : Promise.resolve();
