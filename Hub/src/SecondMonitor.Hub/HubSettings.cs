@@ -85,6 +85,12 @@ public sealed class AiSettings
     /// <summary>Alertes de pilotage dites tout de suite : limites de piste, temps annulé, pénalité, usure brutale, départ.</summary>
     public bool DrivingAlerts { get; set; } = true;
 
+    /// <summary>
+    /// Mode « thinking » des modèles qui l'ont (Qwen 3, DeepSeek R1, gpt-oss…) : l'IA raisonne avant de répondre, plus juste mais plus lent.
+    /// Activable à la voix (« active le mode thinking », « réfléchis plus ») ; sans effet sur les modèles qui ne l'ont pas.
+    /// </summary>
+    public bool ThinkingMode { get; set; }
+
     /// <summary>Annonces de limites de piste et de temps annulé (désactivables à la voix : « coupe les limites de piste »).</summary>
     public bool TrackLimitAlerts { get; set; } = true;
 

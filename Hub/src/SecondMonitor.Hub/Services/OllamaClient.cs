@@ -104,21 +104,62 @@ public sealed class OllamaClient
         return result;
     }
 
-    public async Task<string> ChatAsync(string spec, IEnumerable<object> messages, CancellationToken ct, int maxTokens = 160)
+    /// <summary>Capacité « thinking » par modèle (url|nom), retenue pour toute la vie de l'application (le client est recréé à chaque usage).</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> ThinkingSupport = new();
+
+    /// <summary>Le modèle a-t-il un mode « thinking » (raisonnement avant de répondre) ? Lu une fois par /api/show.</summary>
+    public async Task<bool> SupportsThinkingAsync(string spec, CancellationToken ct)
     {
         var (url, model, _) = Resolve(spec);
-        var body = new
+        string key = $"{url}|{model}";
+        if (ThinkingSupport.TryGetValue(key, out bool known))
         {
-            model,
-            stream = false,
-            keep_alive = "30m",
-            options = new { temperature = 0.2, num_predict = maxTokens },
-            messages,
+            return known;
+        }
+
+        try
+        {
+            using var resp = await _http.PostAsJsonAsync($"{url}/api/show", new { model }, ct);
+            JsonNode? show = await resp.Content.ReadFromJsonAsync<JsonNode>(ct);
+            bool thinks = show?["capabilities"]?.AsArray().Any(c => c?.GetValue<string>() == "thinking") == true;
+            ThinkingSupport[key] = thinks;
+            return thinks;
+        }
+        catch (Exception)
+        {
+            return false; // fiche indisponible : on n'envoie pas « think » (Ollama refuserait la requête si le modèle ne l'a pas)
+        }
+    }
+
+    /// <summary>
+    /// Conversation. <paramref name="think"/> : mode « thinking » pour les modèles qui l'ont (raisonnement plus long, réponse plus réfléchie) ;
+    /// pour ces modèles, il est toujours envoyé (vrai ou faux), sinon certains réfléchissent d'office. Ignoré pour les autres.
+    /// </summary>
+    public async Task<string> ChatAsync(string spec, IEnumerable<object> messages, CancellationToken ct, int maxTokens = 160, bool think = false)
+    {
+        var (url, model, _) = Resolve(spec);
+        bool thinks = await SupportsThinkingAsync(spec, ct);
+        var body = new Dictionary<string, object>
+        {
+            ["model"] = model,
+            ["stream"] = false,
+            ["keep_alive"] = "30m",
+            // Le raisonnement compte dans la limite : on la relève quand il est demandé, pour qu'il reste de la place pour la réponse.
+            ["options"] = new { temperature = 0.2, num_predict = thinks && think ? Math.Max(maxTokens, 2048) : maxTokens },
+            ["messages"] = messages,
         };
+        if (thinks)
+        {
+            body["think"] = think;
+        }
+
         using var resp = await _http.PostAsJsonAsync($"{url}/api/chat", body, ct);
         await EnsureOk(resp, ct);
         JsonNode? json = await resp.Content.ReadFromJsonAsync<JsonNode>(ct);
-        return json?["message"]?["content"]?.GetValue<string>()?.Trim() ?? string.Empty;
+        string content = json?["message"]?["content"]?.GetValue<string>() ?? string.Empty;
+        // Anciennes versions d'Ollama : le raisonnement arrive dans la réponse, entre balises.
+        content = System.Text.RegularExpressions.Regex.Replace(content, @"<think>[\s\S]*?</think>", string.Empty);
+        return content.Trim();
     }
 
     /// <summary>Transcription d'un fichier audio (WAV conseillé) — route compatible OpenAI d'Ollama.</summary>

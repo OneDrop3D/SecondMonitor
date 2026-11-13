@@ -333,6 +333,8 @@ export interface HubSettings {
     proactiveRadio: boolean;
     /** Alertes de pilotage dites tout de suite (limites de piste, temps annulé, pénalité, usure brutale, départ). */
     drivingAlerts?: boolean;
+    /** Mode « thinking » des modèles qui l'ont (raisonnement avant de répondre, plus lent). */
+    thinkingMode?: boolean;
     /** Annonces de limites de piste et de temps annulé (aussi à la voix : « coupe les limites de piste »). */
     trackLimitAlerts?: boolean;
     /** L'ingénieur règle le menu des stands de Le Mans Ultimate (par le collecteur du PC de jeu). */

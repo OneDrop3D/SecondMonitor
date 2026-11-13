@@ -366,6 +366,7 @@ function BehaviourCard({ settings, save }: { settings: HubSettings | null; save:
           Pendant que l'IA réfléchit, vous pouvez poser d'autres questions : les réponses calculées (pneus, essence, TC…) arrivent tout de suite,
           les autres attendent leur tour, puis l'ingénieur revient (« Pour la stratégie : … »).
         </div>
+        <ThinkingSwitch on={ai.thinkingMode ?? false} set={(v) => set({ thinkingMode: v })} />
         <label className="switch">
           <input type="checkbox" checked={ai.strictAnswers} onChange={(e) => set({ strictAnswers: e.target.checked })} />
           <span>Réponses calculées dites telles quelles</span>
@@ -658,6 +659,26 @@ function ModelsCard({ settings, save, models, reload }: { settings: HubSettings 
         <p className="secondary small">Les chiffres sont toujours calculés par le hub, jamais par l'IA : elle choisit et formule.</p>
       </div>
     </section>
+  );
+}
+
+/** Mode « thinking » : seulement pour les modèles qui l'ont (Ollama le dit dans leur fiche). Aussi à la voix. */
+function ThinkingSwitch({ on, set }: { on: boolean; set: (v: boolean) => void }) {
+  const { data } = usePoll<{ enabled: boolean; models: { model: string; thinking: boolean }[] }>('/api/ai/thinking', 20000);
+  const models = data?.models ?? [];
+  const able = models.filter((m) => m.thinking).map((m) => m.model.split(':')[0]);
+  return (
+    <>
+      <label className="switch">
+        <input type="checkbox" checked={on} onChange={(e) => set(e.target.checked)} />
+        <span>Mode thinking (l'IA raisonne avant de répondre)</span>
+      </label>
+      <div className="secondary small">
+        Plus juste mais plus lent ; l'ingénieur répond « Copy, je reviens vers toi » en attendant. À la radio : « active le mode thinking », « réfléchis plus »,
+        « coupe le thinking », « réponds plus vite ».{' '}
+        {models.length === 0 ? 'Aucun modèle choisi.' : able.length > 0 ? `Disponible sur : ${able.join(', ')}.` : 'Aucun des modèles choisis ne l\'a (Qwen 3, DeepSeek R1, gpt-oss… l\'ont).'}
+      </div>
+    </>
   );
 }
 

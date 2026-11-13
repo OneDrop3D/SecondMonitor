@@ -208,6 +208,7 @@ app.MapPost("/api/ai/listen", async (EngineerService engineer, HttpRequest reque
         return Results.Json(new { error = ex.Message }, statusCode: 400);
     }
 }).DisableAntiforgery();
+app.MapGet("/api/ai/thinking", async (EngineerService engineer, CancellationToken ct) => Results.Json(await engineer.ThinkingStatusAsync(ct)));
 app.MapPost("/api/pitmenu/test", async (EngineerService engineer, CancellationToken ct) =>
     Results.Json(new { sent = await engineer.TestPitMenuAsync(ct) }));
 app.MapPost("/api/ai/test", async (EngineerService engineer, DiagnosticRequest req, CancellationToken ct) =>

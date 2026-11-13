@@ -401,9 +401,15 @@ public sealed class EngineerService
                     {
                         case "limites": s.Ai.TrackLimitAlerts = toggle.On; break;
                         case "stand": s.Ai.LmuPitMenu = toggle.On; break;
+                        case "thinking": s.Ai.ThinkingMode = toggle.On; break;
                         default: s.Ai.DrivingAlerts = toggle.On; break;
                     }
                 });
+            }
+
+            if (toggle.Key == "thinking")
+            {
+                return await ThinkingReplyAsync(toggle.On, ct) + (test ? " (mode test : rien n'est changé)" : string.Empty);
             }
 
             return (toggle.Key, toggle.On) switch
@@ -515,6 +521,53 @@ public sealed class EngineerService
         return await _hub.SendToPitStationAsync("pitMenu", order, ct);
     }
 
+    /// <summary>Réponse au changement de mode « thinking » : quels modèles choisis l'ont vraiment.</summary>
+    private async Task<string> ThinkingReplyAsync(bool on, CancellationToken ct)
+    {
+        if (!on)
+        {
+            return "Copy, mode thinking coupé : réponses rapides.";
+        }
+
+        AiSettings ai = _settings.Current.Ai;
+        var chosen = new[] { ai.ThinkModel }.Concat(ai.Specialists?.Values ?? Enumerable.Empty<string>())
+            .Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
+        if (chosen.Count == 0)
+        {
+            return "Copy, mode thinking activé. Choisis un modèle « réflexion » qui l'a dans l'écran Ingénieur IA.";
+        }
+
+        var with = new List<string>();
+        var without = new List<string>();
+        foreach (string m in chosen)
+        {
+            (await _ollama.SupportsThinkingAsync(m, ct) ? with : without).Add(Pretty(m));
+        }
+
+        if (with.Count == 0)
+        {
+            return $"Copy, c'est noté, mais {string.Join(" et ", without)} n'a pas de mode thinking : rien ne change tant que tu ne prends pas un modèle qui l'a.";
+        }
+
+        return $"Copy, mode thinking activé sur {string.Join(" et ", with)} : réponses plus réfléchies mais plus lentes, je te dis « je reviens vers toi » en attendant." +
+            (without.Count > 0 ? $" {string.Join(" et ", without)} ne l'a pas." : string.Empty);
+    }
+
+    /// <summary>Le mode « thinking » est-il disponible sur un des modèles choisis ? (écran Ingénieur IA)</summary>
+    public async Task<object> ThinkingStatusAsync(CancellationToken ct)
+    {
+        AiSettings ai = _settings.Current.Ai;
+        var chosen = new[] { ai.ThinkModel }.Concat(ai.Specialists?.Values ?? Enumerable.Empty<string>())
+            .Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
+        var models = new List<object>();
+        foreach (string m in chosen)
+        {
+            models.Add(new { model = m, thinking = await _ollama.SupportsThinkingAsync(m, ct) });
+        }
+
+        return new { enabled = ai.ThinkingMode, models };
+    }
+
     /// <summary>Bouton « Tester le menu des stands » de l'écran Ingénieur IA.</summary>
     public Task<bool> TestPitMenuAsync(CancellationToken ct) => _hub.SendToPitStationAsync("pitMenuTest", new { id = Guid.NewGuid().ToString("N") }, ct);
 
@@ -573,7 +626,7 @@ public sealed class EngineerService
         }
 
         messages.Add(new { role = "user", content = prep.Question });
-        string answer = Shorten(Clean(await _ollama.ChatAsync(ModelFor(prep.Domain), messages, ct)));
+        string answer = Shorten(Clean(await _ollama.ChatAsync(ModelFor(prep.Domain), messages, ct, think: _settings.Current.Ai.ThinkingMode)));
 
         // Garde-fous : chiffre inventé, réponse en anglais ou qui parle du « document » → réponse du hub.
         bool invented = brief.Suggestion != null && HasUnknownNumber(answer, brief.Facts + " " + prep.Question);

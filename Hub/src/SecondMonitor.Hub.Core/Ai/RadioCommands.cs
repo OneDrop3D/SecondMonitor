@@ -109,6 +109,17 @@ namespace SecondMonitor.Hub.Core.Ai
                 return null;
             }
 
+            // Mode « thinking » : « active le mode thinking », « coupe le raisonnement », « réfléchis plus », « réponds plus vite ».
+            if (Regex.IsMatch(t, @"\breflechis (plus|davantage|a fond|bien|mieux)\b|\bprends le temps de reflechir\b"))
+            {
+                return new Toggle("thinking", true);
+            }
+
+            if (Regex.IsMatch(t, @"\b(reflechis moins|reponds plus vite|reponses? (plus )?rapides?|plus vite les reponses)\b"))
+            {
+                return new Toggle("thinking", false);
+            }
+
             bool off = OffVerb.IsMatch(t);
             bool on = !off && OnVerb.IsMatch(t);
             if (!off && !on)
@@ -116,7 +127,8 @@ namespace SecondMonitor.Hub.Core.Ai
                 return null;
             }
 
-            string key = Regex.IsMatch(t, @"\b(limites? de piste|limites?|tracks? limits?|track limit)\b") ? "limites"
+            string key = Regex.IsMatch(t, @"\b(thinking|think|thinkin|raisonnement|mode (de )?reflexion|reflexion approfondie|mode reflechi)\b") ? "thinking"
+                : Regex.IsMatch(t, @"\b(limites? de piste|limites?|tracks? limits?|track limit)\b") ? "limites"
                 : Regex.IsMatch(t, @"\bmenu (des|du|de) stands?\b|\bstands? auto\w*|\bmenu stand\b") ? "stand"
                 : Regex.IsMatch(t, @"\b(alertes?|annonces?)\b") ? "alertes"
                 : null;

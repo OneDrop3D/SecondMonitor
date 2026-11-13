@@ -165,3 +165,29 @@ public class LmuPitMenuTests
         Assert.That(RadioCommands.IsPitMenuTest(text), Is.EqualTo(expected));
     }
 }
+
+/// <summary>Mode « thinking » à la voix.</summary>
+[TestFixture]
+public class ThinkingVoiceTests
+{
+    [TestCase("Active le mode thinking", true)]
+    [TestCase("active le thinkin", true)]
+    [TestCase("réfléchis plus", true)]
+    [TestCase("Coupe le thinking", false)]
+    [TestCase("désactive le mode réflexion", false)]
+    [TestCase("réponds plus vite", false)]
+    public void Toggles(string text, bool on)
+    {
+        RadioCommands.Toggle t = RadioCommands.ParseToggle(text);
+        Assert.That(t, Is.Not.Null);
+        Assert.That(t.Key, Is.EqualTo("thinking"));
+        Assert.That(t.On, Is.EqualTo(on));
+    }
+
+    [TestCase("Passe sur omni pour la réflexion")]
+    [TestCase("utilise qwen pour la réflexion")]
+    public void ModelSwitchIsNotAToggle(string text)
+    {
+        Assert.That(RadioCommands.ParseToggle(text), Is.Null);
+    }
+}

@@ -173,6 +173,8 @@ En course multi-catégories, le tableau montre votre catégorie et les autres vo
 - **Demandes d'arrêt** à la voix (« je boxe », « softs neufs », « la réparation aussi ») confirmées et gardées pour l'arrêt.
   Dans **Le Mans Ultimate**, l'ingénieur peut régler lui-même le menu des stands (il le propose à la première demande) : le collecteur du PC de jeu passe
   par l'API locale du jeu (port 6397, non officielle), relit le menu pour vérifier et le résultat est dit à la radio. « Essaie l'API » lit le menu sans rien changer.
+- **Mode thinking** des modèles qui l'ont (Qwen 3, DeepSeek R1, gpt-oss…) : activable à la voix (« active le mode thinking », « coupe le thinking »)
+  ou dans l'écran *Ingénieur IA* ; plus juste mais plus lent. Il n'est jamais envoyé à un modèle qui ne l'a pas.
 - Il **tutoie** le pilote. Les annonces de limites de piste se coupent à la voix (« coupe les limites de piste ») ou dans l'écran *Ingénieur IA*.
 - Boutons **Terminer la session** / **Nouvelle session** et menu pour revoir une session passée (écran *Ingénieur IA*).
 - Il garde une **mémoire de la course** et on peut changer de modèle à la voix. Les modèles peuvent tourner sur plusieurs machines (un Raspberry Pi par exemple).
