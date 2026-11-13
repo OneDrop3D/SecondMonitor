@@ -18,6 +18,7 @@ import { BattlePanel } from './components/BattlePanel';
 import { RadioDock } from './components/RadioDock';
 import { RadioProvider, isRadioStation, type RadioMessage } from './radio';
 import { playBase64Wav, stopPlayback } from './audio';
+import { screensPlayVoice, setStations, type StationsState } from './stations';
 import { useSelection } from './selection';
 import type { ClassView } from './classView';
 import { Icon, StatusBar, TimingHeader } from './components/Timing';
@@ -75,12 +76,14 @@ function Shell() {
       return;
     }
     if (m.type === 'radioStop') { stopPlayback(); return; }
-    if (m.type === 'radioPress') { if (isRadioStation()) window.dispatchEvent(new Event('sm-radio-press')); return; }
+    if (m.type === 'stations') { setStations(m.data as StationsState); return; }
+    // Appui venu d'ailleurs : pour le poste radio, sauf si le micro du PC de jeu s'en charge (« poste »).
+    if (m.type === 'radioPress') { if (isRadioStation() && !(m.data as { poste?: string | null })?.poste) window.dispatchEvent(new Event('sm-radio-press')); return; }
     if (m.type !== 'radio') return;
     const msg = m.data as RadioMessage;
     setRadio((r) => [...r.slice(-49), msg]);
     speakRef.current = readPref('smhub-speak', 'true') === 'true';
-    if (speakRef.current && msg.audioBase64) playBase64Wav(msg.audioBase64);
+    if (speakRef.current && msg.audioBase64 && screensPlayVoice()) playBase64Wav(msg.audioBase64);
   });
   const [tab, setTabState] = useState<Tab>(() => {
     const h = location.hash.slice(1) as Tab;

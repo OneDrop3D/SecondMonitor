@@ -211,7 +211,7 @@ function CarnetDetail({ id, live, onChanged }: { id: string; live: boolean; onCh
                   {r.category && <CategoryPill category={r.category} />}
                   {r.categorySource === 'modèle' && <span className="muted">classé par l'IA</span>}
                 </div>
-                {r.question && <div className="msg-q"><b>{r.from === 'pilote' ? 'Pilote' : 'Ingénieur'}</b> : « {r.question} »</div>}
+                {r.question && <div className="msg-q"><b>{r.from?.startsWith('pilote') ? 'Pilote' : 'Ingénieur'}</b> : « {r.question} »</div>}
                 <div className="msg-a">{r.answer}</div>
               </div>
             ))}

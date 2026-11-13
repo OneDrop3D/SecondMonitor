@@ -145,6 +145,10 @@ En course multi-catégories, le tableau montre votre catégorie et les autres vo
   - un bouton du volant branché sur l'ordinateur qui affiche ;
   - une **touche du clavier ou un bouton du volant du PC de jeu** : réglage dans la fenêtre du collecteur ; marche même pendant le jeu, sous Windows ;
   - une touche **ClickDeck**.
+- **Voix et micro sur le PC de jeu** : dans la fenêtre du collecteur, carte *Radio de l'ingénieur*, cochez « Entendre l'ingénieur sur ce PC »
+  (et choisissez le casque) et/ou « Parler avec le micro de ce PC » (et choisissez le micro). Le bouton radio du PC de jeu et ClickDeck enregistrent
+  alors le micro du PC de jeu. *Réglages › Voix de l'ingénieur* dans SecondMonitor : voix sur le PC de jeu seul (par défaut), sur les écrans, ou les deux.
+  La carte *Radio* de l'écran *Ingénieur IA* indique quand le PC de jeu a la voix ou le micro.
 - Les chiffres sont calculés par SecondMonitor : l'IA ne les invente pas.
 - Il calcule le **rythme** : le vôtre, celui qu'il faut pour rattraper la voiture devant ou pour gagner, et ce que donne le rythme actuel à l'arrivée.
   Il donne aussi la tendance météo des 30 minutes suivantes. Il répond à plusieurs questions posées d'un coup.
@@ -240,7 +244,11 @@ Une session peut être rejouée : `SecondMonitorHub --rejouer <fichier.smrec> [-
 
 Options de SecondMonitor :
 - `--navigateur` ouvre l'interface dans le navigateur au lieu de la fenêtre ;
-- `--sans-fenetre` lance le serveur seul (machine sans écran, Raspberry Pi).
+- `--sans-fenetre` lance le serveur seul (machine sans écran, Raspberry Pi) ;
+- `--sans-gpu` affiche la fenêtre sans accélération graphique (Windows : fenêtre noire avec certains pilotes) ; même effet avec `"fenetreSansGpu": true` dans `settings.json`.
+
+Si la fenêtre n'affiche pas l'interface au bout de 15 s, SecondMonitor l'ouvre dans le navigateur et en note la raison dans `journal.txt`.
+Sous Windows, SecondMonitor et le collecteur ont chacun leur dossier WebView2 (`%LOCALAPPDATA%\SecondMonitor\WebView2-Affichage` et `WebView2-Collecteur`).
 
 ## Crédits et licence
 

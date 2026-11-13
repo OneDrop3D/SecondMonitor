@@ -4,6 +4,7 @@ import { Recorder, audioPref, canChooseSpeaker, listAudioDevices, playBase64Wav,
 import { useRadio, type RadioMessage } from '../radio';
 import type { HubSettings, MemoryState, NodeStatus, OllamaModel } from '../types';
 import { CategoryPill } from './CarnetView';
+import { useStations } from '../stations';
 
 interface Diagnostic {
   step: string;
@@ -130,6 +131,8 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
               </form>
             </div>
             {r.phase === 'recording' && <div className="status short"><span className="ico">●</span>Je vous écoute… appuyez de nouveau pour envoyer.</div>}
+            <PcStationLine />
+
             {!r.micAvailable && (
               <div className="secondary small">
                 Micro indisponible sur cette adresse : le navigateur l'exige en HTTPS ou sur <span className="code">http://localhost</span>. Utilisez l'adresse <b>https://…:8687</b> indiquée dans Réglages.
@@ -182,7 +185,7 @@ function Message({ m }: { m: RadioMessage }) {
   return (
     <div className={`msg ${m.test ? 'msg-test' : ''} ${m.proactive ? 'msg-proactive' : ''}`}>
       {(m.transcript || m.question) && (
-        <div className="msg-q"><b>{m.from === 'pilote' ? 'Pilote' : 'Ingénieur'}</b> : « {m.transcript ?? m.question} »</div>
+        <div className="msg-q"><b>{m.from?.startsWith('pilote') ? 'Pilote' : 'Ingénieur'}</b> : « {m.transcript ?? m.question} »</div>
       )}
       <div className="row" style={{ alignItems: 'flex-start', flexWrap: 'nowrap' }}>
         <div className="msg-a">{m.proactive ? (m.awaitingAnswer ? '❓ ' : '📣 ') : '📻 '}{m.answer}</div>
@@ -290,6 +293,24 @@ function BehaviourCard({ settings, save }: { settings: HubSettings | null; save:
   );
 }
 
+/** Voix et micro sur le PC de jeu (collecteur) : affiché dans la carte Radio. */
+function PcStationLine() {
+  const { stations, voiceOutput } = useStations();
+  const voice = stations.find((s) => s.voice);
+  const mic = stations.find((s) => s.mic);
+  if (!voice && !mic) return null;
+  const where = voiceOutput === 'ecrans' ? 'sur les écrans (réglage « Voix de l\'ingénieur sur »)' : voiceOutput === 'deux' ? 'sur le PC de jeu et ici' : 'sur le PC de jeu seulement';
+  return (
+    <div className="callout">
+      <span aria-hidden>🎧</span>
+      <div>
+        <b>{(voice ?? mic)!.name}</b> :{voice ? ` voix de l'ingénieur ${where}` : ''}{voice && mic ? ' ;' : ''}
+        {mic ? " le bouton radio du PC de jeu (et ClickDeck) enregistre le micro du PC de jeu" : ''}.
+      </div>
+    </div>
+  );
+}
+
 function AudioDevicesCard() {
   const [devices, setDevices] = useState<{ inputs: MediaDeviceInfo[]; outputs: MediaDeviceInfo[]; named: boolean } | null>(null);
   const [mic, setMic] = useState(() => audioPref('mic'));
@@ -306,7 +327,7 @@ function AudioDevicesCard() {
       <div className="card-body stack-sm">
         <p className="secondary small" style={{ margin: 0 }}>
           Chaque écran utilise ses propres appareils : sur le Mac, le micro du Mac (ou un micro branché dessus) ;
-          pour le micro et le casque du PC de jeu, ouvrez le hub sur le PC (adresse HTTPS dans Réglages) et choisissez-les là-bas.
+          pour le micro et le casque du PC de jeu, choisissez-les dans la fenêtre du collecteur (« Radio de l'ingénieur »).
         </p>
         <div className="field">
           <label>Micro</label>

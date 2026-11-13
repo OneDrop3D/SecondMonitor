@@ -24,6 +24,14 @@ public sealed class HubSettings
 
     public AiSettings Ai { get; set; } = new();
 
+    /// <summary>Fenêtre sans accélération graphique (comme l'option « --sans-gpu ») : Windows, fenêtre noire avec certains pilotes.</summary>
+    public bool FenetreSansGpu { get; set; }
+
+    /// <summary>
+    /// Où se fait entendre la voix de l'ingénieur quand le PC de jeu la demande (collecteur, « Entendre l'ingénieur sur ce PC ») :
+    /// « pc » (le PC de jeu seul, par défaut), « ecrans » (les écrans de SecondMonitor seuls) ou « deux ».
+    /// </summary>
+    public string VoiceOutput { get; set; } = "pc";
     /// <summary>Plages de température (bleu = froid, vert = bon, rouge = trop chaud) par jeu et par voiture.</summary>
     public List<Core.Race.ThermalProfile> ThermalProfiles { get; set; } = new();
 }

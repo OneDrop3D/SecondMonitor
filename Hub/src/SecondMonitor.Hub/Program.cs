@@ -9,8 +9,10 @@ using SecondMonitor.Hub.Services;
 //   (sans option)    fenêtre de l'application
 //   --navigateur     interface dans le navigateur au lieu de la fenêtre
 //   --sans-fenetre   serveur seul (machine sans écran, Raspberry Pi…)
+//   --sans-gpu       fenêtre sans accélération graphique (Windows : fenêtre noire avec certains pilotes)
 bool headless = args.Contains("--sans-fenetre") || args.Contains("--serveur");
 bool useBrowser = args.Contains("--navigateur") || args.Contains("--ouvrir");
+bool noGpu = args.Contains("--sans-gpu");
 // Diagnostic : rejoue un enregistrement (dossier « enregistrements ») au lieu d'écouter le réseau.
 int replayIndex = Array.IndexOf(args, "--rejouer");
 if (replayIndex >= 0 && replayIndex + 1 < args.Length)
@@ -36,14 +38,17 @@ var builder = Directory.Exists(Path.Combine(installedRoot, "wwwroot"))
     ? WebApplication.CreateBuilder(new WebApplicationOptions { Args = args, ContentRootPath = installedRoot, WebRootPath = Path.Combine(installedRoot, "wwwroot") })
     : WebApplication.CreateBuilder(args);
 int webPort = settings.Current.WebPort;
-string localUrl = $"http://localhost:{webPort}";
+// Windows : 127.0.0.1 plutôt que « localhost » (Kestrel n'écoute qu'en IPv4 ; WebView2 peut essayer ::1 d'abord).
+// Mac et Linux gardent « localhost » : les préférences de la fenêtre (disposition, bouton du volant…) dépendent de l'adresse.
+string localUrl = OperatingSystem.IsWindows() ? $"http://127.0.0.1:{webPort}" : $"http://localhost:{webPort}";
+noGpu |= settings.Current.FenetreSansGpu;
 var (portFree, alreadyRunning) = AppWindow.ProbePort(webPort);
 if (!portFree)
 {
     if (alreadyRunning && !headless)
     {
         // SecondMonitor tourne déjà (autre fenêtre, ou lancé sans fenêtre) : on ouvre simplement son interface.
-        if (useBrowser || !AppWindow.Run(localUrl, "SecondMonitor"))
+        if (useBrowser || !AppWindow.Run(localUrl, "SecondMonitor", dataDir, noGpu))
         {
             AppWindow.OpenBrowser(localUrl);
         }
@@ -102,7 +107,8 @@ app.Map("/ws", async (HttpContext ctx, LiveHub hub) =>
     }
 
     using var socket = await ctx.WebSockets.AcceptWebSocketAsync();
-    await hub.AcceptAsync(socket, ctx.RequestAborted);
+    // « ?poste=1 » : collecteur du PC de jeu qui joue la voix de l'ingénieur ou enregistre le micro (sans l'état de course).
+    await hub.AcceptAsync(socket, ctx.RequestAborted, ctx.Request.Query["poste"] == "1", ctx.Connection.RemoteIpAddress?.ToString());
 });
 
 app.MapGet("/api/snapshot", (RaceEngine engine) => Results.Json(engine.BuildSnapshot(), LiveHub.Json));
@@ -118,6 +124,8 @@ app.MapGet("/api/status", (DataSourceService source, LiveHub hub) => Results.Jso
     dataDir,
     webPort = settings.Current.WebPort,
     httpsPort = httpsCertificate != null ? settings.Current.HttpsPort : (int?)null,
+    stations = hub.Stations, // postes audio du PC de jeu (voix de l'ingénieur, micro)
+    voiceOutput = settings.Current.VoiceOutput,
 }));
 
 // ───── Analyses détaillées (à la demande, hors flux temps réel) ─────
@@ -140,6 +148,7 @@ app.MapPut("/api/settings", (SettingsStore store, HubSettings incoming) =>
         s.DemoSpeed = incoming.DemoSpeed;
         s.Ai = incoming.Ai ?? new AiSettings();
         s.ThermalProfiles = incoming.ThermalProfiles ?? new List<SecondMonitor.Hub.Core.Race.ThermalProfile>();
+        s.VoiceOutput = incoming.VoiceOutput is "pc" or "ecrans" or "deux" ? incoming.VoiceOutput : s.VoiceOutput;
     });
     return Results.Ok(store.Current);
 });
@@ -242,8 +251,9 @@ app.MapPost("/api/radio/press", async (LiveHub hub, HttpContext ctx) =>
 {
     // Un appui « radio » venu d'ailleurs : le poste radio (la fenêtre de SecondMonitor) démarre ou envoie la dictée,
     // ou coupe l'ingénieur s'il parle. Même comportement que le bouton à l'écran.
+    // Si le collecteur enregistre le micro du PC de jeu (« poste »), c'est lui qui répond à l'appui, pas les écrans.
     string from = ctx.Request.Query["de"].FirstOrDefault() ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "?";
-    await hub.BroadcastAsync("radioPress", new { from, at = DateTime.Now });
+    await hub.BroadcastAsync("radioPress", new { from, at = DateTime.Now, poste = hub.MicStation?.Name });
     return Results.Json(new { ok = true, postes = hub.ClientCount, phase = DeckApi.RadioPhase });
 });
 app.MapPost("/api/radio/state", (RadioState state) =>
@@ -289,7 +299,7 @@ if (headless)
     return;
 }
 
-if (useBrowser || !AppWindow.Run(localUrl, "SecondMonitor"))
+if (useBrowser || !AppWindow.Run(localUrl, "SecondMonitor", dataDir, noGpu))
 {
     // Pas de fenêtre : interface dans le navigateur. Pour arrêter : Réglages › Quitter.
     AppWindow.OpenBrowser(localUrl);

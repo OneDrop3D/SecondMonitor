@@ -1,4 +1,5 @@
 // Miroir des DTO C# (SecondMonitor.Hub.Core.Race.RaceSnapshot). Durées en s, distances en m, litres, kPa, °C.
+import type { AudioStation, VoiceOutput } from './stations';
 
 export interface RaceSnapshot {
   sequence: number;
@@ -275,6 +276,10 @@ export interface HubSettings {
   gameHosts: string[];
   demoMode: boolean;
   demoSpeed: number;
+  /** Fenêtre sans accélération graphique (Windows). */
+  fenetreSansGpu?: boolean;
+  /** Voix de l'ingénieur quand le PC de jeu la demande : « pc », « ecrans » ou « deux ». */
+  voiceOutput?: VoiceOutput;
   ai: {
     ollamaUrl: string;
     localNodeName: string;
@@ -356,6 +361,9 @@ export interface HubStatus {
   dataDir: string;
   webPort: number;
   httpsPort: number | null;
+  /** Postes audio du PC de jeu (collecteur : voix de l'ingénieur, micro). */
+  stations?: AudioStation[];
+  voiceOutput?: VoiceOutput;
 }
 
 // ───── Analyses (API /api/analysis/*, /api/telemetry, /api/weather) ─────
