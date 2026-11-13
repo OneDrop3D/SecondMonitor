@@ -4,6 +4,7 @@ import type { HubSettings, HubStatus, RaceSnapshot } from '../types';
 import { ThermalProfiles } from './ThermalProfiles';
 import { WheelBindingCard } from './EngineerView';
 import { isRadioStation, setRadioStation } from '../radio';
+import { MusicCard } from '../music/MusicCard';
 
 export function SettingsView({ theme, setTheme, snapshot }: { theme: string; setTheme: (t: string) => void; snapshot: RaceSnapshot | null }) {
   const [settings, setSettings] = useState<HubSettings | null>(null);
@@ -41,6 +42,7 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
       {message && <div className="cx-advice">{message}</div>}
       <RadioSourcesCard />
       <WheelBindingCard />
+      <MusicCard />
 
       <ThermalProfiles snapshot={snapshot} />
 

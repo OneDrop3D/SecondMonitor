@@ -223,6 +223,12 @@ public sealed class EngineerService
             }
         }
 
+        // ───── Musique Deezer (chantier musique) : « pause musique », « mets Daft Punk »… sans le modèle ─────
+        if (await Music.MusicHook.TryHandleAsync(text, test, ct) is string music)
+        {
+            return music;
+        }
+
         if (test)
         {
             return null;

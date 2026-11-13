@@ -3,6 +3,10 @@
 SecondMonitor (l'application qui affiche) et SecondMonitor Collecteur (PC de jeu), pour Windows, Mac et Linux/SteamOS.
 Basé sur [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) de winzarten (licence MIT).
 
+## Non publié
+
+- **Musique Deezer** (carte Musique dans Réglages) : la musique joue dans l'application Deezer de l'ordinateur (pleine qualité, votre compte) et se commande à la voix sans passer par l'IA (« mets mon Flow », « mets la playlist rock », « mets Daft Punk », « pause musique », « chanson suivante », « remets la précédente », « monte / baisse la musique », « c'est quoi ce morceau ? ») ; la radio passe avant (pause puis reprise, ou volume de Deezer baissé sur Windows / Linux) ; option « pas de musique en course » ou « seulement en essais ».
+
 ## Version 0.5.0
 
 - **Dégâts mécaniques** pièce par pièce, quand le jeu les donne :
