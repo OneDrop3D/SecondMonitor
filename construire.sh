@@ -131,7 +131,10 @@ signer() {
   # Sans elle, signature ad hoc : macOS redemande ces autorisations à chaque version.
   # Créer l'identité (une fois) : packaging/mac/creer-identite-signature.sh [--github]
   local ids="$(security find-identity -v -p codesigning 2>/dev/null)"
-  local id="${ONEDROP3D_SIGN_IDENTITY:-$(printf '%s\n' "$ids" | grep -oE '"OneDrop3D SecondMonitor"' | head -1 | tr -d '"')}"
+  # Certificat auto-signé : macOS ne l'« approuve » pas (absent de find-identity -v), mais codesign s'en sert très bien
+  # et l'exigence désignée (empreinte du certificat) reste la même d'une version à l'autre.
+  local id="${ONEDROP3D_SIGN_IDENTITY:-}"
+  [ -n "$id" ] || ! security find-certificate -c "OneDrop3D SecondMonitor" >/dev/null 2>&1 || id="OneDrop3D SecondMonitor"
   [ -n "$id" ] || id="$(printf '%s\n' "$ids" | grep -oE '"(Multibook|ClickDeck|OneDrop3D)[^"]*"' | head -1 | tr -d '"')"
   echo "Signature : ${id:-ad hoc (les autorisations seront redemandées à chaque version)}"
   codesign --force --deep --sign "${id:--}" --identifier "$2" "$1" >/dev/null 2>&1 || codesign --force --deep --sign - --identifier "$2" "$1"

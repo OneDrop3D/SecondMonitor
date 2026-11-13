@@ -32,7 +32,8 @@ TRAVAIL="$(mktemp -d)"
 trap 'rm -rf "$TRAVAIL"' EXIT
 MDP="$(openssl rand -hex 16)"
 
-if security find-identity -v -p codesigning | grep -q "\"$NOM\""; then
+# Certificat auto-signé : il n'apparaît pas dans « find-identity -v » (non approuvé), on cherche donc le certificat.
+if security find-certificate -c "$NOM" "$TROUSSEAU" >/dev/null 2>&1; then
   echo "✅ L'identité « $NOM » existe déjà dans le trousseau."
   if [ "$GITHUB" = 1 ]; then
     echo "Pour l'envoyer à GitHub, il faut le fichier .p12 d'origine : supprimez l'identité (Trousseaux d'accès) et relancez ce script avec --github."
@@ -57,7 +58,9 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout "$TRAVAIL/cle.pem" 
 # -legacy : sans lui, « security import » ne sait pas lire le PKCS#12 d'OpenSSL 3.
 openssl pkcs12 -export -legacy -out "$TRAVAIL/identite.p12" -inkey "$TRAVAIL/cle.pem" -in "$TRAVAIL/cert.pem" -passout "pass:$MDP" 2>/dev/null
 security import "$TRAVAIL/identite.p12" -k "$TROUSSEAU" -P "$MDP" -T /usr/bin/codesign
-security find-identity -v -p codesigning | grep -q "\"$NOM\"" || { echo "❌ Identité inutilisable pour la signature." >&2; exit 1; }
+# Contrôle : signer un petit fichier avec la nouvelle identité (macOS peut demander l'accès au trousseau : « Toujours autoriser »).
+cp /usr/bin/true "$TRAVAIL/essai"
+codesign --force --sign "$NOM" "$TRAVAIL/essai" 2>/dev/null || { echo "❌ Identité inutilisable pour la signature." >&2; exit 1; }
 echo "✅ Identité « $NOM » créée : ./construire.sh mac l'utilisera."
 
 if [ "$GITHUB" = 1 ]; then
