@@ -162,7 +162,7 @@ construire_mac() {
     cp -R "$TMP/coll-osx-$arch/." "$coll/Contents/MacOS/"
     rm -f "$coll/Contents/MacOS/LISEZ-MOI.md"
     cp packaging/SecondMonitor.icns "$coll/Contents/Resources/"
-    plist "$coll" "SecondMonitor Collecteur" "fr.onedrop3d.secondmonitor-collecteur" "SecondMonitor-Collecteur" non
+    plist "$coll" "SecondMonitor Collecteur" "fr.onedrop3d.secondmonitor-collecteur" "SecondMonitor-Collecteur" oui  # micro : radio de l'ingénieur sur ce PC
     chmod +x "$coll/Contents/MacOS/SecondMonitor-Collecteur"
     signer "$coll" fr.onedrop3d.secondmonitor-collecteur
 

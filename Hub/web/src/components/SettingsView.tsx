@@ -6,6 +6,7 @@ import { WheelBindingCard } from './EngineerView';
 import { isRadioStation, setRadioStation } from '../radio';
 import { MusicCard } from '../music/MusicCard';
 import { UpdateCard } from './UpdateBanner';
+import { useStations, type VoiceOutput } from '../stations';
 
 export function SettingsView({ theme, setTheme, snapshot }: { theme: string; setTheme: (t: string) => void; snapshot: RaceSnapshot | null }) {
   const [settings, setSettings] = useState<HubSettings | null>(null);
@@ -42,6 +43,7 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
     <div className="stack" style={{ maxWidth: 900 }}>
       {message && <div className="cx-advice">{message}</div>}
       <RadioSourcesCard />
+      <VoiceOutputCard value={settings.voiceOutput ?? 'pc'} saving={saving} onChange={(v) => save({ voiceOutput: v })} />
       <WheelBindingCard />
       <MusicCard />
 
@@ -96,6 +98,32 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
           <div className="card-body"><div className="log">{status.source.log.join('\n') || '—'}</div></div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Voix de l'ingénieur : sur le PC de jeu (collecteur, casque du pilote), sur les écrans de SecondMonitor, ou les deux. */
+function VoiceOutputCard({ value, saving, onChange }: { value: VoiceOutput; saving: boolean; onChange: (v: VoiceOutput) => void }) {
+  const { stations } = useStations();
+  const pc = stations.find((s) => s.voice || s.mic);
+  return (
+    <div className="card">
+      <div className="card-head"><span className="card-title">Voix de l'ingénieur</span><span className="muted">{pc ? `${pc.name}${pc.voice ? ' : voix' : ''}${pc.voice && pc.mic ? ' et' : pc.mic ? ' :' : ''}${pc.mic ? ' micro' : ''}` : 'PC de jeu non déclaré'}</span></div>
+      <div className="card-body stack-sm">
+        <div className="row">
+          <span className="secondary">Voix sur</span>
+          <div className="seg">
+            {([['ecrans', 'Les écrans de SecondMonitor'], ['pc', 'Le PC de jeu'], ['deux', 'Les deux']] as const).map(([k, l]) => (
+              <button key={k} className={value === k ? 'on' : ''} disabled={saving} onClick={() => onChange(k)}>{l}</button>
+            ))}
+          </div>
+        </div>
+        <p className="secondary small" style={{ margin: 0 }}>
+          Le PC de jeu fait entendre la voix (casque du pilote) quand « Entendre l'ingénieur sur ce PC » est coché dans la fenêtre du <b>collecteur</b>,
+          carte « Radio de l'ingénieur ». Il peut aussi enregistrer son propre micro avec le bouton radio du PC de jeu.
+          Sans PC de jeu déclaré, la voix reste sur les écrans (case « Écouter ici » de l'Ingénieur IA).
+        </p>
+      </div>
     </div>
   );
 }

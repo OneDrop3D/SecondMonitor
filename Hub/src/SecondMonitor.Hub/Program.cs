@@ -107,7 +107,8 @@ app.Map("/ws", async (HttpContext ctx, LiveHub hub) =>
     }
 
     using var socket = await ctx.WebSockets.AcceptWebSocketAsync();
-    await hub.AcceptAsync(socket, ctx.RequestAborted);
+    // « ?poste=1 » : collecteur du PC de jeu qui joue la voix de l'ingénieur ou enregistre le micro (sans l'état de course).
+    await hub.AcceptAsync(socket, ctx.RequestAborted, ctx.Request.Query["poste"] == "1", ctx.Connection.RemoteIpAddress?.ToString());
 });
 
 app.MapGet("/api/snapshot", (RaceEngine engine) => Results.Json(engine.BuildSnapshot(), LiveHub.Json));
@@ -123,6 +124,8 @@ app.MapGet("/api/status", (DataSourceService source, LiveHub hub) => Results.Jso
     dataDir,
     webPort = settings.Current.WebPort,
     httpsPort = httpsCertificate != null ? settings.Current.HttpsPort : (int?)null,
+    stations = hub.Stations, // postes audio du PC de jeu (voix de l'ingénieur, micro)
+    voiceOutput = settings.Current.VoiceOutput,
 }));
 
 // ───── Analyses détaillées (à la demande, hors flux temps réel) ─────
@@ -144,7 +147,9 @@ app.MapPut("/api/settings", (SettingsStore store, HubSettings incoming) =>
         s.DemoMode = incoming.DemoMode;
         s.DemoSpeed = incoming.DemoSpeed;
         s.Ai = incoming.Ai ?? new AiSettings();
-        s.ThermalProfiles = incoming.ThermalProfiles ?? new List<SecondMonitor.Hub.Core.Race.ThermalProfile>();    });
+        s.ThermalProfiles = incoming.ThermalProfiles ?? new List<SecondMonitor.Hub.Core.Race.ThermalProfile>();
+        s.VoiceOutput = incoming.VoiceOutput is "pc" or "ecrans" or "deux" ? incoming.VoiceOutput : s.VoiceOutput;
+    });
     return Results.Ok(store.Current);
 });
 
@@ -246,8 +251,9 @@ app.MapPost("/api/radio/press", async (LiveHub hub, HttpContext ctx) =>
 {
     // Un appui « radio » venu d'ailleurs : le poste radio (la fenêtre de SecondMonitor) démarre ou envoie la dictée,
     // ou coupe l'ingénieur s'il parle. Même comportement que le bouton à l'écran.
+    // Si le collecteur enregistre le micro du PC de jeu (« poste »), c'est lui qui répond à l'appui, pas les écrans.
     string from = ctx.Request.Query["de"].FirstOrDefault() ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "?";
-    await hub.BroadcastAsync("radioPress", new { from, at = DateTime.Now });
+    await hub.BroadcastAsync("radioPress", new { from, at = DateTime.Now, poste = hub.MicStation?.Name });
     return Results.Json(new { ok = true, postes = hub.ClientCount, phase = DeckApi.RadioPhase });
 });
 app.MapPost("/api/radio/state", (RadioState state) =>
