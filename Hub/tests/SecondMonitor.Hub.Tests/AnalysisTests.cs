@@ -148,7 +148,7 @@ public class AnalysisTests
         BriefingResult brakes = RaceBriefing.Prepare(_snap, "Température des freins ?");
         Assert.That(brakes.Suggestion, Does.StartWith("Freins :"));
         Assert.That(brakes.Facts, Does.Contain("Moteur : eau"));
-        Assert.That(brakes.Facts, Does.Contain("Carcasse des pneus"));
+        Assert.That(brakes.Facts, Does.Contain("Carcasse :"));
     }
 
     [Test]

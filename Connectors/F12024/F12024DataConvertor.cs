@@ -1,4 +1,4 @@
-﻿namespace SecondMonitor.F12024Connector
+namespace SecondMonitor.F12024Connector
 {
     using System;
     using System.Collections.Generic;
@@ -279,9 +279,26 @@
 
         private void FillBoostData(ref CarStatusData rawCarStatusData, DriverInfo player)
         {
+            // Réglages en roulant (SecondMonitor multiplateforme) : répartition, TC, ABS, mélange carburant (cartographie).
+            CarControls controls = player.CarInfo.Controls;
+            controls.Available = true;
+            controls.FrontBrakeBiasPct = rawCarStatusData.FrontBrakeBias > 0 ? rawCarStatusData.FrontBrakeBias : null;
+            controls.Tc = rawCarStatusData.TractionControl;
+            controls.TcMax = 2;
+            controls.Abs = rawCarStatusData.AntiLockBrakes;
+            controls.AbsMax = 1;
+            controls.MotorMap = rawCarStatusData.FuelMix;
+            controls.MotorMapMax = 3;
+            controls.SpeedLimiterAvailable = true;
             if (player.CarClassId != F1Class)
             {
                 return;
+            }
+
+            controls.ElectricMotorState = rawCarStatusData.EnginePowerMGUK > 1000 ? 2 : rawCarStatusData.EnginePowerMGUK < -1000 ? 3 : 1;
+            if (_maxStoreEnergy > 0)
+            {
+                controls.BatteryPct = Math.Round(rawCarStatusData.ErsStoreEnergy / 40000.0, 1); // 4 MJ = 100 %
             }
 
             CarInfo playerCar = player.CarInfo;

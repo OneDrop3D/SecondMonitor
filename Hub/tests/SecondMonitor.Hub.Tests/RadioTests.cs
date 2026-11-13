@@ -84,9 +84,9 @@ public class RadioTests
         Assert.That(pit, Does.Contain("Rentrez au stand").Or.Contain("Pas besoin"));
     }
 
-    [TestCase("Merci.", "Avec plaisir")]
-    [TestCase("ok", "Reçu")]
-    [TestCase("bien reçu", "Reçu")]
+    [TestCase("Merci.", "Copy")]
+    [TestCase("ok", "Copy")]
+    [TestCase("bien reçu", "Copy")]
     public void SmallTalk_IsAnsweredInFrench(string text, string expected)
     {
         Assert.That(RadioCommands.SmallTalk(text), Does.StartWith(expected));

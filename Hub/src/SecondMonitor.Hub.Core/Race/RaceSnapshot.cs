@@ -316,6 +316,12 @@ namespace SecondMonitor.Hub.Core.Race
 
         /// <summary>Simulations d'arrêt : perte au stand, position à la sortie, undercut / overcut.</summary>
         public SecondMonitor.Hub.Core.Strategy.PitPlanDto PitPlan { get; set; }
+
+        /// <summary>Réglages en roulant (répartition, TC, ABS, cartographie…), hybride, limites de piste et pénalités, si le jeu les donne.</summary>
+        public ControlsDto Controls { get; set; }
+
+        /// <summary>Pédales et volant à l'instant.</summary>
+        public InputsDto Inputs { get; set; }
     }
 
     public sealed class FuelStrategy

@@ -73,6 +73,21 @@ public sealed class AiSettings
 
     /// <summary>L'IA prend la parole d'elle-même (pluie, relais à allonger, arrêt proche, menace derrière, surchauffe).</summary>
     public bool ProactiveRadio { get; set; } = true;
+
+    /// <summary>Alertes de pilotage dites tout de suite : limites de piste, temps annulé, pénalité, usure brutale, départ.</summary>
+    public bool DrivingAlerts { get; set; } = true;
+
+    /// <summary>Accusés de réception radio en anglais (« Copy », « Understood »), comme une vraie radio d'équipe.</summary>
+    public bool EnglishCalls { get; set; } = true;
+
+    /// <summary>
+    /// Spécialistes : un modèle par domaine (« pneus », « stratégie », « voiture », « course »), vide = modèle « réflexion ».
+    /// Chaque spécialiste ne reçoit que les faits et les connaissances de son domaine : réponses plus rapides et plus justes.
+    /// </summary>
+    public Dictionary<string, string> Specialists { get; set; } = new();
+
+    /// <summary>Temps (s) au-delà duquel l'ingénieur répond « Copy, je regarde et je reviens vers vous » et laisse le pilote poser une autre question.</summary>
+    public double AckAfterSeconds { get; set; } = 2.5;
 }
 
 public sealed class SettingsStore

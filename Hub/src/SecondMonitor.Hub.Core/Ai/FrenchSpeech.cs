@@ -65,6 +65,11 @@ namespace SecondMonitor.Hub.Core.Ai
             t = Regex.Replace(t, @"(\d)\s?min\b", "$1 minutes");
             t = Regex.Replace(t, @"(\d)\s?kPa\b", "$1 kilopascals");
 
+            // Listes de valeurs (« avant gauche 67 degrés, avant droit 56, … ») et deux-points : la voix les enchaînait sans respirer.
+            // Un point après un nombre marque une vraie pause. Les virgules décimales (« 9,9 ») n'ont pas d'espace : elles restent « virgule ».
+            t = Regex.Replace(t, @"(\d(?:\s(?:pour cent|degrés|litres|secondes|minutes|kilomètres heure|kilopascals|bar|kW))?)\s*[,;]\s+", "$1. ");
+            t = Regex.Replace(t, @"\s+:\s+", ". ");
+
             // Nombres signés et décimaux (virgule ou point), puis entiers.
             t = Regex.Replace(t, @"(?<![\w-])([+-])(?=\d)", m => m.Value == "-" ? "moins " : "plus ");
             t = Regex.Replace(t, @"\b(\d+)[.,](\d+)\b", m => Number(long.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture), false) + " virgule " + Decimals(m.Groups[2].Value));

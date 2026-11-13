@@ -35,14 +35,30 @@ public sealed class ProactiveService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+        // Toutes les 250 ms : alertes de pilotage (limites de piste, temps annulé, pénalité, usure brutale), dites tout de suite.
+        // Toutes les 3 s : le reste (pluie, relais, arrêt, duels, surchauffe), avec un intervalle minimal entre deux messages.
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(250));
+        DateTime nextRules = DateTime.MinValue;
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             AiSettings ai = _settings.Current.Ai;
-            if (!ai.ProactiveRadio || (DateTime.UtcNow - _engine.LastUpdateUtc).TotalSeconds > 5)
+            List<DrivingEvent> driving = _engine.DrainDrivingEvents();
+            if ((DateTime.UtcNow - _engine.LastUpdateUtc).TotalSeconds > 5)
             {
                 continue;
             }
+
+            if (driving.Count > 0 && ai.DrivingAlerts)
+            {
+                await SayDrivingAsync(driving, stoppingToken);
+            }
+
+            if (!ai.ProactiveRadio || DateTime.UtcNow < nextRules)
+            {
+                continue;
+            }
+
+            nextRules = DateTime.UtcNow.AddSeconds(3);
 
             try
             {
@@ -95,6 +111,35 @@ public sealed class ProactiveService : BackgroundService
             {
                 _logger.LogWarning(ex, "Intervention spontanée de l'IA impossible");
             }
+        }
+    }
+
+    /// <summary>Alertes de pilotage : une phrase courte, sans attendre l'intervalle des autres messages.</summary>
+    private async Task SayDrivingAsync(List<DrivingEvent> events, CancellationToken ct)
+    {
+        try
+        {
+            RaceSnapshot snap = _engine.BuildSnapshot();
+            foreach (RadioLine line in DrivingRadio.Lines(events, snap))
+            {
+                if (line.IsQuestion)
+                {
+                    _engineer.Memory.Ask(new PendingQuestion
+                    {
+                        Key = "usure-" + DateTime.UtcNow.Ticks,
+                        Topic = line.Topic,
+                        Text = line.Text,
+                        Lap = snap.Drivers.FirstOrDefault(d => d.IsPlayer)?.Laps ?? 0,
+                    });
+                }
+
+                string category = line.Topic == "usure" ? ExchangeCategorizer.RaceSettings : ExchangeCategorizer.RaceInfo;
+                await _engineer.SayAsync(line.Text, "ingénieur IA", ct, proactive: true, awaitingAnswer: line.IsQuestion, category: category, urgent: true);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Alerte de pilotage impossible");
         }
     }
 }

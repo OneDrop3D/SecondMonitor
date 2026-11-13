@@ -1,4 +1,4 @@
-﻿namespace SecondMonitor.AccConnector
+namespace SecondMonitor.AccConnector
 {
     using System;
     using System.Collections.Generic;
@@ -434,6 +434,16 @@
             playerCar.TcInfo.IsAvailable = accData.AcsGraphic.TC > 0 || accData.AcsGraphic.TCCut > 0;
             playerCar.TcInfo.Remark = accData.AcsGraphic.TCCut > 0 ? $"{accData.AcsGraphic.TC.ToString()} / {accData.AcsGraphic.TCCut.ToString()}" : accData.AcsGraphic.TC.ToString(); 
             playerCar.TcInfo.IsActive = accData.AcsPhysics.tc > 0;
+
+            // Réglages en roulant (SecondMonitor multiplateforme). La répartition de freinage d'ACC dépend d'un décalage
+            // propre à chaque voiture : elle n'est pas donnée, pour ne pas annoncer un chiffre faux.
+            CarControls controls = playerCar.Controls;
+            controls.Available = true;
+            controls.Tc = accData.AcsGraphic.TC;
+            controls.TcCut = accData.AcsGraphic.TCCut;
+            controls.Abs = accData.AcsGraphic.ABS;
+            controls.MotorMap = accData.AcsGraphic.EngineMap + 1; // ACC compte à partir de 0, l'écran de la voiture à partir de 1
+            controls.SpeedLimiterAvailable = true;
         }
 
         internal void FillSessionInfo(AccShared data, SimulatorDataSet simData, FullUdpData fullUdpData)

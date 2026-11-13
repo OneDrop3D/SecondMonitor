@@ -94,6 +94,7 @@ namespace SecondMonitor.Hub.Core.Race
                 {
                     _player.Update(player, playerTracker);
                     _telemetry.Add(now, player, data.SessionInfo);
+                    _driving.Update(now, player, data.InputInfo, lapLength, _segments, data.SessionInfo.SessionType.ToString(), data.SessionInfo.SessionPhase.ToString());
                 }
 
                 _weather.Add(now, data.SessionInfo.WeatherInfo);
@@ -117,6 +118,53 @@ namespace SecondMonitor.Hub.Core.Race
         }
 
         private readonly TyreThermalWatch _thermal = new();
+        private readonly DrivingWatch _driving = new();
+
+        /// <summary>Événements de pilotage à dire tout de suite (usure brutale, limites de piste, tour annulé, pénalité, départ).</summary>
+        public List<DrivingEvent> DrainDrivingEvents()
+        {
+            lock (_lock)
+            {
+                return _driving.Drain();
+            }
+        }
+
+        /// <summary>Usures brutales de la session (pour l'ingénieur).</summary>
+        public List<WearSpike> WearSpikes()
+        {
+            lock (_lock)
+            {
+                return _driving.Spikes.ToList();
+            }
+        }
+
+        /// <summary>Résumé du pilotage (pédales) du dernier tour complet.</summary>
+        public string DrivingSummary()
+        {
+            lock (_lock)
+            {
+                return _driving.DrivingSummary();
+            }
+        }
+
+        /// <summary>Trace pédales / volant d'un tour du joueur : « current », « last », « best » ou un numéro de tour.</summary>
+        public InputTraceDto InputTrace(string which)
+        {
+            lock (_lock)
+            {
+                DriverInfo player = _last == null ? null : PlayerOf(_last);
+                var times = new Dictionary<int, double?>();
+                if (player != null && _trackers.TryGetValue(DriverId(player), out DriverTracker t))
+                {
+                    foreach (var lap in t.Laps.Where(l => l.Valid && !l.IsPitLap && !l.IsOutLap))
+                    {
+                        times[lap.Lap] = lap.Time;
+                    }
+                }
+
+                return _driving.Trace(which ?? "last", times);
+            }
+        }
         private readonly DamageWatch _damage = new();
         private SecondMonitor.Hub.Core.Track.LibraryTrack _libraryTrack;
         private readonly SecondMonitor.Hub.Core.Track.TrackCalibration _libraryCalibration = new();
@@ -181,6 +229,7 @@ namespace SecondMonitor.Hub.Core.Race
         {
             _thermal.Reset();
             _damage.Reset();
+            _driving.Reset();
             _libraryTrack = null;
             _libraryCalibration.Reset();
             _trackers.Clear();
@@ -323,6 +372,8 @@ namespace SecondMonitor.Hub.Core.Race
                     snap.ThermalProfile = string.Join(" · ", new[] { profile.Game, profile.Car }.Where(x => !string.IsNullOrWhiteSpace(x)).DefaultIfEmpty("tous les jeux"));
                 }
 
+                playerStrategy.Controls = _driving.Controls;
+                playerStrategy.Inputs = _driving.Inputs;
                 bool moving = !playerInfo.InPits && (playerInfo.Speed?.InKph ?? 0) > 20;
                 playerStrategy.TyreThermal = _thermal.Update(now, playerInfo.CompletedLaps, moving, playerStrategy.Wheels);
                 playerStrategy.Alerts = TyreThermalWatch.Alerts(playerStrategy.TyreThermal);

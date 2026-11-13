@@ -1,4 +1,4 @@
-﻿namespace SecondMonitor.LmUConnector.SharedMemory
+namespace SecondMonitor.LmUConnector.SharedMemory
 {
     using System;
     using System.Linq;
@@ -105,6 +105,7 @@
 
                 //Add Additional Player Car Info
                 AddPlayerCarInfo(playelmUVehicleTelemetry, simData);
+                AddControls(playelmUVehicleTelemetry, lmData, simData);
 
                 /*_currentlyIgnoredPackage = 0;*/
 
@@ -235,6 +236,81 @@
             playerCar.FrontDownForce = Force.GetFromNewtons(data.mFrontDownforce);
             playerCar.RearDownForce = Force.GetFromNewtons(data.mRearDownforce);
             playerCar.OverallDownForce = Force.GetFromNewtons(data.mFrontDownforce + data.mRearDownforce);
+        }
+
+        /// <summary>
+        /// Réglages en roulant, moteur, hybride et règlement (SecondMonitor multiplateforme) : répartition de freinage, TC, ABS,
+        /// cartographie, migration, regen, état du moteur électrique, limites de piste, pénalités, tour annulé, demande d'arrêt.
+        /// </summary>
+        private static void AddControls(LmUVehicleTelemetry data, in LmUObjectOut lmData, SimulatorDataSet simData)
+        {
+            CarControls c = simData.PlayerInfo.CarInfo.Controls;
+            c.Available = true;
+            static int? Level(byte value, byte max) => max > 0 ? value : null;
+            static int? Max(byte max) => max > 0 ? max : null;
+            if (data.mRearBrakeBias > 0 && data.mRearBrakeBias < 1)
+            {
+                c.FrontBrakeBiasPct = Math.Round((1 - data.mRearBrakeBias) * 1000) / 10;
+            }
+
+            c.MotorMap = Level(data.mMotorMap, data.mMotorMapMax);
+            c.MotorMapMax = Max(data.mMotorMapMax);
+            c.Tc = Level(data.mTC, data.mTCMax);
+            c.TcMax = Max(data.mTCMax);
+            c.TcCut = Level(data.mTCCut, data.mTCCutMax);
+            c.TcCutMax = Max(data.mTCCutMax);
+            c.TcSlip = Level(data.mTCSlip, data.mTCSlipMax);
+            c.TcSlipMax = Max(data.mTCSlipMax);
+            c.Abs = Level(data.mABS, data.mABSMax);
+            c.AbsMax = Max(data.mABSMax);
+            c.Migration = Level(data.mMigration, data.mMigrationMax);
+            c.MigrationMax = Max(data.mMigrationMax);
+            c.FrontAntiRoll = Level(data.mFrontAntiSway, data.mFrontAntiSwayMax);
+            c.FrontAntiRollMax = Max(data.mFrontAntiSwayMax);
+            c.RearAntiRoll = Level(data.mRearAntiSway, data.mRearAntiSwayMax);
+            c.RearAntiRollMax = Max(data.mRearAntiSwayMax);
+            c.ElectricMotorState = data.mElectricBoostMotorState;
+            if (data.mElectricBoostMotorState > 0)
+            {
+                c.ElectricMotorTorque = data.mElectricBoostMotorTorque;
+                c.RegenKw = data.mRegen;
+                c.BatteryPct = Math.Round(data.mBatteryChargeFraction * 1000) / 10;
+            }
+
+            if (data.mVirtualEnergy > 0)
+            {
+                c.VirtualEnergyPct = Math.Round(data.mVirtualEnergy * 1000) / 10;
+            }
+
+            c.LapInvalidated = data.mLapInvalidated != 0;
+            c.Ignition = data.mIgnitionStarter;
+            c.LiftAndCoastPct = data.mLiftAndCoastProgress;
+            c.AntiStall = data.mAntiStallActivated != 0;
+            c.SpeedLimiterAvailable = data.mSpeedLimiterAvailable != 0;
+
+            byte perPoint = lmData.Scoring.mScoringInfo.mTrackLimitsStepsPerPoint;
+            byte perPenalty = lmData.Scoring.mScoringInfo.mTrackLimitsStepsPerPenalty;
+            if (perPoint > 0)
+            {
+                c.TrackLimitsPoints = (double)data.mTrackLimitsSteps / perPoint;
+                if (perPenalty > 0)
+                {
+                    c.TrackLimitsPointsPerPenalty = (double)perPenalty / perPoint;
+                }
+            }
+
+            if (lmData.Scoring.mVehicles != null)
+            {
+                foreach (LmUVehicleScoring v in lmData.Scoring.mVehicles)
+                {
+                    if (v.mIsPlayer == 1)
+                    {
+                        c.Penalties = v.mNumPenalties;
+                        c.PitRequested = v.mPitState == 1;
+                        break;
+                    }
+                }
+            }
         }
 
         private void AddFlags(in LmUObjectOut lmData, SimulatorDataSet simData)

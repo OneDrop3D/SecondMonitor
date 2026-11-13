@@ -109,17 +109,17 @@ namespace SecondMonitor.Hub.Core.Ai
 
             if (Regex.IsMatch(t, @"^(merci|merci beaucoup|merci bien|thanks|top merci|super merci)\b"))
             {
-                return "Avec plaisir, je reste à l'écoute.";
+                return "Copy, je reste à l'écoute.";
             }
 
             if (Regex.IsMatch(t, @"^(ok|okay|d accord|recu|bien recu|compris|c est note|parfait|super|top|nickel|ca marche)$"))
             {
-                return "Reçu.";
+                return "Copy.";
             }
 
             if (Regex.IsMatch(t, @"^(radio check|test radio|tu m entends|vous m entendez|allo)\b"))
             {
-                return "Je vous reçois cinq sur cinq.";
+                return "Radio check : je vous reçois cinq sur cinq.";
             }
 
             return null;

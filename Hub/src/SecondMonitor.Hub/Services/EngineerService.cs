@@ -14,6 +14,8 @@ public sealed class EngineerService
     private const string SystemPrompt =
         "Tu es l'ingénieur de course du pilote et tu lui parles à la radio pendant la course. " +
         "Réponds TOUJOURS en français, en une ou deux phrases courtes, faciles à entendre en pilotant, en vouvoyant le pilote. " +
+        "Réponds SEULEMENT à ce qui est demandé : pas de récapitulatif de la course, pas de météo ni de position si on ne te les demande pas. " +
+        "Si le pilote fait une remarque sans poser de question, accuse réception en commençant par « Copy » et ajoute au plus un conseil utile. " +
         "Utilise UNIQUEMENT les chiffres des informations ci-dessous, recopiés tels quels ; ne fais aucun calcul. " +
         "Ne parle jamais de « document », de « texte » ni de « fiche » : le pilote ne les voit pas. " +
         "Si une information manque vraiment, dis en une phrase laquelle et pourquoi (le jeu ne l'envoie pas, ou il faut encore un tour). " +
@@ -44,7 +46,9 @@ public sealed class EngineerService
     private readonly LiveHub _hub;
     private readonly ILogger<EngineerService> _logger;
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly List<(string Role, string Text)> _history = new();
+    private readonly List<(string Domain, string Role, string Text)> _history = new();
+    private readonly SemaphoreSlim _thinkQueue = new(1, 1);
+    private int _thinking;
     private (DateTime At, List<OllamaModel> Models) _modelCache = (DateTime.MinValue, new());
     private DateTime _stopRequestedUtc = DateTime.MinValue;
 
@@ -84,146 +88,243 @@ public sealed class EngineerService
 
     /// <summary>
     /// Pose une question à l'ingénieur IA (ou lui transmet une consigne, une remarque, une réponse).
+    /// Ce qui se calcule (chiffres, réglages, suites de conversation, demandes d'arrêt) répond tout de suite.
+    /// Ce qui demande le modèle passe par une file (une réflexion à la fois) : si elle dure plus de quelques secondes,
+    /// l'ingénieur répond « Copy, je regarde ça et je reviens vers vous », le pilote peut poser d'autres questions,
+    /// et la réponse arrive ensuite à la radio (« Pour la stratégie : … »).
     /// En mode test, la réponse n'est envoyée qu'à l'écran qui a posé la question (pas de diffusion radio, pas d'historique, pas de mémoire)
     /// et, s'il n'y a pas de course en cours, l'IA répond sur une situation de course fictive.
     /// </summary>
     public async Task<EngineerReply> AskAsync(string question, bool speak, string from, CancellationToken ct, bool test = false)
     {
         AiSettings ai = _settings.Current.Ai;
-        await _gate.WaitAsync(ct);
+        var started = DateTime.UtcNow;
+        Prepared prep;
+        await _gate.WaitAsync(ct); // court : état de la conversation et réponses calculées, jamais pendant la réflexion du modèle
         try
         {
-            var started = DateTime.UtcNow;
-            RaceSnapshot snapshot = _engine.BuildSnapshot();
-            string scenario = "course en cours";
-            if (test && !snapshot.HasData)
-            {
-                snapshot = await Task.Run(TestScenario.Get, ct);
-                scenario = "course fictive de test (aucune donnée du jeu)";
-            }
-
-            int? lap = snapshot.Drivers.FirstOrDefault(d => d.IsPlayer)?.Laps;
-            string? facts = null;
-            string kind;
-            string? category;
-            string categorySource = "règles";
-            // Mode test : mémoire à part (le fil de conversation marche, sans toucher à la vraie course).
-            RaceMemory memory = test ? _testMemory : Memory;
-            CarContext car = CarContext.From(snapshot, ai.WetThresholdPct);
-
-            // Suites de conversation (« oui », « non », « autre chose ? ») avant les politesses : « ok » répond à la proposition.
-            DialogReply? dialog = RadioDialog.FollowUp(question, memory, car, lap);
-            string? answer = dialog?.Text ?? await HandleCommandAsync(question, test, lap, ct);
-            if (dialog == null && answer == null)
-            {
-                // Retour du pilote sur la voiture : base de réglages, réponse immédiate (jamais un simple « reçu »).
-                dialog = RadioDialog.Feedback(question, memory, car, snapshot, lap);
-            }
-
-            if (dialog != null)
-            {
-                answer = dialog.Text;
-                kind = dialog.Kind;
-                category = dialog.Category;
-            }
-            else if (answer != null)
-            {
-                kind = "commande";
-                category = ExchangeCategorizer.FromText(question) ?? ExchangeCategorizer.RaceInfo;
-            }
-            else
-            {
-                var extras = new BriefingExtras
-                {
-                    Speeds = snapshot.HasData && !test ? _engine.BuildSpeedAnalysis() : null,
-                    MicroSectors = snapshot.HasData && !test ? _engine.BuildMicroSectors() : null,
-                    Weather = snapshot.HasData && !test ? _engine.BuildWeather() : null,
-                    Laps = snapshot.HasData && !test ? _engine.PlayerLaps() : null,
-                    Memory = memory,
-                    WetThresholdPct = ai.WetThresholdPct,
-                };
-                BriefingResult brief = RaceBriefing.Prepare(snapshot, question, extras);
-                facts = brief.Facts;
-                category = ExchangeCategorizer.Categorize(question, brief.Topics);
-                if (brief.Suggestion != null && (ai.StrictAnswers || string.IsNullOrWhiteSpace(ai.ThinkModel)))
-                {
-                    // Réponse calculée par le hub : dite telle quelle (fiable, et sans attendre le modèle).
-                    answer = brief.Suggestion;
-                    kind = "calculée";
-                }
-                else
-                {
-                    if (string.IsNullOrWhiteSpace(ai.ThinkModel))
-                    {
-                        throw new InvalidOperationException("Choisissez d'abord un modèle « réflexion » dans l'onglet Ingénieur IA.");
-                    }
-
-                    answer = await ThinkAsync(question, brief, snapshot, test, ct);
-                    kind = answer == brief.Suggestion ? "calculée" : "modèle";
-                }
-
-                if (answer == brief.Suggestion && brief.Proposal != null)
-                {
-                    // La réponse propose quelque chose (un cran d'aileron, une sortie de virage) : « oui » / « non » s'y rattachent.
-                    RadioDialog.Offered(memory, brief.Proposal, "vitesse", "Vitesse de pointe", category ?? ExchangeCategorizer.RaceInfo);
-                }
-
-                if (category == null)
-                {
-                    category = ExchangeCategorizer.RaceInfo;
-                    categorySource = "défaut"; // le carnet demandera au modèle de classer l'échange
-                }
-            }
-
-            if (!test)
-            {
-                lock (_history)
-                {
-                    _history.Add(("user", question));
-                    _history.Add(("assistant", answer));
-                    if (_history.Count > 20)
-                    {
-                        _history.RemoveRange(0, 2);
-                    }
-                }
-            }
-
-            int thinkMs = (int)(DateTime.UtcNow - started).TotalMilliseconds;
-            string? audio = speak && _stopRequestedUtc < started ? await TrySpeakAsync(answer, ct) : null;
-            if (_stopRequestedUtc > started)
-            {
-                audio = null; // coupé pendant la préparation de la voix
-            }
-            var reply = new EngineerReply
-            {
-                Question = question,
-                Answer = answer,
-                AudioBase64 = audio,
-                From = from,
-                Facts = facts,
-                Milliseconds = (int)(DateTime.UtcNow - started).TotalMilliseconds,
-                ThinkMilliseconds = thinkMs,
-                Test = test,
-                Scenario = test ? scenario : null,
-                UsedPreparedAnswer = kind == "calculée",
-                Kind = kind,
-                Category = category,
-                CategorySource = categorySource,
-            };
-
-            // Tous les écrans (Mac, iPad, poste du pilote) voient et peuvent entendre l'échange (sauf en mode test).
-            if (!test)
-            {
-                await _hub.BroadcastAsync("radio", reply);
-                Replied?.Invoke(reply);
-            }
-
-            return reply;
+            prep = await PrepareAsync(question, test, ct);
         }
         finally
         {
             _gate.Release();
         }
+
+        if (prep.Answer != null)
+        {
+            return await FinishAsync(prep, prep.Answer, prep.Kind, speak, from, started, ct);
+        }
+
+        if (string.IsNullOrWhiteSpace(ModelFor(prep.Domain)))
+        {
+            throw new InvalidOperationException("Choisissez d'abord un modèle « réflexion » dans l'onglet Ingénieur IA.");
+        }
+
+        bool queued = Volatile.Read(ref _thinking) > 0;
+        Task<string> thinking = ThinkQueuedAsync(prep);
+        if (test)
+        {
+            string answer = await thinking;
+            return await FinishAsync(prep, answer, answer == prep.Brief.Suggestion ? "calculée" : "modèle", speak, from, started, ct);
+        }
+
+        Task delay = Task.Delay(TimeSpan.FromSeconds(Math.Clamp(ai.AckAfterSeconds, 0.5, 15)), ct);
+        if (!queued && await Task.WhenAny(thinking, delay) == thinking)
+        {
+            string answer = await thinking;
+            return await FinishAsync(prep, answer, answer == prep.Brief.Suggestion ? "calculée" : "modèle", speak, from, started, ct);
+        }
+
+        // Réflexion longue : accusé de réception tout de suite, réponse plus tard. Le pilote n'est pas bloqué.
+        EngineerReply ack = await FinishAsync(prep, RadioStyle.Thinking(queued, ai.EnglishCalls), "accusé", speak, from, started, ct, remember: false);
+        _ = Task.Run(async () =>
+        {
+            string later;
+            string kind;
+            try
+            {
+                later = await thinking;
+                kind = later == prep.Brief.Suggestion ? "calculée" : "modèle";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Réflexion de l'IA impossible");
+                later = prep.Brief.Suggestion ?? RaceBriefing.Missing(question, prep.Snapshot);
+                kind = "calculée";
+            }
+
+            try
+            {
+                string intro = $"Pour {Specialists.Label(prep.Domain)} : ";
+                await FinishAsync(prep, intro + RadioFormat.Cap(later.TrimStart()), kind, speak, from, started, CancellationToken.None, followUp: true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Réponse différée impossible");
+            }
+        });
+        return ack;
+    }
+
+    /// <summary>Question préparée : réponse immédiate (Answer) ou de quoi faire réfléchir le modèle.</summary>
+    private sealed class Prepared
+    {
+        public string Question = "";
+        public bool Test;
+        public RaceSnapshot Snapshot = new();
+        public string Scenario = "course en cours";
+        public int? Lap;
+        public RaceMemory Memory = new();
+        public string? Answer;
+        public string Kind = "modèle";
+        public string? Category;
+        public string CategorySource = "règles";
+        public string? Facts;
+        public BriefingResult Brief = new();
+        public string Domain = Specialists.Car;
+    }
+
+    private async Task<Prepared> PrepareAsync(string question, bool test, CancellationToken ct)
+    {
+        AiSettings ai = _settings.Current.Ai;
+        var prep = new Prepared { Question = question, Test = test, Snapshot = _engine.BuildSnapshot() };
+        if (test && !prep.Snapshot.HasData)
+        {
+            prep.Snapshot = await Task.Run(TestScenario.Get, ct);
+            prep.Scenario = "course fictive de test (aucune donnée du jeu)";
+        }
+
+        RaceSnapshot snapshot = prep.Snapshot;
+        prep.Lap = snapshot.Drivers.FirstOrDefault(d => d.IsPlayer)?.Laps;
+        // Mode test : mémoire à part (le fil de conversation marche, sans toucher à la vraie course).
+        prep.Memory = test ? _testMemory : Memory;
+        RaceMemory memory = prep.Memory;
+        CarContext car = CarContext.From(snapshot, ai.WetThresholdPct);
+
+        // Suites de conversation (« oui », « non », « autre chose ? ») avant les politesses : « ok » répond à la proposition.
+        DialogReply? dialog = RadioDialog.FollowUp(question, memory, car, prep.Lap);
+        string? answer = dialog?.Text ?? await HandleCommandAsync(question, test, prep.Lap, ct);
+        if (dialog == null && answer == null && PitOrders.Parse(question) is PitOrder order)
+        {
+            // « Je boxe », « je veux des softs neufs », « la réparation aussi » : confirmé tout de suite et gardé pour l'arrêt.
+            prep.Answer = PitOrders.Confirm(order, memory, snapshot, prep.Lap);
+            prep.Kind = "commande";
+            prep.Category = ExchangeCategorizer.Strategy;
+            return prep;
+        }
+
+        if (dialog == null && answer == null)
+        {
+            // Retour du pilote sur la voiture : base de réglages, réponse immédiate (jamais un simple « reçu »).
+            dialog = RadioDialog.Feedback(question, memory, car, snapshot, prep.Lap);
+        }
+
+        if (dialog != null)
+        {
+            prep.Answer = ai.EnglishCalls && dialog.Kind is "retour" or "suite" ? RadioStyle.WithCopy(dialog.Text) : dialog.Text;
+            prep.Kind = dialog.Kind;
+            prep.Category = dialog.Category;
+            return prep;
+        }
+
+        if (answer != null)
+        {
+            prep.Answer = answer;
+            prep.Kind = "commande";
+            prep.Category = ExchangeCategorizer.FromText(question) ?? ExchangeCategorizer.RaceInfo;
+            return prep;
+        }
+
+        bool live = snapshot.HasData && !test;
+        var extras = new BriefingExtras
+        {
+            Speeds = live ? _engine.BuildSpeedAnalysis() : null,
+            MicroSectors = live ? _engine.BuildMicroSectors() : null,
+            Weather = live ? _engine.BuildWeather() : null,
+            Laps = live ? _engine.PlayerLaps() : null,
+            DrivingSummary = live ? _engine.DrivingSummary() : null,
+            WearSpikes = live ? _engine.WearSpikes() : null,
+            Memory = memory,
+            WetThresholdPct = ai.WetThresholdPct,
+        };
+        BriefingResult brief = RaceBriefing.Prepare(snapshot, question, extras);
+        prep.Brief = brief;
+        prep.Facts = brief.Facts;
+        prep.Domain = Specialists.For(brief.Topics);
+        prep.Category = ExchangeCategorizer.Categorize(question, brief.Topics);
+        if (prep.Category == null)
+        {
+            prep.Category = ExchangeCategorizer.RaceInfo;
+            prep.CategorySource = "défaut"; // le carnet demandera au modèle de classer l'échange
+        }
+
+        if (brief.Suggestion != null && (ai.StrictAnswers || string.IsNullOrWhiteSpace(ai.ThinkModel)))
+        {
+            // Réponse calculée par le hub : dite telle quelle (fiable, et sans attendre le modèle).
+            prep.Answer = brief.Suggestion;
+            prep.Kind = "calculée";
+            if (brief.Proposal != null)
+            {
+                // La réponse propose quelque chose (un cran d'aileron, une sortie de virage) : « oui » / « non » s'y rattachent.
+                RadioDialog.Offered(memory, brief.Proposal, "vitesse", "Vitesse de pointe", prep.Category);
+            }
+        }
+
+        return prep;
+    }
+
+    /// <summary>Diffuse la réponse (voix comprise), la garde dans l'historique et le carnet.</summary>
+    private async Task<EngineerReply> FinishAsync(Prepared prep, string answer, string kind, bool speak, string from, DateTime started, CancellationToken ct, bool remember = true, bool followUp = false)
+    {
+        if (!prep.Test && remember)
+        {
+            lock (_history)
+            {
+                _history.Add((prep.Domain, "user", prep.Question));
+                _history.Add((prep.Domain, "assistant", answer));
+                if (_history.Count > 20)
+                {
+                    _history.RemoveRange(0, 2);
+                }
+            }
+        }
+
+        DateTime voiceStart = DateTime.UtcNow;
+        int thinkMs = (int)(voiceStart - started).TotalMilliseconds;
+        string? audio = speak && _stopRequestedUtc < voiceStart ? await TrySpeakAsync(answer, ct) : null;
+        if (_stopRequestedUtc > voiceStart)
+        {
+            audio = null; // coupé pendant la préparation de la voix
+        }
+
+        var reply = new EngineerReply
+        {
+            Question = followUp ? null : prep.Question,
+            Answer = answer,
+            AudioBase64 = audio,
+            From = followUp ? "ingénieur IA" : from,
+            Facts = prep.Facts,
+            Milliseconds = (int)(DateTime.UtcNow - started).TotalMilliseconds,
+            ThinkMilliseconds = thinkMs,
+            Test = prep.Test,
+            Scenario = prep.Test ? prep.Scenario : null,
+            UsedPreparedAnswer = kind == "calculée",
+            Kind = kind,
+            Category = prep.Category,
+            CategorySource = prep.CategorySource,
+            FollowUp = followUp,
+            InReplyTo = followUp ? prep.Question : null,
+            Specialist = prep.Brief.Topics.Count > 0 || kind == "modèle" ? prep.Domain : null,
+        };
+
+        // Tous les écrans (Mac, iPad, poste du pilote) voient et peuvent entendre l'échange (sauf en mode test).
+        if (!prep.Test)
+        {
+            await _hub.BroadcastAsync("radio", reply);
+            Replied?.Invoke(reply);
+        }
+
+        return reply;
     }
 
     /// <summary>Phrases qui ne demandent pas de réflexion : politesses, changement de modèle, réponse à une question de l'IA, remarque à mémoriser.</summary>
@@ -280,46 +381,85 @@ public sealed class EngineerService
         return null;
     }
 
-    private async Task<string> ThinkAsync(string question, BriefingResult brief, RaceSnapshot snapshot, bool test, CancellationToken ct)
+    private string ModelFor(string domain)
     {
         AiSettings ai = _settings.Current.Ai;
-        string system = SystemPrompt + "\n\n" + SessionFocus(snapshot.SessionType) + "\n\nINFORMATIONS (chiffres exacts calculés par l'ordinateur) :\n" + brief.Facts;
+        return ai.Specialists != null && ai.Specialists.TryGetValue(domain, out string? model) && !string.IsNullOrWhiteSpace(model) ? model : ai.ThinkModel;
+    }
+
+    /// <summary>File de réflexion : une question au modèle à la fois, dans l'ordre d'arrivée.</summary>
+    private async Task<string> ThinkQueuedAsync(Prepared prep)
+    {
+        Interlocked.Increment(ref _thinking);
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+            await _thinkQueue.WaitAsync(timeout.Token);
+            try
+            {
+                return await ThinkAsync(prep, timeout.Token);
+            }
+            finally
+            {
+                _thinkQueue.Release();
+            }
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _thinking);
+        }
+    }
+
+    /// <summary>
+    /// Spécialiste du domaine de la question : consigne commune + rôle du spécialiste + faits de son domaine seulement,
+    /// et seulement le dernier échange du même domaine (le contexte est vidé entre deux sujets).
+    /// </summary>
+    private async Task<string> ThinkAsync(Prepared prep, CancellationToken ct)
+    {
+        BriefingResult brief = prep.Brief;
+        string system = SystemPrompt + "\n\n" + Specialists.Role(prep.Domain) + "\n\n" + SessionFocus(prep.Snapshot.SessionType) + "\n\n" + Specialists.Facts(prep.Domain, brief);
         if (brief.Suggestion != null)
         {
             system += "\n\nRÉPONSE PRÉPARÉE POUR CETTE QUESTION (à dire au pilote, presque mot pour mot) :\n" + brief.Suggestion;
         }
 
         var messages = new List<object> { new { role = "system", content = system } };
-        if (!test)
+        if (!prep.Test)
         {
-            // Un peu de contexte de conversation (questions/réponses récentes), sans les anciens chiffres.
             lock (_history)
             {
-                foreach (var (role, text) in _history.TakeLast(4))
+                foreach (var (_, role, text) in _history.Where(h => h.Domain == prep.Domain).TakeLast(2))
                 {
                     messages.Add(new { role, content = text });
                 }
             }
         }
 
-        messages.Add(new { role = "user", content = question });
-        string answer = Clean(await _ollama.ChatAsync(ai.ThinkModel, messages, ct));
+        messages.Add(new { role = "user", content = prep.Question });
+        string answer = Shorten(Clean(await _ollama.ChatAsync(ModelFor(prep.Domain), messages, ct)));
 
         // Garde-fous : chiffre inventé, réponse en anglais ou qui parle du « document » → réponse du hub.
-        bool invented = brief.Suggestion != null && HasUnknownNumber(answer, brief.Facts + " " + question);
+        bool invented = brief.Suggestion != null && HasUnknownNumber(answer, brief.Facts + " " + prep.Question);
         if (invented || RadioCommands.IsUnusableAnswer(answer))
         {
             _logger.LogInformation("Réponse IA écartée : {Answer}", answer);
-            return brief.Suggestion ?? RaceBriefing.Missing(question, snapshot);
+            return brief.Suggestion ?? RaceBriefing.Missing(prep.Question, prep.Snapshot);
         }
 
         // « Je n'ai pas cette information » : on dit plutôt quelle donnée manque et pourquoi.
         if (RadioCommands.Normalize(answer).Contains("pas cette information"))
         {
-            return brief.Suggestion ?? RaceBriefing.Missing(question, snapshot);
+            return brief.Suggestion ?? RaceBriefing.Missing(prep.Question, prep.Snapshot);
         }
 
         return answer;
+    }
+
+    /// <summary>Radio : deux phrases au plus. Le modèle a tendance à tout réciter.</summary>
+    private static string Shorten(string text)
+    {
+        var sentences = System.Text.RegularExpressions.Regex.Split(text.Trim(), @"(?<=[.!?])\s+").Where(x => x.Length > 0).ToList();
+        return sentences.Count <= 2 ? text.Trim() : string.Join(" ", sentences.Take(2));
     }
 
     private async Task<List<OllamaModel>> CachedModelsAsync(CancellationToken ct)
@@ -451,11 +591,11 @@ public sealed class EngineerService
     }
 
     /// <summary>Message radio sans question (alerte du hub, consigne de l'ingénieur humain, intervention spontanée de l'IA).</summary>
-    public async Task<EngineerReply> SayAsync(string text, string from, CancellationToken ct, bool proactive = false, bool awaitingAnswer = false, string? category = null)
+    public async Task<EngineerReply> SayAsync(string text, string from, CancellationToken ct, bool proactive = false, bool awaitingAnswer = false, string? category = null, bool urgent = false)
     {
         var started = DateTime.UtcNow;
         string? audio = await TrySpeakAsync(text, ct);
-        var reply = new EngineerReply { Answer = text, From = from, AudioBase64 = _stopRequestedUtc > started ? null : audio, Proactive = proactive, AwaitingAnswer = awaitingAnswer, Kind = proactive ? "spontanée" : "message", Category = category ?? ExchangeCategorizer.FromText(text) ?? ExchangeCategorizer.RaceInfo };
+        var reply = new EngineerReply { Answer = text, From = from, AudioBase64 = _stopRequestedUtc > started ? null : audio, Proactive = proactive, AwaitingAnswer = awaitingAnswer, Urgent = urgent, Kind = proactive ? (urgent ? "alerte" : "spontanée") : "message", Category = category ?? ExchangeCategorizer.FromText(text) ?? ExchangeCategorizer.RaceInfo };
         await _hub.BroadcastAsync("radio", reply);
         Replied?.Invoke(reply);
         return reply;
@@ -523,7 +663,7 @@ public sealed class EngineerReply
     /// <summary>Vrai si le hub a remplacé (ou validé mot pour mot) la réponse du modèle par sa réponse préparée.</summary>
     public bool UsedPreparedAnswer { get; set; }
 
-    /// <summary>« calculée » (par le hub), « modèle » (formulée par l'IA), « commande », « spontanée », « message ».</summary>
+    /// <summary>« calculée » (par le hub), « modèle » (formulée par l'IA), « commande », « accusé » (réponse à venir), « spontanée », « alerte », « message ».</summary>
     public string? Kind { get; set; }
 
     /// <summary>L'IA a pris la parole d'elle-même.</summary>
@@ -537,6 +677,17 @@ public sealed class EngineerReply
 
     /// <summary>« règles » ou « défaut » (le carnet fait alors classer l'échange par le modèle).</summary>
     public string? CategorySource { get; set; }
+
+    /// <summary>Alerte de pilotage (limites de piste, usure brutale…) : dite tout de suite.</summary>
+    public bool Urgent { get; set; }
+
+    /// <summary>Réponse arrivée après « Copy, je reviens vers vous » ; InReplyTo rappelle la question.</summary>
+    public bool FollowUp { get; set; }
+
+    public string? InReplyTo { get; set; }
+
+    /// <summary>Spécialiste qui a répondu : « pneus », « stratégie », « voiture », « course ».</summary>
+    public string? Specialist { get; set; }
 
     public DateTime At { get; set; } = DateTime.Now;
 }

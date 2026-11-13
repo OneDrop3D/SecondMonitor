@@ -19,6 +19,9 @@ namespace SecondMonitor.Hub.Core.Ai
         /// <summary>Arrêt décidé avec le pilote (remplace l'arrêt conseillé tant qu'il n'est pas passé).</summary>
         public int? PlannedStopLap { get; set; }
 
+        /// <summary>Ce que le pilote a demandé pour le prochain arrêt (pneus, réparation, carburant).</summary>
+        public PitOrder PitPlan { get; set; }
+
         /// <summary>Décidé avec le pilote : finir sans s'arrêter.</summary>
         public bool NoStopPlanned { get; set; }
 
@@ -66,6 +69,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 _entries.Clear();
                 _pending = null;
                 PlannedStopLap = null;
+                PitPlan = null;
                 NoStopPlanned = false;
             }
 

@@ -72,6 +72,7 @@ namespace SecondMonitor.Hub.Core.Race
 
         public void Reset()
         {
+            _suspectSince.Clear();
             _previous.Clear();
             _pending = null;
             LastEvent = null;
@@ -83,6 +84,7 @@ namespace SecondMonitor.Hub.Core.Race
         public List<DamagePartDto> Update(DriverInfo player, double now, int laps, IReadOnlyList<(int Lap, double Time)> cleanLaps)
         {
             var parts = Read(player?.CarInfo);
+            Debounce(parts, player, now);
             foreach (DamagePartDto d in parts)
             {
                 _previous.TryGetValue(d.Key, out double before);
@@ -110,6 +112,45 @@ namespace SecondMonitor.Hub.Core.Race
             }
 
             return parts;
+        }
+
+        private readonly Dictionary<string, double> _suspectSince = new();
+
+        /// <summary>
+        /// Roue arrachée, crevaison : LMU les signale un instant en entrant au garage, en sortant des stands ou après un retour
+        /// au stand (toutes les roues d'un coup). On ne les retient que si elles durent 2 s, voiture en mouvement hors des stands,
+        /// et jamais quand les quatre roues sont touchées en même temps.
+        /// </summary>
+        private void Debounce(List<DamagePartDto> parts, DriverInfo player, double now)
+        {
+            static bool Wheel(string key) => key.StartsWith("wheel-", StringComparison.Ordinal) || key.StartsWith("puncture-", StringComparison.Ordinal);
+            var flagged = parts.Where(p => Wheel(p.Key) && p.Percent >= 50).ToList();
+            bool allFour = flagged.Count(p => p.Key.StartsWith("wheel-", StringComparison.Ordinal)) >= 4 || flagged.Count(p => p.Key.StartsWith("puncture-", StringComparison.Ordinal)) >= 4;
+            bool moving = player != null && !player.InPits && (player.Speed?.InKph ?? 0) > 10;
+            foreach (DamagePartDto p in parts.Where(p => Wheel(p.Key)))
+            {
+                if (p.Percent < 50 || allFour)
+                {
+                    _suspectSince.Remove(p.Key);
+                    if (allFour)
+                    {
+                        p.Percent = 0;
+                    }
+
+                    continue;
+                }
+
+                if (!_suspectSince.TryGetValue(p.Key, out double since))
+                {
+                    _suspectSince[p.Key] = since = now;
+                }
+
+                bool confirmed = _previous.TryGetValue(p.Key, out double already) && already >= 50;
+                if (!confirmed && (!moving || now - since < 2))
+                {
+                    p.Percent = 0; // pas encore sûr : ni alerte, ni affichage
+                }
+            }
         }
 
         public static string Label(string key) => Labels.TryGetValue(key, out string label) ? label : key;
