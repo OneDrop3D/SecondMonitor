@@ -34,8 +34,8 @@ namespace SecondMonitor.Hub.Core.Ai
         /// <summary>Le pilote attend : l'ingénieur réfléchit et reviendra (le pilote peut poser une autre question entre-temps).</summary>
         public static string Thinking(bool queued, bool english) =>
             english
-                ? queued ? "Copy, je finis la question d'avant et je reviens vers vous." : "Copy, je regarde ça et je reviens vers vous."
-                : queued ? "Bien reçu, je finis la question d'avant et je reviens vers vous." : "Bien reçu, je regarde ça et je reviens vers vous.";
+                ? queued ? "Copy, je finis la question d'avant et je reviens vers toi." : "Copy, je regarde ça et je reviens vers toi."
+                : queued ? "Bien reçu, je finis la question d'avant et je reviens vers toi." : "Bien reçu, je regarde ça et je reviens vers toi.";
 
         private static string LowerFirst(string s) =>
             s.Length > 1 && char.IsUpper(s[0]) && !char.IsUpper(s[1]) ? char.ToLowerInvariant(s[0]) + s[1..] : s;

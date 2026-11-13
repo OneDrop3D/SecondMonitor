@@ -42,7 +42,7 @@ namespace SecondMonitor.Hub.Core.Strategy
                 PitLoss = Math.Round(pitLoss ?? DefaultPitLoss, 1),
                 PitLossSource = pitLoss.HasValue ? $"mesurée sur {stops} arrêt{(stops > 1 ? "s" : string.Empty)}" : "estimée (aucun arrêt observé pour l'instant)",
                 FreshTyreGain = freshGain.HasValue ? Math.Round(freshGain.Value, 2) : null,
-                FreshTyreGainSource = fieldGain.HasValue ? $"mesuré sur {gainSamples} relais" : playerGain.HasValue ? "d'après votre dégradation" : "inconnu pour l'instant",
+                FreshTyreGainSource = fieldGain.HasValue ? $"mesuré sur {gainSamples} relais" : playerGain.HasValue ? "d'après ta dégradation" : "inconnu pour l'instant",
                 WarmupPenalty = warmup,
             };
 
@@ -87,8 +87,8 @@ namespace SecondMonitor.Hub.Core.Strategy
             if (d <= 0.05)
             {
                 cut.Text = d <= 0
-                    ? $"Undercut sur le numéro {rival.Number} ({N(gap, 1)} s devant) : non, même avec des pneus neufs vous seriez plus lent que lui de {N(-d, 2)} seconde par tour."
-                    : $"Undercut sur le numéro {rival.Number} ({N(gap, 1)} s devant) : non, les pneus neufs ne vous feraient gagner que {N(d, 2)} seconde par tour.";
+                    ? $"Undercut sur le numéro {rival.Number} ({N(gap, 1)} s devant) : non, même avec des pneus neufs tu serais plus lent que lui de {N(-d, 2)} seconde par tour."
+                    : $"Undercut sur le numéro {rival.Number} ({N(gap, 1)} s devant) : non, les pneus neufs ne te feraient gagner que {N(d, 2)} seconde par tour.";
                 return cut;
             }
 
@@ -96,10 +96,10 @@ namespace SecondMonitor.Hub.Core.Strategy
             cut.LapsNeeded = k;
             int? hisStopIn = rival.NextStop?.LapsUntil;
             cut.Feasible = k <= 2 || (hisStopIn is int h && h >= k);
-            string when = k <= 1 ? "même s'il s'arrête au tour suivant" : $"s'il reste dehors au moins {k} tours après vous";
+            string when = k <= 1 ? "même s'il s'arrête au tour suivant" : $"s'il reste dehors au moins {k} tours après toi";
             cut.Text = cut.Feasible
-                ? $"Undercut possible sur le numéro {rival.Number} ({N(gap, 1)} s devant) : en vous arrêtant avant lui, vous gagnez {N(d, 2)} s par tour avec des pneus neufs et passez devant {when}."
-                : $"Undercut difficile sur le numéro {rival.Number} ({N(gap, 1)} s devant) : il faudrait qu'il reste dehors {k} tours de plus que vous (gain {N(d, 2)} s par tour).";
+                ? $"Undercut possible sur le numéro {rival.Number} ({N(gap, 1)} s devant) : en t'arrêtant avant lui, tu gagnes {N(d, 2)} s par tour avec des pneus neufs et passe devant {when}."
+                : $"Undercut difficile sur le numéro {rival.Number} ({N(gap, 1)} s devant) : il faudrait qu'il reste dehors {k} tours de plus que toi (gain {N(d, 2)} s par tour).";
             return cut;
         }
 
@@ -119,7 +119,7 @@ namespace SecondMonitor.Hub.Core.Strategy
             cut.LapsNeeded = 1;
             cut.Feasible = gain1 > gap + PassMargin;
             cut.Text = cut.Feasible
-                ? $"Overcut possible sur le numéro {rival.Number} : s'il s'arrête avant vous, son tour de sortie sur pneus froids vous fait gagner {N(gain1, 1)} s, plus que les {N(gap, 1)} s d'écart. Restez dehors un tour de plus que lui."
+                ? $"Overcut possible sur le numéro {rival.Number} : s'il s'arrête avant toi, son tour de sortie sur pneus froids te fait gagner {N(gain1, 1)} s, plus que les {N(gap, 1)} s d'écart. Reste dehors un tour de plus que lui."
                 : $"Overcut sur le numéro {rival.Number} : non, ses pneus neufs vont plus vite ({N(d, 2)} s par tour) que ce qu'il perd au tour de sortie ({N(warmup, 1)} s).";
             return cut;
         }
@@ -144,8 +144,8 @@ namespace SecondMonitor.Hub.Core.Strategy
             cut.LapsNeeded = k;
             cut.Feasible = k <= 2;
             cut.Text = cut.Feasible
-                ? $"Menace d'undercut : le numéro {rival.Number} ({N(gap, 1)} s derrière) vous passe en {k} tour{(k > 1 ? "s" : string.Empty)} s'il s'arrête avant vous. Pour couvrir : rentrez le tour qui suit son arrêt."
-                : $"Faible menace d'undercut du numéro {rival.Number} ({N(gap, 1)} s derrière) : il lui faudrait {k} tours de pneus neufs avant votre arrêt.";
+                ? $"Menace d'undercut : le numéro {rival.Number} ({N(gap, 1)} s derrière) te passe en {k} tour{(k > 1 ? "s" : string.Empty)} s'il s'arrête avant toi. Pour couvrir : rentre le tour qui suit son arrêt."
+                : $"Faible menace d'undercut du numéro {rival.Number} ({N(gap, 1)} s derrière) : il lui faudrait {k} tours de pneus neufs avant ton arrêt.";
             return cut;
         }
 
@@ -175,7 +175,7 @@ namespace SecondMonitor.Hub.Core.Strategy
                 newAhead != null ? $"{N(r.AheadGap ?? 0, 1)} s derrière le numéro {newAhead.Number}" : null,
                 newBehind != null ? $"{N(r.BehindGap ?? 0, 1)} s devant le numéro {newBehind.Number}" : null,
             }.Where(x => x != null));
-            r.Text = $"Si vous rentrez maintenant, vous ressortez {pos}{(around.Length > 0 ? $", {around}" : string.Empty)}{(traffic > 0 ? $", avec {traffic} voiture(s) d'une autre catégorie tout près" : string.Empty)}.";
+            r.Text = $"Si tu rentres maintenant, tu ressors {pos}{(around.Length > 0 ? $", {around}" : string.Empty)}{(traffic > 0 ? $", avec {traffic} voiture(s) d'une autre catégorie tout près" : string.Empty)}.";
             return r;
         }
 

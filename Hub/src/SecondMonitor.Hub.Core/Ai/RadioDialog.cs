@@ -187,11 +187,11 @@ namespace SecondMonitor.Hub.Core.Ai
             }
             else if (Regex.IsMatch(t, @"\b(seche|sechante|ca seche|s asseche|trajectoire seche)\b"))
             {
-                result = new DialogReply($"Noté, la piste sèche de votre côté (humidité mesurée {snap?.Weather?.Wetness ?? 0} %). Je vous dis quand repasser en pneus secs.", "retour", ExchangeCategorizer.Strategy);
+                result = new DialogReply($"Noté, la piste sèche de ton côté (humidité mesurée {snap?.Weather?.Wetness ?? 0} %). Je te dis quand repasser en pneus secs.", "retour", ExchangeCategorizer.Strategy);
             }
             else if (Regex.IsMatch(t, @"\b(mouill\w*|humide|il pleut|pleut|gouttes|averse)\b"))
             {
-                result = new DialogReply($"Noté, piste mouillée de votre côté (humidité mesurée {snap?.Weather?.Wetness ?? 0} %). Je vous dis quand passer en pneus pluie.", "retour", ExchangeCategorizer.Strategy);
+                result = new DialogReply($"Noté, piste mouillée de ton côté (humidité mesurée {snap?.Weather?.Wetness ?? 0} %). Je te dis quand passer en pneus pluie.", "retour", ExchangeCategorizer.Strategy);
             }
             else if (Regex.IsMatch(t, @"\b(touche|abime\w*|degat\w*|casse\w*|crev\w*)\b"))
             {
@@ -216,7 +216,7 @@ namespace SecondMonitor.Hub.Core.Ai
             }
             else if (Regex.IsMatch(t, @"\b(trafic|drapeau bleu|retardataire)\b"))
             {
-                result = new DialogReply("Noté pour le trafic, je vous préviens des voitures proches.", "retour", ExchangeCategorizer.RaceInfo);
+                result = new DialogReply("Noté pour le trafic, je te préviens des voitures proches.", "retour", ExchangeCategorizer.RaceInfo);
             }
             else
             {

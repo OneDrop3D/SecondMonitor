@@ -41,7 +41,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
             foreach (DrivingEvent e in events.Where(e => e.Type == "départ"))
             {
-                lines.Add(new RadioLine(e.Detail == "moteur" ? "Moteur coupé : démarrez le moteur." : "Moteur prêt : passez la première.", "départ", false));
+                lines.Add(new RadioLine(e.Detail == "moteur" ? "Moteur coupé : démarre le moteur." : "Moteur prêt : passe la première.", "départ", false));
             }
 
             foreach (DrivingEvent e in events.Where(e => e.Type == "usure" && e.Spike != null))
@@ -55,7 +55,7 @@ namespace SecondMonitor.Hub.Core.Ai
         private static string Limits(DrivingEvent e, bool invalidated)
         {
             string where = e.Corner == null ? string.Empty : $" {e.Corner.ToLowerInvariant()}";
-            string what = e.Detail == "coupé" ? "coupé, levez un peu le pied" : "trop large";
+            string what = e.Detail == "coupé" ? "coupé, lève un peu le pied" : "trop large";
             string text = $"Track limits{where} : {what}.";
             if (invalidated)
             {
@@ -83,7 +83,7 @@ namespace SecondMonitor.Hub.Core.Ai
             string text = $"Usure anormale {Wheel(s.Wheel)} : plus {N(s.DeltaPct, 1)} % en {N(s.Seconds, 0)} secondes{where}{phase}. {Cap(cause)}.";
             if (proposal != null)
             {
-                text += $" Essayez : {proposal}.";
+                text += $" Essaie : {proposal}.";
             }
 
             return text + " Qu'est-ce qui s'est passé ?";

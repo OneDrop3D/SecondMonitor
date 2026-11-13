@@ -119,7 +119,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
             if (Regex.IsMatch(t, @"^(radio check|test radio|tu m entends|vous m entendez|allo)\b"))
             {
-                return "Radio check : je vous reçois cinq sur cinq.";
+                return "Radio check : je te reçois cinq sur cinq.";
             }
 
             return null;

@@ -33,7 +33,7 @@ public class StrategyTests
         var plan = _snap.Player.PitPlan;
         Assert.That(plan, Is.Not.Null);
         Assert.That(plan.PitLoss, Is.InRange(8, 120));
-        Assert.That(plan.RejoinNow.Text, Does.StartWith("Si vous rentrez maintenant, vous ressortez P"));
+        Assert.That(plan.RejoinNow.Text, Does.StartWith("Si tu rentres maintenant, tu ressors P"));
         TestContext.Out.WriteLine($"Perte {plan.PitLoss} s ({plan.PitLossSource}), pneus neufs {plan.FreshTyreGain} ({plan.FreshTyreGainSource})");
         TestContext.Out.WriteLine(plan.RejoinNow.Text);
         foreach (var c in plan.Cuts)

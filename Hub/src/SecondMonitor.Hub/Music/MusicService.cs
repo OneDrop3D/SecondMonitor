@@ -225,7 +225,7 @@ public sealed class MusicService
 
         if (!Settings.Current.Enabled)
         {
-            return intent.Explicit ? "La musique Deezer est désactivée. Activez-la dans les réglages, carte Musique." : null;
+            return intent.Explicit ? "La musique Deezer est désactivée. Active-la dans les réglages, carte Musique." : null;
         }
 
         if (test)
@@ -249,7 +249,7 @@ public sealed class MusicService
     {
         if (!Settings.Current.Enabled)
         {
-            return Remember("La musique Deezer est désactivée. Activez-la dans les réglages, carte Musique.");
+            return Remember("La musique Deezer est désactivée. Active-la dans les réglages, carte Musique.");
         }
 
         if ((intent.Action is MusicAction.Play or MusicAction.Flow or MusicAction.Open) && !SessionAllowed(out string? reason))
@@ -310,7 +310,7 @@ public sealed class MusicService
             {
                 if (NeedsLaunch(out string flowLink))
                 {
-                    return await OpenOrQueueAsync(flowLink, "Flow", ducked, ct, "Je lance Deezer avec votre Flow.");
+                    return await OpenOrQueueAsync(flowLink, "Flow", ducked, ct, "Je lance Deezer avec ton Flow.");
                 }
 
                 if (ducked)
@@ -332,13 +332,13 @@ public sealed class MusicService
                 if (after.Playing == false && state.Title == null)
                 {
                     // Rien à reprendre dans Deezer : on lance le Flow.
-                    return await OpenOrQueueAsync(FlowLink(), "votre Flow", false, ct, "Je lance votre Flow.");
+                    return await OpenOrQueueAsync(FlowLink(), "ton Flow", false, ct, "Je lance ton Flow.");
                 }
 
                 if (after.Playing == false)
                 {
                     return Player.Platform == "mac" && !s.MediaKeys
-                        ? "Deezer ne répond pas à la commande. Essayez les touches multimédia dans la carte Musique."
+                        ? "Deezer ne répond pas à la commande. Essaie les touches multimédia dans la carte Musique."
                         : "Deezer ne répond pas à la commande.";
                 }
 
@@ -366,7 +366,7 @@ public sealed class MusicService
             {
                 if (!Player.CanSetVolume)
                 {
-                    return "Sur Mac, je ne peux pas régler le volume de Deezer seul : utilisez le curseur de Deezer. Le volume de l'ordinateur changerait aussi ma voix.";
+                    return "Sur Mac, je ne peux pas régler le volume de Deezer seul : utilise le curseur de Deezer. Le volume de l'ordinateur changerait aussi ma voix.";
                 }
 
                 PlayerState state = await StateAsync(ct, fresh: true);
@@ -393,12 +393,12 @@ public sealed class MusicService
                 }
 
                 return LastOpened != null
-                    ? $"Je ne vois pas le titre exact sur cet ordinateur. Vous écoutez {LastOpened}."
+                    ? $"Je ne vois pas le titre exact sur cet ordinateur. Tu écoutes {LastOpened}."
                     : "Je ne vois pas le titre en cours sur cet ordinateur.";
             }
 
             case MusicAction.Flow:
-                return await OpenOrQueueAsync(FlowLink(), "votre Flow", ducked, ct, "Je lance votre Flow.");
+                return await OpenOrQueueAsync(FlowLink(), "ton Flow", ducked, ct, "Je lance ton Flow.");
 
             case MusicAction.Open when item != null:
             {

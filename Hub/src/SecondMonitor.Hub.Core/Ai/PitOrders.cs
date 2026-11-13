@@ -127,7 +127,7 @@ namespace SecondMonitor.Hub.Core.Ai
             string box = order.BoxNow ? "Copy, box ce tour." : "Copy, noté pour l'arrêt.";
             memory?.Add("pilote", "stand", $"demande pour l'arrêt :{list}".TrimEnd(), lap);
             return box + list + (snap?.Source?.Contains("LM Ultimate", System.StringComparison.OrdinalIgnoreCase) == true && parts.Count > 0
-                ? " Vérifiez le menu des stands avant l'entrée."
+                ? " Vérifie le menu des stands avant l'entrée."
                 : string.Empty);
         }
     }

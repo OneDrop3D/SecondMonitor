@@ -65,7 +65,7 @@ public class RadioTests
     public void Answers_UseClassStandings()
     {
         string position = RaceBriefing.Prepare(_snap, "Quelle est ma position ?", _extras).Suggestion;
-        Assert.That(position, Does.Contain("dans votre catégorie"));
+        Assert.That(position, Does.Contain("dans ta catégorie"));
         Assert.That(position, Does.Not.Contain("général"));
     }
 
@@ -81,7 +81,7 @@ public class RadioTests
     public void PitAnswer_GivesTime()
     {
         string pit = RaceBriefing.Prepare(_snap, "je boxe dans combien de temps", _extras).Suggestion;
-        Assert.That(pit, Does.Contain("Rentrez au stand").Or.Contain("Pas besoin"));
+        Assert.That(pit, Does.Contain("Rentre au stand").Or.Contain("Pas besoin"));
     }
 
     [TestCase("Merci.", "Copy")]
@@ -101,7 +101,7 @@ public class RadioTests
     [TestCase("You're welcome! If you have any more questions, feel free to ask.", true)]
     [TestCase("Le document ne mentionne pas de vitesse maximale.", true)]
     [TestCase("Le texte ne mentionne pas l'heure.", true)]
-    [TestCase("Rentrez au stand au tour 12.", false)]
+    [TestCase("Rentre au stand au tour 12.", false)]
     public void UnusableAnswers_AreDetected(string answer, bool unusable)
     {
         Assert.That(RadioCommands.IsUnusableAnswer(answer), Is.EqualTo(unusable));

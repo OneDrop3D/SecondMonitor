@@ -37,7 +37,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
             var cls = snap.Drivers.Where(d => d.ClassId == me.ClassId).OrderBy(d => d.ClassPosition).ToList();
             int pos = snap.IsMultiClass ? me.ClassPosition : me.Position;
-            string where = snap.IsMultiClass ? $"P{pos} dans votre catégorie" : $"P{pos}";
+            string where = snap.IsMultiClass ? $"P{pos} dans ta catégorie" : $"P{pos}";
             string moves = me.PositionsGained > 0 ? $", {me.PositionsGained} place{(me.PositionsGained > 1 ? "s" : string.Empty)} gagnée{(me.PositionsGained > 1 ? "s" : string.Empty)}"
                 : me.PositionsGained < 0 ? $", {-me.PositionsGained} place{(me.PositionsGained < -1 ? "s" : string.Empty)} perdue{(me.PositionsGained < -1 ? "s" : string.Empty)}" : string.Empty;
             string text = $"Drapeau à damier ! {where}{moves}.";

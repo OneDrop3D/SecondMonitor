@@ -68,53 +68,53 @@ namespace SecondMonitor.Hub.Core.Ai
 
             if (race && p?.LapsRemaining is double left && left <= 1.05)
             {
-                return h.ChargePct > 15 ? "Dernier tour : videz la batterie, déploiement maximum." : "Dernier tour : il reste peu de batterie, gardez-la pour la dernière ligne droite.";
+                return h.ChargePct > 15 ? "Dernier tour : vide la batterie, déploiement maximum." : "Dernier tour : il reste peu de batterie, garde-la pour la dernière ligne droite.";
             }
 
             if (snap.SessionType is "Qualification" && h.ChargePct < 90 && (p?.StintLaps ?? 0) == 0)
             {
-                return f1 ? "Tour de sortie : mode aucun pour recharger à fond avant le tour lancé." : "Tour de sortie : rechargez au maximum avant le tour lancé.";
+                return f1 ? "Tour de sortie : mode aucun pour recharger à fond avant le tour lancé." : "Tour de sortie : recharge au maximum avant le tour lancé.";
             }
 
             if (h.LastLapEmptyAt is double empty)
             {
                 string where = SegmentAt(speeds, empty)?.Name ?? $"{N(empty, 0)} m";
                 return f1
-                    ? $"Batterie vide au dernier tour vers {where.ToLowerInvariant()} : déployez moins tôt dans le tour pour en garder jusqu'à la ligne."
-                    : $"Batterie vide vers {where.ToLowerInvariant()} au dernier tour : levez le pied plus tôt avant les gros freinages pour récupérer davantage.";
+                    ? $"Batterie vide au dernier tour vers {where.ToLowerInvariant()} : déploie moins tôt dans le tour pour en garder jusqu'à la ligne."
+                    : $"Batterie vide vers {where.ToLowerInvariant()} au dernier tour : lève le pied plus tôt avant les gros freinages pour récupérer davantage.";
             }
 
             if (h.ChargePct < 20)
             {
                 return f1
-                    ? $"Batterie basse : mode aucun un tour pour recharger, et récoltez au freinage du {braking.ToLowerInvariant()}."
-                    : $"Batterie basse : levez le pied un peu plus tôt avant le {braking.ToLowerInvariant()} pour récupérer.";
+                    ? $"Batterie basse : mode aucun un tour pour recharger, et récolte au freinage du {braking.ToLowerInvariant()}."
+                    : $"Batterie basse : lève le pied un peu plus tôt avant le {braking.ToLowerInvariant()} pour récupérer.";
             }
 
             BattleDto ahead = p?.Battles?.FirstOrDefault(b => b.Side == "ahead");
             BattleDto behind = p?.Battles?.FirstOrDefault(b => b.Side == "behind");
             if (race && ahead?.Gap is double ga && ga <= 1.2 && h.ChargePct >= 40)
             {
-                return $"Attaque sur le numéro {ahead.Number} ({Sec(ga)}) : gardez la batterie pour la sortie du virage avant la {straight.ToLowerInvariant().Replace(" (principale)", " principale")}{(f1 ? ", mode overtake" : string.Empty)}.";
+                return $"Attaque sur le numéro {ahead.Number} ({Sec(ga)}) : garde la batterie pour la sortie du virage avant la {straight.ToLowerInvariant().Replace(" (principale)", " principale")}{(f1 ? ", mode overtake" : string.Empty)}.";
             }
 
             if (race && behind?.Gap is double gb && gb <= 1.0 && h.ChargePct >= 30)
             {
-                return $"Défense : le numéro {behind.Number} est à {Sec(gb)}, déployez en sortie des virages lents pour rester devant.";
+                return $"Défense : le numéro {behind.Number} est à {Sec(gb)}, déploie en sortie des virages lents pour rester devant.";
             }
 
             if (h.ChargePct > 90 && h.LastLapEndPct >= h.LastLapStartPct)
             {
-                return f1 ? $"Batterie pleine : vous pouvez déployer plus, mode moyen ou overtake dans la {straight.ToLowerInvariant().Replace(" (principale)", " principale")}." : "Batterie pleine : vous pouvez attaquer, elle se recharge bien.";
+                return f1 ? $"Batterie pleine : tu peux déployer plus, mode moyen ou overtake dans la {straight.ToLowerInvariant().Replace(" (principale)", " principale")}." : "Batterie pleine : tu peux attaquer, elle se recharge bien.";
             }
 
             if (h.LastLapStartPct is double s && h.LastLapEndPct is double e && e - s <= -10)
             {
                 double perLap = s - e;
-                return $"Vous videz {N(perLap, 0)} % par tour : à ce rythme, à vide dans {N(Math.Max(1, Math.Floor(h.ChargePct / perLap)), 0)} tours. {(f1 ? "Passez en mode moyen ou bas." : "Récupérez un peu plus au freinage.")}";
+                return $"Tu vides {N(perLap, 0)} % par tour : à ce rythme, à vide dans {N(Math.Max(1, Math.Floor(h.ChargePct / perLap)), 0)} tours. {(f1 ? "Passez en mode moyen ou bas." : "Récupérez un peu plus au freinage.")}";
             }
 
-            return "Gestion correcte, continuez comme ça.";
+            return "Gestion correcte, continue comme ça.";
         }
 
         /// <summary>« Je déploie où ? » : les plus longues lignes droites, et où récolter.</summary>
@@ -124,15 +124,15 @@ namespace SecondMonitor.Hub.Core.Ai
             var brakings = HeavyBrakings(speeds).Take(2).ToList();
             if (straights.Count == 0)
             {
-                return "Je n'ai pas encore le profil du circuit (il faut un tour complet) : déployez dans les plus longues lignes droites, récupérez dans les gros freinages.";
+                return "Je n'ai pas encore le profil du circuit (il faut un tour complet) : déploie dans les plus longues lignes droites, récupère dans les gros freinages.";
             }
 
             double lapLength = snap?.Track?.Length > 0 ? snap.Track.Length : speeds.Segments.Select(s => s.End).DefaultIfEmpty(0).Max();
             string deploy = string.Join(" et ", straights.Select(s => $"{Clean(s.Name)} ({N(Length(s, lapLength), 0)} m)"));
             string harvest = brakings.Count == 0 ? "dans les gros freinages" : "au freinage du " + string.Join(" et du ", brakings.Select(b => b.Name.ToLowerInvariant()));
             string text = h?.System == "LMU"
-                ? $"La batterie se vide en accélération : elle sert le plus dans {deploy}. Elle se recharge {harvest} ; levez le pied juste avant pour récupérer plus."
-                : $"Déployez dans {deploy}, en sortie des virages lents. Récoltez {harvest}.";
+                ? $"La batterie se vide en accélération : elle sert le plus dans {deploy}. Elle se recharge {harvest} ; lève le pied juste avant pour récupérer plus."
+                : $"Déploie dans {deploy}, en sortie des virages lents. Récolte {harvest}.";
             return text;
         }
 
@@ -150,34 +150,34 @@ namespace SecondMonitor.Hub.Core.Ai
             bool f1 = h.System == "F1";
             if (race && p.LapsRemaining is double left && left <= 1.05 && left > 0.3 && h.ChargePct > 25)
             {
-                return Info("ers-last", "Dernier tour : videz la batterie, déploiement maximum.", 100000, urgent: true);
+                return Info("ers-last", "Dernier tour : vide la batterie, déploiement maximum.", 100000, urgent: true);
             }
 
             BattleDto ahead = p.Battles?.FirstOrDefault(b => b.Side == "ahead");
             if (race && ahead?.Gap is double ga && ga <= 1.0 && h.ChargePct >= 50)
             {
-                return Info($"ers-attack-{ahead.Id}", $"Le numéro {ahead.Number} est à {Sec(ga)} : gardez la batterie pour la ligne droite principale{(f1 ? ", mode overtake" : string.Empty)}.", 300);
+                return Info($"ers-attack-{ahead.Id}", $"Le numéro {ahead.Number} est à {Sec(ga)} : garde la batterie pour la ligne droite principale{(f1 ? ", mode overtake" : string.Empty)}.", 300);
             }
 
             BattleDto behind = p.Battles?.FirstOrDefault(b => b.Side == "behind");
             if (race && behind?.Gap is double gb && gb <= 0.8 && h.ChargePct >= 40)
             {
-                return Info($"ers-defend-{behind.Id}", $"Le numéro {behind.Number} est à {Sec(gb)} derrière : déployez en sortie des virages lents pour le garder derrière.", 300);
+                return Info($"ers-defend-{behind.Id}", $"Le numéro {behind.Number} est à {Sec(gb)} derrière : déploie en sortie des virages lents pour le garder derrière.", 300);
             }
 
             if (race && h.ChargePct < 12)
             {
-                return Info("ers-low", f1 ? $"Batterie à {N(h.ChargePct, 0)} % : mode aucun un tour pour recharger." : $"Batterie à {N(h.ChargePct, 0)} % : levez le pied un peu plus tôt avant les freinages pour la recharger.", 300);
+                return Info("ers-low", f1 ? $"Batterie à {N(h.ChargePct, 0)} % : mode aucun un tour pour recharger." : $"Batterie à {N(h.ChargePct, 0)} % : lève le pied un peu plus tôt avant les freinages pour la recharger.", 300);
             }
 
             if (h.LastLapEmptyAt.HasValue && me.Laps >= 1)
             {
-                return Info($"ers-empty-{me.Laps}", f1 ? "Batterie vide avant la fin du dernier tour : déployez un peu moins tôt pour en garder jusqu'à la ligne." : "Batterie vide avant la fin du dernier tour : récupérez davantage au freinage.", 400);
+                return Info($"ers-empty-{me.Laps}", f1 ? "Batterie vide avant la fin du dernier tour : déploie un peu moins tôt pour en garder jusqu'à la ligne." : "Batterie vide avant la fin du dernier tour : récupère davantage au freinage.", 400);
             }
 
             if (snap.SessionType == "Qualification" && p.StintLaps == 0 && h.ChargePct < 80 && me.Speed > 40)
             {
-                return Info($"ers-outlap-{me.Laps}", "Tour de sortie : rechargez la batterie à fond avant le tour lancé.", 600);
+                return Info($"ers-outlap-{me.Laps}", "Tour de sortie : recharge la batterie à fond avant le tour lancé.", 600);
             }
 
             return null;

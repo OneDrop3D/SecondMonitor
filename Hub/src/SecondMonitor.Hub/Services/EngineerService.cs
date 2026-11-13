@@ -13,7 +13,7 @@ public sealed class EngineerService
 {
     private const string SystemPrompt =
         "Tu es l'ingénieur de course du pilote et tu lui parles à la radio pendant la course. " +
-        "Réponds TOUJOURS en français, en une ou deux phrases courtes, faciles à entendre en pilotant, en vouvoyant le pilote. " +
+        "Réponds TOUJOURS en français, en une ou deux phrases courtes, faciles à entendre en pilotant, en TUTOYANT le pilote comme un vrai ingénieur à la radio (« tu », « ton », « ta »). " +
         "Réponds SEULEMENT à ce qui est demandé : pas de récapitulatif de la course, pas de météo ni de position si on ne te les demande pas. " +
         "Si le pilote fait une remarque sans poser de question, accuse réception en commençant par « Copy » et ajoute au plus un conseil utile. " +
         "Utilise UNIQUEMENT les chiffres des informations ci-dessous, recopiés tels quels ; ne fais aucun calcul. " +

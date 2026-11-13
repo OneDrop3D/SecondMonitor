@@ -97,11 +97,11 @@ namespace SecondMonitor.Hub.Core.Ai
 
             return s.Phase switch
             {
-                "sortie" when rear => ("patinage à la réaccélération", TcUp(c, ctx) ?? "dosez l'accélérateur plus progressivement"),
-                "sortie" => ("l'avant glisse à la réaccélération", "remettez les gaz plus tard, roues plus droites"),
-                "freinage" or "entrée" when !rear => ("blocage de l'avant au freinage", BiasBack(c) ?? (hasAbs ? AbsUp(c) : null) ?? "freinez un peu plus tôt et relâchez progressivement"),
-                "freinage" or "entrée" => ("l'arrière bloque ou glisse au freinage", BiasForward(c, Category(ctx)) ?? "freinez plus droit avant de tourner"),
-                "milieu" when rear => ("survirage au milieu du virage", c?.RearAntiRollMax > 0 && c.RearAntiRoll > 1 ? $"barre antiroulis arrière de {c.RearAntiRoll} à {c.RearAntiRoll - 1}" : "moins d'angle de volant, laissez rouler"),
+                "sortie" when rear => ("patinage à la réaccélération", TcUp(c, ctx) ?? "dose l'accélérateur plus progressivement"),
+                "sortie" => ("l'avant glisse à la réaccélération", "remets les gaz plus tard, roues plus droites"),
+                "freinage" or "entrée" when !rear => ("blocage de l'avant au freinage", BiasBack(c) ?? (hasAbs ? AbsUp(c) : null) ?? "freine un peu plus tôt et relâche progressivement"),
+                "freinage" or "entrée" => ("l'arrière bloque ou glisse au freinage", BiasForward(c, Category(ctx)) ?? "freine plus droit avant de tourner"),
+                "milieu" when rear => ("survirage au milieu du virage", c?.RearAntiRollMax > 0 && c.RearAntiRoll > 1 ? $"barre antiroulis arrière de {c.RearAntiRoll} à {c.RearAntiRoll - 1}" : "moins d'angle de volant, laisse rouler"),
                 "milieu" => ("sous-virage au milieu du virage, l'avant frotte", c?.FrontAntiRollMax > 0 && c.FrontAntiRoll > 1 ? $"barre antiroulis avant de {c.FrontAntiRoll} à {c.FrontAntiRoll - 1}" : "moins de vitesse d'entrée et moins de volant"),
                 _ => ("glissade en ligne droite ou passage sur un vibreur", null),
             };
@@ -118,7 +118,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
                 return c.TcCut is int cut && c.TcCutMax is int cutMax && cut < cutMax
                     ? $"TC déjà au maximum : coupure TC de {cut} à {cut + 1}"
-                    : "TC déjà au maximum : dosez l'accélérateur";
+                    : "TC déjà au maximum : dose l'accélérateur";
             }
 
             return ctx?.HasTc == true ? "un cran de TC en plus" : null;

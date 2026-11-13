@@ -412,8 +412,8 @@ namespace SecondMonitor.Hub.Core.Ai
             {
                 string gained = me.PositionsGained > 0 ? $", {me.PositionsGained} place{(me.PositionsGained > 1 ? "s" : string.Empty)} gagnée{(me.PositionsGained > 1 ? "s" : string.Empty)} depuis le départ"
                     : me.PositionsGained < 0 ? $", {-me.PositionsGained} place{(me.PositionsGained < -1 ? "s" : string.Empty)} perdue{(me.PositionsGained < -1 ? "s" : string.Empty)} depuis le départ" : string.Empty;
-                Add(Topic.Position, alone ? "Vous êtes seul en piste dans votre catégorie : pas de classement à suivre."
-                    : snap.IsMultiClass ? $"Vous êtes P{me.ClassPosition} dans votre catégorie ({me.ClassName}){gained}." : $"Vous êtes P{me.Position}{gained}.");
+                Add(Topic.Position, alone ? "Tu es seul en piste dans ta catégorie : pas de classement à suivre."
+                    : snap.IsMultiClass ? $"Tu es P{me.ClassPosition} dans ta catégorie ({me.ClassName}){gained}." : $"Tu es P{me.Position}{gained}.");
 
                 var classmates = snap.Drivers.Where(d => d.ClassId == me.ClassId).ToList();
                 int idx = classmates.IndexOf(me);
@@ -422,7 +422,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
                 if (alone)
                 {
-                    Add(Topic.Gap, "Vous êtes seul en piste dans votre catégorie : pas d'écart à donner.");
+                    Add(Topic.Gap, "Tu es seul en piste dans ta catégorie : pas d'écart à donner.");
                 }
                 else if (aheadInClass != null)
                 {
@@ -430,7 +430,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 }
                 else
                 {
-                    Add(Topic.Gap, snap.IsMultiClass ? "Personne devant vous dans votre catégorie : vous êtes en tête." : "Vous êtes en tête, personne devant.", Side.Ahead);
+                    Add(Topic.Gap, snap.IsMultiClass ? "Personne devant toi dans ta catégorie : tu es en tête." : "Tu es en tête, personne devant.", Side.Ahead);
                 }
 
                 if (alone)
@@ -442,7 +442,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 }
                 else
                 {
-                    Add(Topic.Gap, "Personne derrière vous dans votre catégorie.", Side.Behind);
+                    Add(Topic.Gap, "Personne derrière toi dans ta catégorie.", Side.Behind);
                 }
 
                 var onTrack = snap.Drivers.Where(d => !d.IsPlayer && !d.InPits && d.GapToPlayer.HasValue).ToList();
@@ -462,19 +462,19 @@ namespace SecondMonitor.Hub.Core.Ai
                 DriverRow classLeader = classmates.FirstOrDefault();
                 if (classLeader != null && classLeader != me)
                 {
-                    Add(Topic.Position, $"Leader de votre catégorie : numéro {classLeader.Number} {classLeader.Name}, {GapText(me.GapToClassLeader, me.GapToClassLeaderLaps)} devant vous.");
+                    Add(Topic.Position, $"Leader de ta catégorie : numéro {classLeader.Number} {classLeader.Name}, {GapText(me.GapToClassLeader, me.GapToClassLeaderLaps)} devant toi.");
                 }
 
                 if (snap.IsMultiClass)
                 {
-                    Add(Topic.Position, $"Au classement général (toutes catégories), vous êtes P{me.Position}.");
+                    Add(Topic.Position, $"Au classement général (toutes catégories), tu es P{me.Position}.");
                 }
 
                 foreach (var (rival, side, label) in new[] { (aheadInClass, Side.Ahead, "devant"), (behindInClass, Side.Behind, "derrière") })
                 {
                     if (rival == null)
                     {
-                        Add(Topic.Opponents, side == Side.Ahead ? "Personne devant vous dans votre catégorie : vous êtes en tête." : "Personne derrière vous dans votre catégorie.", side);
+                        Add(Topic.Opponents, side == Side.Ahead ? "Personne devant toi dans ta catégorie : tu es en tête." : "Personne derrière toi dans ta catégorie.", side);
                         continue;
                     }
 
@@ -494,7 +494,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 int? planned = extras.Memory?.PlannedStopLap > me?.Laps ? extras.Memory.PlannedStopLap : null;
                 if (extras.Memory?.NoStopPlanned == true && me != null)
                 {
-                    Add(Topic.Pit, "Pas d'arrêt prévu : on va au bout, comme décidé ensemble. Surveillez les pneus.");
+                    Add(Topic.Pit, "Pas d'arrêt prévu : on va au bout, comme décidé ensemble. Surveille les pneus.");
                 }
                 else if ((planned ?? p.RecommendedStopLap).HasValue && me != null)
                 {
@@ -503,11 +503,11 @@ namespace SecondMonitor.Hub.Core.Ai
                     string when = inLaps <= 1 ? "ce tour-ci, box box" : $"dans {inLaps} tours";
                     string time = p.AverageLap is double avg && inLaps > 1 ? $", environ {Duration(Math.Max(0, inLaps - me.LapFraction) * avg)}" : string.Empty;
                     string why = planned.HasValue ? "comme décidé ensemble (relais allongé)" : Because(p.RecommendedStopReason);
-                    Add(Topic.Pit, $"Rentrez au stand au tour {stop}, {when}{time} : {why}.{Load(p)}");
+                    Add(Topic.Pit, $"Rentre au stand au tour {stop}, {when}{time} : {why}.{Load(p)}");
                 }
                 else if (snap.SessionType == "Race" && p.Fuel?.Status == "ok" && (p.Energy == null || p.Energy.Status == "ok"))
                 {
-                    Add(Topic.Pit, "Pas besoin de rentrer au stand : vous avez de quoi finir.");
+                    Add(Topic.Pit, "Pas besoin de rentrer au stand : tu as de quoi finir.");
                 }
                 else if (snap.SessionType == "Race")
                 {
@@ -518,7 +518,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 {
                     if (p.Fuel.PerLap.HasValue)
                     {
-                        string fuel = $"Il vous reste {N(p.Fuel.LapsLeft ?? 0, 1)} tours d'essence ({N(p.Fuel.Remaining, 1)} L, {N(p.Fuel.PerLap.Value, 2)} L/tour).";
+                        string fuel = $"Il te reste {N(p.Fuel.LapsLeft ?? 0, 1)} tours d'essence ({N(p.Fuel.Remaining, 1)} L, {N(p.Fuel.PerLap.Value, 2)} L/tour).";
                         if (p.Fuel.ToAdd <= 0)
                         {
                             fuel += " Assez pour finir.";
@@ -534,14 +534,14 @@ namespace SecondMonitor.Hub.Core.Ai
                     }
                     else
                     {
-                        Add(Topic.Fuel, $"Il vous reste {N(p.Fuel.Remaining, 1)} L ; consommation en cours de calcul, encore un tour.");
+                        Add(Topic.Fuel, $"Il te reste {N(p.Fuel.Remaining, 1)} L ; consommation en cours de calcul, encore un tour.");
                     }
                 }
 
                 if (p.Energy != null)
                 {
                     string e = p.Energy.PerLapPct.HasValue
-                        ? $"Il vous reste {N(p.Energy.LapsLeft ?? 0, 1)} tours d'énergie virtuelle ({N(p.Energy.RemainingPct, 0)} %, {N(p.Energy.PerLapPct.Value, 1)} %/tour)."
+                        ? $"Il te reste {N(p.Energy.LapsLeft ?? 0, 1)} tours d'énergie virtuelle ({N(p.Energy.RemainingPct, 0)} %, {N(p.Energy.PerLapPct.Value, 1)} %/tour)."
                         : $"Énergie virtuelle : {N(p.Energy.RemainingPct, 0)} % ; consommation en cours de calcul.";
                     Add(Topic.Energy, e);
                     if (p.Energy.LapsLeft is double veLaps && p.Fuel?.LapsLeft is double fuelLaps)
@@ -740,7 +740,7 @@ namespace SecondMonitor.Hub.Core.Ai
         {
             if (c == null)
             {
-                add(Topic.Controls, "Le jeu n'envoie pas les réglages de la voiture (répartition, TC, cartographie) : regardez l'écran du volant.", null);
+                add(Topic.Controls, "Le jeu n'envoie pas les réglages de la voiture (répartition, TC, cartographie) : regarde l'écran du volant.", null);
                 return;
             }
 
@@ -884,12 +884,12 @@ namespace SecondMonitor.Hub.Core.Ai
             double? mine = me.PaceLast3 ?? p?.AverageLap ?? me.LastLap;
             if (mine is not double myPace)
             {
-                add(Topic.Pace, "Pas encore de tour complet pour calculer votre rythme : encore un tour.", Side.None, null);
+                add(Topic.Pace, "Pas encore de tour complet pour calculer ton rythme : encore un tour.", Side.None, null);
                 return;
             }
 
             string deg = p?.Degradation is double dg && Math.Abs(dg) >= 0.05 ? (dg > 0 ? $", en baisse de {N(dg, 2)} s par tour" : $", en hausse de {N(-dg, 2)} s par tour") : string.Empty;
-            add(Topic.Pace, $"Votre rythme est de {Lap(myPace, 1)} (meilleur tour {Lap(me.BestLap)}){deg}.", Side.None, null);
+            add(Topic.Pace, $"Ton rythme est de {Lap(myPace, 1)} (meilleur tour {Lap(me.BestLap)}){deg}.", Side.None, null);
 
             var cls = snap.Drivers.Where(d => d.ClassId == me.ClassId && d.FinishStatus is not ("Dnf" or "Dq")).OrderBy(d => d.ClassPosition).ToList();
             if (snap.SessionType != "Race")
@@ -897,13 +897,13 @@ namespace SecondMonitor.Hub.Core.Ai
                 DriverRow best = cls.Where(d => d.BestLap > 0).OrderBy(d => d.BestLap).FirstOrDefault();
                 if (best != null && me.BestLap > 0 && best.Id != me.Id)
                 {
-                    add(Topic.Pace, $"Meilleur tour de la catégorie : {Lap(best.BestLap)} par le numéro {best.Number}, vous êtes à {Sec(me.BestLap.Value - best.BestLap.Value)}.", Side.None, "objectif-devant");
+                    add(Topic.Pace, $"Meilleur tour de la catégorie : {Lap(best.BestLap)} par le numéro {best.Number}, tu es à {Sec(me.BestLap.Value - best.BestLap.Value)}.", Side.None, "objectif-devant");
                 }
 
                 var ms = extras.MicroSectors?.Drivers.FirstOrDefault(d => d.Id == me.Id);
                 if (ms?.TheoreticalBest is double theo && me.BestLap > theo)
                 {
-                    add(Topic.Pace, $"Meilleur tour théorique (vos meilleurs morceaux) : {Lap(theo)}, soit {Sec(me.BestLap.Value - theo)} à gagner.", Side.None, "objectif-gagner");
+                    add(Topic.Pace, $"Meilleur tour théorique (tes meilleurs morceaux) : {Lap(theo)}, soit {Sec(me.BestLap.Value - theo)} à gagner.", Side.None, "objectif-gagner");
                 }
 
                 return;
@@ -921,12 +921,12 @@ namespace SecondMonitor.Hub.Core.Ai
                 DriverRow next = cls.ElementAtOrDefault(1);
                 if (next?.PaceLast3 is double theirs && next.GapToPlayer is double g && g > 0)
                 {
-                    string keep = lapsLeft is double ll && ll >= 1 ? $" Pour rester devant, ne tournez pas plus lentement que {Lap(theirs + (g / ll), 1)}." : string.Empty;
-                    add(Topic.Pace, $"Vous menez de {Sec(g)} sur le numéro {next.Number}, qui tourne en {Lap(theirs, 1)}.{keep}", Side.None, "objectif-devant");
+                    string keep = lapsLeft is double ll && ll >= 1 ? $" Pour rester devant, ne tourne pas plus lentement que {Lap(theirs + (g / ll), 1)}." : string.Empty;
+                    add(Topic.Pace, $"Tu mènes de {Sec(g)} sur le numéro {next.Number}, qui tourne en {Lap(theirs, 1)}.{keep}", Side.None, "objectif-devant");
                 }
                 else
                 {
-                    add(Topic.Pace, "Vous menez : gardez ce rythme.", Side.None, "objectif-devant");
+                    add(Topic.Pace, "Tu mènes : garde ce rythme.", Side.None, "objectif-devant");
                 }
 
                 return;
@@ -946,12 +946,12 @@ namespace SecondMonitor.Hub.Core.Ai
                 }
 
                 string now = theirs > myPace + 0.05
-                    ? $" Vous lui reprenez déjà {Sec(theirs - myPace)} par tour."
-                    : theirs < myPace - 0.05 ? $" Pour l'instant il vous reprend {Sec(myPace - theirs)} par tour." : " Même rythme pour l'instant.";
+                    ? $" Tu lui reprends déjà {Sec(theirs - myPace)} par tour."
+                    : theirs < myPace - 0.05 ? $" Pour l'instant il te reprend {Sec(myPace - theirs)} par tour." : " Même rythme pour l'instant.";
                 if (lapsLeft is double ll && ll >= 1)
                 {
                     double need = gap / ll;
-                    add(Topic.Pace, $"{goal} (numéro {rival.Number}, {Sec(gap)}) en {N(Math.Floor(ll), 0)} tours : tournez en {Lap(theirs - need, 1)}, {Sec(need)} par tour plus vite que lui.{now}", Side.None, tag);
+                    add(Topic.Pace, $"{goal} (numéro {rival.Number}, {Sec(gap)}) en {N(Math.Floor(ll), 0)} tours : tourne en {Lap(theirs - need, 1)}, {Sec(need)} par tour plus vite que lui.{now}", Side.None, tag);
                 }
                 else
                 {
@@ -960,7 +960,7 @@ namespace SecondMonitor.Hub.Core.Ai
             }
 
             // Deuxième : rattraper la voiture devant, c'est aussi gagner.
-            Target(cls[idx - 1], idx == 1 ? "Pour gagner, rattrapez le leader" : "Pour rattraper la voiture devant", idx == 1 ? "objectif-gagner" : "objectif-devant");
+            Target(cls[idx - 1], idx == 1 ? "Pour gagner, rattrape le leader" : "Pour rattraper la voiture devant", idx == 1 ? "objectif-gagner" : "objectif-devant");
             if (idx > 1)
             {
                 Target(cls[0], "Pour gagner", "objectif-gagner");
@@ -1010,7 +1010,7 @@ namespace SecondMonitor.Hub.Core.Ai
             }
 
             string when = laps < 1 ? "dès ce tour" : $"dans environ {N(Math.Ceiling(laps), 0)} tours";
-            return b.Side == "ahead" ? $", dans ses roues {when}" : $", dans vos roues {when}";
+            return b.Side == "ahead" ? $", dans ses roues {when}" : $", dans tes roues {when}";
         }
 
         private static string Stops(int n) => n == 0 ? "aucun arrêt" : n == 1 ? "un arrêt" : $"{n} arrêts";
@@ -1032,10 +1032,10 @@ namespace SecondMonitor.Hub.Core.Ai
 
             if (otherAhead)
             {
-                return diff > 0 ? $" ; vous lui reprenez {Sec(diff)} par tour" : $" ; il s'échappe de {Sec(-diff)} par tour";
+                return diff > 0 ? $" ; tu lui reprends {Sec(diff)} par tour" : $" ; il s'échappe de {Sec(-diff)} par tour";
             }
 
-            return diff < 0 ? $" ; il revient de {Sec(-diff)} par tour" : $" ; vous le distancez de {Sec(diff)} par tour";
+            return diff < 0 ? $" ; il revient de {Sec(-diff)} par tour" : $" ; tu le distances de {Sec(diff)} par tour";
         }
 
         private static string GapText(double? seconds, int laps) => laps > 0 ? $"{laps} tour{(laps > 1 ? "s" : string.Empty)}" : GapSecs(seconds ?? double.NaN);
@@ -1048,7 +1048,7 @@ namespace SecondMonitor.Hub.Core.Ai
             DriverMicroSectorsDto mine = ms?.Drivers.FirstOrDefault(d => d.Id == me.Id);
             if (mine == null || !ms.ClassBest.TryGetValue(me.ClassId ?? string.Empty, out double?[] classBest))
             {
-                add(Topic.Performance, "Pas encore assez de tours pour comparer vos secteurs : il en faut deux complets.");
+                add(Topic.Performance, "Pas encore assez de tours pour comparer tes secteurs : il en faut deux complets.");
                 return;
             }
 
@@ -1061,11 +1061,11 @@ namespace SecondMonitor.Hub.Core.Ai
                     .ToList();
                 var worst = own.OrderByDescending(l => l.Loss).Take(2).Where(l => l.Loss > 0.05).ToList();
                 add(Topic.Performance, worst.Count == 0
-                    ? "Dernier tour au niveau de vos meilleurs micro-secteurs partout."
-                    : $"Sur le dernier tour, vous perdez le plus {string.Join(" et ", worst.Select(l => $"au micro-secteur {l.Index + 1}{Near(l.Index, ms, extras.Speeds)} ({Sec(l.Loss)})"))} par rapport à vos meilleurs passages.");
+                    ? "Dernier tour au niveau de tes meilleurs micro-secteurs partout."
+                    : $"Sur le dernier tour, tu perds le plus {string.Join(" et ", worst.Select(l => $"au micro-secteur {l.Index + 1}{Near(l.Index, ms, extras.Speeds)} ({Sec(l.Loss)})"))} par rapport à tes meilleurs passages.");
                 if (mine.TheoreticalBest.HasValue && me.BestLap.HasValue && me.BestLap - mine.TheoreticalBest > 0.05)
                 {
-                    add(Topic.Performance, $"Tour idéal (vos meilleurs morceaux) : {Lap(mine.TheoreticalBest)}, {Sec(me.BestLap.Value - mine.TheoreticalBest.Value)} sous votre meilleur tour.");
+                    add(Topic.Performance, $"Tour idéal (tes meilleurs morceaux) : {Lap(mine.TheoreticalBest)}, {Sec(me.BestLap.Value - mine.TheoreticalBest.Value)} sous ton meilleur tour.");
                 }
 
                 return;
@@ -1077,7 +1077,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 .ToList();
             if (losses.Count < ms.Count / 2)
             {
-                add(Topic.Performance, "Pas encore assez de tours pour comparer vos secteurs : il en faut deux complets.");
+                add(Topic.Performance, "Pas encore assez de tours pour comparer tes secteurs : il en faut deux complets.");
                 return;
             }
 
@@ -1085,17 +1085,17 @@ namespace SecondMonitor.Hub.Core.Ai
             var top = losses.OrderByDescending(l => l.Loss).Take(2).Where(l => l.Loss > 0.03).ToList();
             if (top.Count == 0)
             {
-                add(Topic.Performance, "Vous êtes au niveau des meilleurs de votre catégorie sur tout le tour.");
+                add(Topic.Performance, "Tu es au niveau des meilleurs de ta catégorie sur tout le tour.");
             }
             else
             {
                 string where = string.Join(" et ", top.Select(l => $"au micro-secteur {l.Index + 1}{Near(l.Index, ms, extras.Speeds)} ({Sec(l.Loss)})"));
-                add(Topic.Performance, $"Vous perdez le plus {where}. Total : {Sec(total)} sur un tour idéal de la catégorie.");
+                add(Topic.Performance, $"Tu perds le plus {where}. Total : {Sec(total)} sur un tour idéal de la catégorie.");
             }
 
             if (mine.TheoreticalBest.HasValue && me.BestLap.HasValue && me.BestLap - mine.TheoreticalBest > 0.05)
             {
-                add(Topic.Performance, $"En enchaînant vos meilleurs secteurs : {Sec(me.BestLap.Value - mine.TheoreticalBest.Value)} de mieux sur votre meilleur tour.");
+                add(Topic.Performance, $"En enchaînant tes meilleurs secteurs : {Sec(me.BestLap.Value - mine.TheoreticalBest.Value)} de mieux sur ton meilleur tour.");
             }
         }
 
@@ -1124,15 +1124,15 @@ namespace SecondMonitor.Hub.Core.Ai
             {
                 text = wet < threshold / 2 && rain == 0
                     ? $"La piste sèche ({wet} % d'humidité) : on peut repasser en pneus secs."
-                    : $"Restez en pneus pluie : piste mouillée à {wet} %, pluie à {rain} %.";
+                    : $"Reste en pneus pluie : piste mouillée à {wet} %, pluie à {rain} %.";
             }
             else if (wet >= threshold)
             {
-                text = $"Passez en pneus pluie : piste mouillée à {wet} %, au-dessus du seuil de {threshold} %.";
+                text = $"Passe en pneus pluie : piste mouillée à {wet} %, au-dessus du seuil de {threshold} %.";
             }
             else if (rain == 0 && wet == 0)
             {
-                text = "Pas de pluie : restez en pneus secs.";
+                text = "Pas de pluie : reste en pneus secs.";
             }
             else
             {
