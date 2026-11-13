@@ -22,6 +22,9 @@ namespace SecondMonitor.Hub.Core.Ai
         /// <summary>Ce que le pilote a demandé pour le prochain arrêt (pneus, réparation, carburant).</summary>
         public PitOrder PitPlan { get; set; }
 
+        /// <summary>L'ingénieur a déjà proposé de régler lui-même le menu des stands pendant cette session.</summary>
+        public bool PitAutoAsked { get; set; }
+
         /// <summary>Décidé avec le pilote : finir sans s'arrêter.</summary>
         public bool NoStopPlanned { get; set; }
 
@@ -70,6 +73,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 _pending = null;
                 PlannedStopLap = null;
                 PitPlan = null;
+                PitAutoAsked = false;
                 NoStopPlanned = false;
             }
 

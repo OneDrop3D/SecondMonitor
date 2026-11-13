@@ -60,6 +60,19 @@ public sealed class EngineerService
         _hub = hub;
         Memory = memory;
         _logger = logger;
+        // Le collecteur a réglé (ou lu) le menu des stands de Le Mans Ultimate : on le dit à la radio.
+        hub.PitMenuResult += r => _ = Task.Run(async () =>
+        {
+            try
+            {
+                string text = r.Test ? $"Test du menu des stands : {r.Text}" : (r.Ok ? "Copy. " : "Attention : ") + r.Text;
+                await SayAsync(text, "ingénieur IA", CancellationToken.None, category: ExchangeCategorizer.Strategy);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Résultat du menu des stands non dit");
+            }
+        });
         engine.SessionReset += () =>
         {
             lock (_history)
@@ -201,6 +214,28 @@ public sealed class EngineerService
         RaceMemory memory = prep.Memory;
         CarContext car = CarContext.From(snapshot, ai.WetThresholdPct);
 
+        // Réponse à « Je peux remplir le menu des stands moi-même. Je l'active ? »
+        if (!test && memory.Pending()?.Topic == "stand-auto" && RadioCommands.YesNo(question) is bool accept && RadioCommands.Normalize(question).Split(' ').Length <= 10)
+        {
+            memory.ClearPending();
+            prep.Kind = "commande";
+            prep.Category = ExchangeCategorizer.Strategy;
+            if (accept)
+            {
+                _settings.Update(s => s.Ai.LmuPitMenu = true);
+                bool sent = memory.PitPlan is { IsEmpty: false } plan && await SendPitMenuAsync(plan, snapshot, ct);
+                memory.Add("pilote", "stand", "menu des stands réglé par l'ingénieur : accepté", prep.Lap);
+                prep.Answer = sent ? "Copy, je remplis le menu des stands à chaque demande. Je règle celui-ci." : "Copy, je remplirai le menu des stands à chaque demande.";
+            }
+            else
+            {
+                memory.Add("pilote", "stand", "menu des stands réglé par l'ingénieur : refusé", prep.Lap);
+                prep.Answer = "Copy, tu gardes la main sur le menu des stands.";
+            }
+
+            return prep;
+        }
+
         // Suites de conversation (« oui », « non », « autre chose ? ») avant les politesses : « ok » répond à la proposition.
         DialogReply? dialog = RadioDialog.FollowUp(question, memory, car, prep.Lap);
         string? answer = dialog?.Text ?? await HandleCommandAsync(question, test, prep.Lap, ct);
@@ -210,6 +245,25 @@ public sealed class EngineerService
             prep.Answer = PitOrders.Confirm(order, memory, snapshot, prep.Lap);
             prep.Kind = "commande";
             prep.Category = ExchangeCategorizer.Strategy;
+            bool lmu = snapshot.Source?.Contains("LM Ultimate", StringComparison.OrdinalIgnoreCase) == true;
+            bool hasMenuItems = memory.PitPlan is { } plan && (plan.Tyres != null || plan.NoTyres || plan.Repair || plan.Fuel != null);
+            if (!test && lmu && hasMenuItems && _hub.HasPitStation)
+            {
+                if (ai.LmuPitMenu)
+                {
+                    await SendPitMenuAsync(memory.PitPlan!, snapshot, ct);
+                    prep.Answer = prep.Answer.Replace(" Vérifie le menu des stands avant l'entrée.", string.Empty) + " Je règle le menu des stands.";
+                }
+                else if (!memory.PitAutoAsked)
+                {
+                    // Première demande de la session : l'ingénieur propose de régler le menu lui-même.
+                    memory.PitAutoAsked = true;
+                    const string offer = "Je peux remplir le menu des stands moi-même. Je l'active ?";
+                    memory.Ask(new PendingQuestion { Key = "stand-auto", Topic = "stand-auto", Text = offer, Lap = prep.Lap ?? 0 });
+                    prep.Answer = prep.Answer.Replace(" Vérifie le menu des stands avant l'entrée.", string.Empty) + " " + offer;
+                }
+            }
+
             return prep;
         }
 
@@ -336,6 +390,47 @@ public sealed class EngineerService
             return small;
         }
 
+        // « Coupe les limites de piste », « remets les alertes », « active le menu des stands »…
+        if (RadioCommands.ParseToggle(text) is RadioCommands.Toggle toggle)
+        {
+            if (!test)
+            {
+                _settings.Update(s =>
+                {
+                    switch (toggle.Key)
+                    {
+                        case "limites": s.Ai.TrackLimitAlerts = toggle.On; break;
+                        case "stand": s.Ai.LmuPitMenu = toggle.On; break;
+                        default: s.Ai.DrivingAlerts = toggle.On; break;
+                    }
+                });
+            }
+
+            return (toggle.Key, toggle.On) switch
+            {
+                ("limites", false) => "Copy, plus d'annonces de limites de piste. Dis « remets les limites de piste » pour les retrouver.",
+                ("limites", true) => "Copy, je t'annonce de nouveau les limites de piste.",
+                ("stand", true) => _hub.HasPitStation
+                    ? "Copy, je remplirai le menu des stands à chaque demande."
+                    : "Copy, c'est activé. Il faut le collecteur ouvert sur le PC de jeu, case « menu des stands » cochée.",
+                ("stand", false) => "Copy, tu gardes la main sur le menu des stands.",
+                (_, false) => "Copy, plus d'alertes de pilotage. Dis « remets les alertes » pour les retrouver.",
+                _ => "Copy, alertes de pilotage réactivées.",
+            } + (test ? " (mode test : rien n'est changé)" : string.Empty);
+        }
+
+        // « Teste le menu des stands », « essaie l'API » : lecture seule par le collecteur, la réponse arrive à la radio.
+        if (RadioCommands.IsPitMenuTest(text))
+        {
+            if (test)
+            {
+                return "Mode test : je ne touche pas au menu des stands.";
+            }
+
+            bool sent = await _hub.SendToPitStationAsync("pitMenuTest", new { id = Guid.NewGuid().ToString("N") }, ct);
+            return sent ? "Copy, je lis le menu des stands, je te dis." : "Pas de collecteur relié pour le menu des stands : ouvre le collecteur sur le PC de jeu, case « menu des stands » cochée.";
+        }
+
         // « On passe à mistral », « passe sur omni pour la voix »…
         if (RadioCommands.Normalize(text).Split(' ').Length <= 14)
         {
@@ -380,6 +475,48 @@ public sealed class EngineerService
         // Réponses aux questions de l'IA et retours du pilote : voir RadioDialog (appelé par AskAsync).
         return null;
     }
+
+    /// <summary>
+    /// Demande au collecteur de régler le menu des stands de Le Mans Ultimate selon le plan du pilote.
+    /// Carburant : « le plein » = maximum, « jusqu'à la fin » = ce qu'il manque calculé par SecondMonitor.
+    /// </summary>
+    private async Task<bool> SendPitMenuAsync(PitOrder plan, RaceSnapshot snap, CancellationToken ct)
+    {
+        PlayerStrategy? p = snap.Player;
+        double? energyTarget = null;
+        double? fuelTarget = null;
+        if (plan.Fuel == "plein")
+        {
+            energyTarget = 100;
+            fuelTarget = 9999;
+        }
+        else if (plan.Fuel != null && p != null)
+        {
+            if (p.Energy != null)
+            {
+                energyTarget = Math.Min(100, p.Energy.RemainingPct + (p.Energy.ToAddPct ?? p.Energy.NextStopAddPct ?? 0) + 2);
+            }
+
+            if (p.Fuel != null)
+            {
+                fuelTarget = p.Fuel.Remaining + (p.Fuel.ToAdd ?? p.Fuel.NextStopAdd ?? 0) + 1;
+            }
+        }
+
+        var order = new
+        {
+            id = Guid.NewGuid().ToString("N"),
+            tyres = plan.Tyres,
+            noTyres = plan.NoTyres,
+            repair = plan.Repair,
+            energyTargetPct = energyTarget,
+            fuelTargetLitres = fuelTarget,
+        };
+        return await _hub.SendToPitStationAsync("pitMenu", order, ct);
+    }
+
+    /// <summary>Bouton « Tester le menu des stands » de l'écran Ingénieur IA.</summary>
+    public Task<bool> TestPitMenuAsync(CancellationToken ct) => _hub.SendToPitStationAsync("pitMenuTest", new { id = Guid.NewGuid().ToString("N") }, ct);
 
     private string ModelFor(string domain)
     {

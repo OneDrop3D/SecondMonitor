@@ -170,8 +170,10 @@ En course multi-catégories, le tableau montre votre catégorie et les autres vo
 - **Pédales et volant** enregistrés sur chaque tour : bloc *Pédales et volant* de l'accueil et analyse du pilotage à la voix.
 - Ton radio : réponses courtes, « Copy » en anglais (réglable). Si l'IA réfléchit plus de 2,5 s, il répond « Copy, je reviens vers vous » et vous pouvez
   poser d'autres questions ; les questions pour l'IA passent une à la fois, chacune chez son **spécialiste** (pneus, stratégie, voiture, course).
-- **Demandes d'arrêt** à la voix (« je boxe », « softs neufs », « la réparation aussi ») confirmées et gardées pour l'arrêt. Le menu des stands du jeu
-  se règle encore dans le jeu.
+- **Demandes d'arrêt** à la voix (« je boxe », « softs neufs », « la réparation aussi ») confirmées et gardées pour l'arrêt.
+  Dans **Le Mans Ultimate**, l'ingénieur peut régler lui-même le menu des stands (il le propose à la première demande) : le collecteur du PC de jeu passe
+  par l'API locale du jeu (port 6397, non officielle), relit le menu pour vérifier et le résultat est dit à la radio. « Essaie l'API » lit le menu sans rien changer.
+- Il **tutoie** le pilote. Les annonces de limites de piste se coupent à la voix (« coupe les limites de piste ») ou dans l'écran *Ingénieur IA*.
 - Boutons **Terminer la session** / **Nouvelle session** et menu pour revoir une session passée (écran *Ingénieur IA*).
 - Il garde une **mémoire de la course** et on peut changer de modèle à la voix. Les modèles peuvent tourner sur plusieurs machines (un Raspberry Pi par exemple).
 - Un **mode test** fonctionne sans jeu.

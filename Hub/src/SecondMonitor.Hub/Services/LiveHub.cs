@@ -187,20 +187,37 @@ public sealed class LiveHub : BackgroundService
         {
             using JsonDocument doc = JsonDocument.Parse(payload);
             JsonElement root = doc.RootElement;
-            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("type", out JsonElement type) || type.GetString() != "station")
+            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("type", out JsonElement type))
+            {
+                return;
+            }
+
+            if (type.GetString() == "pitMenuResult" && _stations.ContainsKey(id))
+            {
+                // Le collecteur a réglé (ou lu) le menu des stands de Le Mans Ultimate.
+                string text = root.TryGetProperty("text", out JsonElement t) && t.ValueKind == JsonValueKind.String ? t.GetString()! : "Menu des stands : pas de réponse lisible.";
+                bool ok = root.TryGetProperty("ok", out JsonElement okEl) && okEl.ValueKind == JsonValueKind.True;
+                bool test = root.TryGetProperty("test", out JsonElement testEl) && testEl.ValueKind == JsonValueKind.True;
+                string reqId = root.TryGetProperty("id", out JsonElement idEl) ? idEl.ToString() : string.Empty;
+                PitMenuResult?.Invoke(new PitMenuReply(reqId, ok, test, text.Length > 400 ? text[..400] : text));
+                return;
+            }
+
+            if (type.GetString() != "station")
             {
                 return;
             }
 
             bool voice = root.TryGetProperty("voice", out JsonElement v) && v.ValueKind == JsonValueKind.True;
             bool mic = root.TryGetProperty("mic", out JsonElement m) && m.ValueKind == JsonValueKind.True;
+            bool pit = root.TryGetProperty("pit", out JsonElement p) && p.ValueKind == JsonValueKind.True;
             string name = root.TryGetProperty("name", out JsonElement n) && n.ValueKind == JsonValueKind.String ? n.GetString()! : "PC de jeu";
             if (name.Length > 80)
             {
                 name = name[..80];
             }
 
-            if (!voice && !mic)
+            if (!voice && !mic && !pit)
             {
                 if (_stations.TryRemove(id, out _))
                 {
@@ -211,7 +228,7 @@ public sealed class LiveHub : BackgroundService
             }
 
             DateTime since = _stations.TryGetValue(id, out AudioStation? before) ? before.Since : DateTime.Now;
-            var station = new AudioStation(name, voice, mic, address, since);
+            var station = new AudioStation(name, voice, mic, address, since, pit);
             if (before != station)
             {
                 _stations[id] = station;
@@ -222,6 +239,27 @@ public sealed class LiveHub : BackgroundService
         {
             // Message illisible : ignoré.
         }
+    }
+
+    /// <summary>Résultat du menu des stands de Le Mans Ultimate renvoyé par le collecteur.</summary>
+    public event Action<PitMenuReply>? PitMenuResult;
+
+    /// <summary>Un collecteur peut régler le menu des stands de Le Mans Ultimate.</summary>
+    public bool HasPitStation => _stations.Values.Any(s => s.Pit);
+
+    /// <summary>Envoie une demande de menu des stands au collecteur qui sait le faire (« pitMenu » ou « pitMenuTest »). Faux si aucun.</summary>
+    public async Task<bool> SendToPitStationAsync(string type, object data, CancellationToken ct)
+    {
+        foreach (var (id, station) in _stations.Where(x => x.Value.Pit).OrderBy(x => x.Value.Since))
+        {
+            if (_clients.TryGetValue(id, out WebSocket? socket) && socket.State == WebSocketState.Open)
+            {
+                await SendAsync(socket, Serialize(type, data), ct);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private object StationsMessage() => new { stations = Stations, voiceOutput = _voiceOutput };
@@ -280,4 +318,7 @@ public sealed class LiveHub : BackgroundService
 /// Poste audio : un collecteur qui joue la voix de l'ingénieur (<paramref name="Voice"/>) et/ou enregistre le micro
 /// (<paramref name="Mic"/>) sur le PC de jeu.
 /// </summary>
-public sealed record AudioStation(string Name, bool Voice, bool Mic, string? Address, DateTime Since);
+public sealed record AudioStation(string Name, bool Voice, bool Mic, string? Address, DateTime Since, bool Pit = false);
+
+/// <summary>Réponse du collecteur pour le menu des stands de Le Mans Ultimate.</summary>
+public sealed record PitMenuReply(string Id, bool Ok, bool Test, string Text);

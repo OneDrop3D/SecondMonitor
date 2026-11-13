@@ -11,4 +11,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SecondMonitor.Hub.Core\SecondMonitor.Hub.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Menu des stands de Le Mans Ultimate (collecteur) : testé contre un faux LMU local. -->
+    <Compile Include="..\..\..\Collector\src\LmuPitMenu.cs" Link="Linked\LmuPitMenu.cs" />
+  </ItemGroup>
 </Project>

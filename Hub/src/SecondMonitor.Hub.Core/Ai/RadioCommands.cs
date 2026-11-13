@@ -91,6 +91,45 @@ namespace SecondMonitor.Hub.Core.Ai
             return new ModelSwitch(role, scored[0].Model.Id, close.Count > 1 ? close : Array.Empty<string>());
         }
 
+        /// <summary>Interrupteur dit à la radio : « coupe les limites de piste », « remets les alertes », « active le menu des stands ».</summary>
+        public sealed record Toggle(string Key, bool On);
+
+        private static readonly Regex OffVerb = new(@"\b(coupe|couper|coupes|desactive|desactiver|desactives|arrete|arreter|stop|stoppe|enleve|enlever|retire|retirer|supprime|plus de|mute|eteins|eteindre)\b", RegexOptions.Compiled);
+        private static readonly Regex OnVerb = new(@"\b(remets|remet|remettre|reactive|reactiver|active|activer|actives|rallume|rallumer|allume|allumer|redonne|relance)\b", RegexOptions.Compiled);
+
+        /// <summary>
+        /// « Coupe les alertes de limites de piste », « plus de track limits », « remets les limites de piste », « coupe les alertes de pilotage »,
+        /// « active le menu des stands automatique », « désactive le menu des stands ». Null si ce n'est pas un interrupteur.
+        /// </summary>
+        public static Toggle ParseToggle(string text)
+        {
+            string t = Normalize(text);
+            if (t.Split(' ').Length > 14)
+            {
+                return null;
+            }
+
+            bool off = OffVerb.IsMatch(t);
+            bool on = !off && OnVerb.IsMatch(t);
+            if (!off && !on)
+            {
+                return null;
+            }
+
+            string key = Regex.IsMatch(t, @"\b(limites? de piste|limites?|tracks? limits?|track limit)\b") ? "limites"
+                : Regex.IsMatch(t, @"\bmenu (des|du|de) stands?\b|\bstands? auto\w*|\bmenu stand\b") ? "stand"
+                : Regex.IsMatch(t, @"\b(alertes?|annonces?)\b") ? "alertes"
+                : null;
+            return key == null ? null : new Toggle(key, on);
+        }
+
+        /// <summary>« Teste le menu des stands », « essaie l'API » : lecture seule du menu des stands par le collecteur.</summary>
+        public static bool IsPitMenuTest(string text)
+        {
+            string t = Normalize(text);
+            return Regex.IsMatch(t, @"\b(teste|tester|essaie|essaye|essayer|verifie|verifier|lis|lire)\b.*\b(api|menu (des|du) stands?)\b");
+        }
+
         public static string RoleLabel(string role) => role switch
         {
             "speak" => "la voix",

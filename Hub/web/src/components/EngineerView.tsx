@@ -338,6 +338,20 @@ function BehaviourCard({ settings, save }: { settings: HubSettings | null; save:
           et usure brutale d'un pneu analysée (où, dans quelle phase du virage, quel réglage essayer).
         </div>
         <label className="switch">
+          <input type="checkbox" checked={ai.trackLimitAlerts ?? true} onChange={(e) => set({ trackLimitAlerts: e.target.checked })} disabled={!(ai.drivingAlerts ?? true)} />
+          <span>Annoncer les limites de piste et les temps annulés</span>
+        </label>
+        <div className="secondary small">À la radio aussi : « coupe les limites de piste », « remets les limites de piste ».</div>
+        <label className="switch">
+          <input type="checkbox" checked={ai.lmuPitMenu ?? false} onChange={(e) => set({ lmuPitMenu: e.target.checked })} />
+          <span>Régler le menu des stands de Le Mans Ultimate</span>
+        </label>
+        <div className="secondary small">
+          Quand vous demandez « softs neufs », « la réparation » ou « le plein », l'ingénieur règle le menu des stands du jeu par le collecteur du PC de jeu
+          (API locale de LMU, non officielle : vérifiez le menu avant d'entrer). L'ingénieur le propose à la première demande ; à la radio : « active le menu des stands », « essaie l'API ».
+        </div>
+        <PitMenuTest />
+        <label className="switch">
           <input type="checkbox" checked={ai.englishCalls ?? true} onChange={(e) => set({ englishCalls: e.target.checked })} />
           <span>Accusés de réception en anglais (« Copy »)</span>
         </label>
@@ -644,6 +658,26 @@ function ModelsCard({ settings, save, models, reload }: { settings: HubSettings 
         <p className="secondary small">Les chiffres sont toujours calculés par le hub, jamais par l'IA : elle choisit et formule.</p>
       </div>
     </section>
+  );
+}
+
+/** Lecture seule du menu des stands de LMU par le collecteur ; le résultat arrive à la radio. */
+function PitMenuTest() {
+  const [state, setState] = useState<string | null>(null);
+  const test = async () => {
+    setState('Demande envoyée au collecteur…');
+    try {
+      const r = await api<{ sent: boolean }>('/api/pitmenu/test', { method: 'POST' });
+      setState(r.sent ? 'Demande envoyée : le résultat arrive à la radio.' : 'Aucun collecteur relié pour le menu des stands (collecteur ouvert sur le PC de jeu, case « menu des stands » cochée).');
+    } catch (e) {
+      setState((e as Error).message);
+    }
+  };
+  return (
+    <div className="row">
+      <button className="chip" onClick={test}>Tester le menu des stands</button>
+      {state && <span className="muted small">{state}</span>}
+    </div>
   );
 }
 

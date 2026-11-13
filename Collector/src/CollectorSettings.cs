@@ -51,6 +51,12 @@ namespace SecondMonitor.Collector
         /// <summary>Mode diagnostic : CPU, mémoire, débit réseau et lectures du jeu affichés dans la fenêtre (ou la console).</summary>
         public bool Diagnostic { get; set; }
 
+        /// <summary>
+        /// SecondMonitor peut régler le menu des stands de Le Mans Ultimate depuis ce PC (API locale du jeu, port 6397), quand l'ingénieur
+        /// l'a activé et que le pilote le demande (« softs neufs », « la réparation »). Rien n'est envoyé au jeu sans demande.
+        /// </summary>
+        public bool MenuStandsLmu { get; set; } = true;
+
         [JsonIgnore]
         public string FilePath { get; private set; }
 

@@ -18,6 +18,9 @@ Dans la fenêtre :
 - *Lancer avec Windows* : démarrage automatique, fenêtre réduite ;
 - *Démonstration* : envoie une course fictive pour tester la liaison sans jeu.
 
+- *Laisser SecondMonitor régler le menu des stands de Le Mans Ultimate* (carte *Radio de l'ingénieur*, cochée par défaut) : quand l'ingénieur l'a activé
+  et que le pilote demande des pneus, la réparation ou du carburant, le collecteur règle le menu des stands par l'API locale du jeu (port 6397), puis le relit.
+  Rien n'est lu ni envoyé au jeu sans demande. *Tester l'API du menu des stands* lit le menu sans le modifier.
 - *Bouton radio* : choisissez une touche du clavier ou un bouton du volant de ce PC. Un appui démarre ou envoie la dictée de l'ingénieur IA sur SecondMonitor, ou le coupe s'il parle. Il fonctionne même quand le jeu est au premier plan.
 
 ### Radio de l'ingénieur sur ce PC (voix et micro)

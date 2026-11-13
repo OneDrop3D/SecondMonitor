@@ -152,6 +152,8 @@ namespace SecondMonitor.Collector
                         voixSur = runtime.Engineer?.VoiceOutput ?? "pc",
                     },
                     diagnostic = s.Diagnostic,
+                    menuStands = s.MenuStandsLmu,
+                    menuStandsDernier = runtime.Engineer?.LastPitMenu,
                     mesures = s.Diagnostic ? runtime.Diagnostics.Sample()?.Text : null,
                 });
             }
@@ -259,6 +261,23 @@ namespace SecondMonitor.Collector
                         case "demo":
                             runtime.SetDemo(root.GetProperty("valeur").GetBoolean());
                             SendState();
+                            break;
+                        case "stand-autoriser":
+                            runtime.Settings.MenuStandsLmu = root.GetProperty("valeur").GetBoolean();
+                            runtime.Settings.Save();
+                            engineer?.SettingsChanged();
+                            SendState();
+                            break;
+                        case "stand-tester":
+                            if (engineer != null)
+                            {
+                                _ = System.Threading.Tasks.Task.Run(async () =>
+                                {
+                                    var (ok, text) = await engineer.TestPitMenuAsync();
+                                    Send(new { type = "stand-resultat", ok, texte = text });
+                                });
+                            }
+
                             break;
                         case "diagnostic":
                             runtime.Settings.Diagnostic = root.GetProperty("valeur").GetBoolean();

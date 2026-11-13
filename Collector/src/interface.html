@@ -158,6 +158,12 @@
         <button class="btn" id="ri-noms">Afficher les noms des appareils</button>
       </div>
       <div class="hint ri-etat" id="ri-etat"></div>
+      <label class="switch" style="margin-top:8px"><input type="checkbox" id="stand-autoriser"><span>Laisser SecondMonitor régler le menu des stands de Le Mans Ultimate</span></label>
+      <div class="row ri-ligne">
+        <button class="btn" id="stand-tester">Tester l'API du menu des stands</button>
+      </div>
+      <div class="hint" id="stand-aide">Quand l'ingénieur l'a activé et que vous demandez « softs neufs » ou « la réparation », il règle le menu des stands du jeu (API locale de LMU, port 6397). Le test lit seulement le menu, sans rien changer.</div>
+      <div class="hint" id="stand-resultat"></div>
     </div>
   </details>
 
@@ -258,6 +264,8 @@
     $('autostart-label').textContent = e.systeme === 'windows' ? 'Lancer avec Windows (fenêtre réduite)' : 'Lancer à l\'ouverture de session (fenêtre réduite)';
     $('demo').checked = e.demo;
     $('diagnostic').checked = e.diagnostic;
+    $('stand-autoriser').checked = !!e.menuStands;
+    if (e.menuStandsDernier && !$('stand-resultat').textContent) $('stand-resultat').textContent = e.menuStandsDernier;
     $('mesures').classList.toggle('show', !!e.mesures);
     $('mesures').textContent = e.mesures || '';
     $('btn-visualiseur').style.display = e.visualiseur ? '' : 'none';
@@ -326,12 +334,15 @@
     else if (m.type === 'maj') majVue(m.maj);
     else if (m.type === 'relancer') { $('relancer').classList.toggle('show', m.necessaire); $('options').open = true; }
     else if (m.type.startsWith('radio-')) radioMessage(m);
+    else if (m.type === 'stand-resultat') { $('stand-resultat').textContent = (m.ok ? '✓ ' : '✗ ') + m.texte; }
   });
 
   document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => send('qualite', b.dataset.q)));
   $('autostart').addEventListener('change', (e) => send('autostart', e.target.checked));
   $('demo').addEventListener('change', (e) => send('demo', e.target.checked));
   $('diagnostic').addEventListener('change', (e) => send('diagnostic', e.target.checked));
+  $('stand-autoriser').addEventListener('change', (e) => send('stand-autoriser', e.target.checked));
+  $('stand-tester').addEventListener('click', () => { $('stand-resultat').textContent = 'Lecture du menu des stands…'; send('stand-tester'); });
   $('btn-relancer').addEventListener('click', () => send('relancer'));
   $('btn-dossier').addEventListener('click', () => send('dossier'));
   $('btn-visualiseur').addEventListener('click', () => send('visualiseur'));

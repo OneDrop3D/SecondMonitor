@@ -59,6 +59,12 @@ namespace SecondMonitor.Collector
 
         private bool WantsMic => _pageAttached && _micAvailable && Settings.Parler;
 
+        /// <summary>Le pilote laisse SecondMonitor régler le menu des stands de Le Mans Ultimate depuis ce PC (réglage du collecteur).</summary>
+        private bool WantsPit => _runtime.Settings.MenuStandsLmu;
+
+        private ClientWebSocket _socket;
+        private readonly SemaphoreSlim _sendLock = new(1, 1);
+
         /// <summary>La fenêtre est ouverte et dit ce que sa vue web sait faire (le micro exige une page « sécurisée »).</summary>
         public void AttachPage(bool micAvailable)
         {
@@ -208,7 +214,7 @@ namespace SecondMonitor.Collector
             while (!stop.IsCancellationRequested)
             {
                 string host = FirstHub();
-                if (!WantsVoice && !WantsMic)
+                if (!WantsVoice && !WantsMic && !WantsPit)
                 {
                     Status = _pageAttached && Settings.Parler && !_micAvailable
                         ? "Micro indisponible dans cette fenêtre : la radio reste sur l'ordinateur de SecondMonitor."
@@ -246,6 +252,7 @@ namespace SecondMonitor.Collector
                 finally
                 {
                     Host = null;
+                    _socket = null;
                 }
 
                 await WaitAsync(TimeSpan.FromSeconds(3), stop).ConfigureAwait(false);
@@ -264,14 +271,15 @@ namespace SecondMonitor.Collector
             }
 
             Host = host;
-            Status = $"Reliée à SecondMonitor ({host}).";
+            _socket = socket;
+            Status = WantsVoice || WantsMic ? $"Reliée à SecondMonitor ({host})." : $"Reliée à SecondMonitor ({host}) pour le menu des stands ; la voix et le micro restent sur l'ordinateur de SecondMonitor.";
             _runtime.Log($"Radio de l'ingénieur reliée à SecondMonitor ({host}).");
             _dirty = true;
             bool leaving = false;
             Task receive = ReceiveAsync(socket, stop);
             while (socket.State == WebSocketState.Open && !stop.IsCancellationRequested)
             {
-                if (!WantsVoice && !WantsMic || FirstHub() != host)
+                if (!WantsVoice && !WantsMic && !WantsPit || FirstHub() != host)
                 {
                     // Plus rien à faire sur ce PC (ou autre SecondMonitor) : on se retire proprement.
                     leaving = true;
@@ -303,8 +311,69 @@ namespace SecondMonitor.Collector
         private Task SendStationAsync(ClientWebSocket socket, CancellationToken stop)
         {
             string name = $"PC de jeu ({Environment.MachineName})";
-            byte[] payload = JsonSerializer.SerializeToUtf8Bytes(new { type = "station", voice = WantsVoice, mic = WantsMic, name });
-            return socket.SendAsync(payload, WebSocketMessageType.Text, true, stop);
+            return SendAsync(socket, new { type = "station", voice = WantsVoice, mic = WantsMic, pit = WantsPit, name }, stop);
+        }
+
+        /// <summary>Un seul envoi à la fois sur la liaison (le WebSocket ne supporte pas deux envois simultanés).</summary>
+        private async Task SendAsync(ClientWebSocket socket, object message, CancellationToken stop)
+        {
+            if (socket == null || socket.State != WebSocketState.Open)
+            {
+                return;
+            }
+
+            byte[] payload = JsonSerializer.SerializeToUtf8Bytes(message);
+            await _sendLock.WaitAsync(stop).ConfigureAwait(false);
+            try
+            {
+                await socket.SendAsync(payload, WebSocketMessageType.Text, true, stop).ConfigureAwait(false);
+            }
+            finally
+            {
+                _sendLock.Release();
+            }
+        }
+
+        /// <summary>
+        /// Demande de SecondMonitor pour le menu des stands de Le Mans Ultimate : lecture seule (« test ») ou réglage.
+        /// Le résultat repart vers SecondMonitor (« pitMenuResult »), qui le dit à la radio.
+        /// </summary>
+        private void HandlePitMenu(JsonElement data, bool test)
+        {
+            string id = data.ValueKind == JsonValueKind.Object && data.TryGetProperty("id", out JsonElement i) ? i.ToString() : string.Empty;
+            JsonElement order = data.ValueKind == JsonValueKind.Object ? data.Clone() : default;
+            ClientWebSocket socket = _socket;
+            _ = Task.Run(async () =>
+            {
+                (bool ok, string text) = !WantsPit
+                    ? (false, "Le collecteur n'autorise pas le réglage du menu des stands (case à cocher dans sa fenêtre).")
+                    : _runtime.ActiveGame != "Le Mans Ultimate" && !test
+                        ? (false, "Le Mans Ultimate n'est pas lancé sur le PC de jeu.")
+                        : test ? await LmuPitMenu.TestAsync(_stop.Token).ConfigureAwait(false) : await LmuPitMenu.ApplyAsync(order, _stop.Token).ConfigureAwait(false);
+                _runtime.Log($"Menu des stands LMU : {text}");
+                LastPitMenu = text;
+                ToPage?.Invoke(new { type = "stand-resultat", ok, texte = text });
+                try
+                {
+                    await SendAsync(socket, new { type = "pitMenuResult", id, ok, test, text }, _stop.Token).ConfigureAwait(false);
+                }
+                catch (Exception)
+                {
+                    // Liaison coupée entre-temps : le résultat reste dans le journal du collecteur.
+                }
+            });
+        }
+
+        /// <summary>Dernier résultat du menu des stands (affiché dans la fenêtre).</summary>
+        public string LastPitMenu { get; private set; }
+
+        /// <summary>Bouton « Tester l'API du menu des stands » de la fenêtre : lecture seule, sans passer par SecondMonitor.</summary>
+        public async Task<(bool Ok, string Text)> TestPitMenuAsync()
+        {
+            (bool ok, string text) = await LmuPitMenu.TestAsync(_stop.Token).ConfigureAwait(false);
+            LastPitMenu = text;
+            _runtime.Log($"Menu des stands LMU (test) : {text}");
+            return (ok, text);
         }
 
         /// <summary>Lit les messages de SecondMonitor jusqu'à la fermeture de la liaison.</summary>
@@ -372,6 +441,12 @@ namespace SecondMonitor.Collector
                             PressRequested?.Invoke();
                         }
 
+                        break;
+                    case "pitMenu":
+                        HandlePitMenu(data, test: false);
+                        break;
+                    case "pitMenuTest":
+                        HandlePitMenu(data, test: true);
                         break;
                     case "stations":
                         if (data.ValueKind == JsonValueKind.Object && data.TryGetProperty("voiceOutput", out JsonElement v) && v.ValueKind == JsonValueKind.String)

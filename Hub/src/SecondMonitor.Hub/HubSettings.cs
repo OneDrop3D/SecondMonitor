@@ -85,6 +85,15 @@ public sealed class AiSettings
     /// <summary>Alertes de pilotage dites tout de suite : limites de piste, temps annulé, pénalité, usure brutale, départ.</summary>
     public bool DrivingAlerts { get; set; } = true;
 
+    /// <summary>Annonces de limites de piste et de temps annulé (désactivables à la voix : « coupe les limites de piste »).</summary>
+    public bool TrackLimitAlerts { get; set; } = true;
+
+    /// <summary>
+    /// L'ingénieur règle lui-même le menu des stands de Le Mans Ultimate (par le collecteur du PC de jeu) quand le pilote demande
+    /// des pneus, la réparation ou du carburant. Désactivé tant que le pilote ne l'a pas accepté (l'ingénieur le propose).
+    /// </summary>
+    public bool LmuPitMenu { get; set; }
+
     /// <summary>Accusés de réception radio en anglais (« Copy », « Understood »), comme une vraie radio d'équipe.</summary>
     public bool EnglishCalls { get; set; } = true;
 

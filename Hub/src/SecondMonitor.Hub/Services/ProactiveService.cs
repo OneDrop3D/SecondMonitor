@@ -48,6 +48,11 @@ public sealed class ProactiveService : BackgroundService
                 continue;
             }
 
+            if (!ai.TrackLimitAlerts)
+            {
+                driving.RemoveAll(e => e.Type is "limites" or "tour-annulé"); // coupées à la voix ou dans les réglages
+            }
+
             if (driving.Count > 0 && ai.DrivingAlerts)
             {
                 await SayDrivingAsync(driving, stoppingToken);
