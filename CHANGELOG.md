@@ -3,6 +3,10 @@
 SecondMonitor (l'application qui affiche) et SecondMonitor Collecteur (PC de jeu), pour Windows, Mac et Linux/SteamOS.
 Basé sur [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) de winzarten (licence MIT).
 
+## Non publié
+
+- **Collecteur plus léger pour le PC de jeu** (même protocole, rien de perdu pour SecondMonitor) : quand le jeu se tait (menus, pause, garage), le signe de vie d'une seconde ne renvoie plus tout le plateau identique (≈ 18 Ko/s → 0,2 Ko/s en F1 24) ; recherche du jeu en un seul passage sur les processus (3× moins d'allocations, 2× moins de CPU sans jeu) ; envois sans copies inutiles (−38 % d'allocations en course) ; fenêtre mise à jour seulement quand quelque chose change, et presque plus quand elle est réduite. Option **Diagnostic** (Réglages, ou `--diagnostic`) : CPU, mémoire, débit réseau réel et lectures du jeu par seconde. `--rejouer fichier.smrec` renvoie un enregistrement de SecondMonitor pour mesurer sans le jeu.
+
 ## Version 0.5.0
 
 - **Dégâts mécaniques** pièce par pièce, quand le jeu les donne :

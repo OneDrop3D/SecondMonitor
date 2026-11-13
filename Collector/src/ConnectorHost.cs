@@ -2,7 +2,9 @@ namespace SecondMonitor.Collector
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
+    using System.Reflection;
     using System.Threading;
     using System.Threading.Tasks;
     using SecondMonitor.Foundation.Connectors;
@@ -22,6 +24,9 @@ namespace SecondMonitor.Collector
         private IRawTelemetryConnector _active;
         private DateTime _noPeerSince = DateTime.MinValue;
         private long _gameReads;
+        private readonly Dictionary<IRawTelemetryConnector, string[]> _executables = new();
+        private readonly HashSet<IRawTelemetryConnector> _seenRunning = new();
+        private readonly HashSet<string> _running = new(StringComparer.OrdinalIgnoreCase);
 
         public ConnectorHost(IPluginSettingsProvider provider, BroadcastServer server, CollectorSettings settings, Action<string> log)
         {
@@ -42,6 +47,7 @@ namespace SecondMonitor.Collector
                 // AVANT d'avoir pu se connecter. Sans cela, la demande était perdue et le jeu n'était jamais détecté.
                 string gameName = name;
                 connector.DisplayMessage += (_, e) => OnMessage(gameName, e);
+                _executables[connector] = Executables(connector);
             }
         }
 
@@ -154,11 +160,25 @@ namespace SecondMonitor.Collector
             }
 
             string waiting = null;
+            bool snapshot = SnapshotProcesses();
             foreach (var (name, connector) in _connectors)
             {
-                if (connector is AbstractGameConnector g && !g.IsProcessRunning())
+                // Un seul instantané des processus pour tous les jeux, au lieu d'une recherche complète par exécutable
+                // (une trentaine toutes les 3 s). Le connecteur n'est interrogé que si son jeu tourne (ou tournait).
+                if (snapshot && !_seenRunning.Contains(connector) && _executables[connector] is string[] exes && !exes.Any(_running.Contains))
                 {
                     continue;
+                }
+
+                if (connector is AbstractGameConnector g)
+                {
+                    if (!g.IsProcessRunning())
+                    {
+                        _seenRunning.Remove(connector);
+                        continue;
+                    }
+
+                    _seenRunning.Add(connector);
                 }
 
                 bool connected;
@@ -299,6 +319,72 @@ namespace SecondMonitor.Collector
                 : $"{game} : installation du plugin impossible ({detail}).");
         }
 
+
+        /// <summary>Noms des processus en cours (un seul parcours). Faux si impossible : on interroge alors chaque connecteur.</summary>
+        private bool SnapshotProcesses()
+        {
+            _running.Clear();
+            Process[] all;
+            try
+            {
+                all = Process.GetProcesses();
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+
+            foreach (Process p in all)
+            {
+                try
+                {
+                    _running.Add(p.ProcessName);
+                }
+                catch (Exception)
+                {
+                    // Processus terminé entre-temps.
+                }
+                finally
+                {
+                    p.Dispose();
+                }
+            }
+
+            return _running.Count > 0;
+        }
+
+        /// <summary>
+        /// Exécutables d'un jeu, lus dans le connecteur d'origine (sans le modifier) : champ « _executables » des connecteurs
+        /// SecondMonitor, ou liste statique « …Executables » (Project CARS). Null si introuvable : le connecteur est alors
+        /// interrogé à chaque recherche, comme avant.
+        /// </summary>
+        private static string[] Executables(IRawTelemetryConnector connector)
+        {
+            try
+            {
+                for (Type t = connector.GetType(); t != null; t = t.BaseType)
+                {
+                    if (t.GetField("_executables", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(connector) is string[] own && own.Length > 0)
+                    {
+                        return own;
+                    }
+                }
+
+                foreach (FieldInfo f in connector.GetType().GetFields(BindingFlags.Static | BindingFlags.NonPublic))
+                {
+                    if (f.FieldType == typeof(string[]) && f.Name.EndsWith("Executables", StringComparison.Ordinal) && f.GetValue(null) is string[] list && list.Length > 0)
+                    {
+                        return list;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Réflexion impossible : pas de filtre.
+            }
+
+            return null;
+        }
 
         /// <summary>Tous les jeux pris en charge par SecondMonitor. Un connecteur qui ne peut pas démarrer est simplement ignoré.</summary>
         private static IEnumerable<(string Name, IRawTelemetryConnector Connector)> Create(IPluginSettingsProvider p, Action<string> log)

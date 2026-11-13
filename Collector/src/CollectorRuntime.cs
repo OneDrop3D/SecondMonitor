@@ -127,7 +127,8 @@ namespace SecondMonitor.Collector
             {
                 string year = game.Contains("24", StringComparison.Ordinal) ? "2024" : game.Replace("F1 ", string.Empty, StringComparison.Ordinal);
                 return $"Activez la télémétrie dans le jeu : Options › Paramètres › Télémétrie. Télémétrie UDP : Activée · Mode diffusion : Désactivé · "
-                    + $"Adresse IP : 127.0.0.1 · Port : 20777 · Format UDP : {year}. Les données arrivent dès que vous êtes en piste (tour de formation compris).";
+                    + $"Adresse IP : 127.0.0.1 · Port : 20777 · Format UDP : {year}. Les données arrivent dès que vous êtes en piste (tour de formation compris). "
+                    + "Fréquence d'envoi UDP : 20 Hz suffit (30 Hz en qualité « Précis ») ; 60 Hz fait travailler le PC pour rien.";
             }
 
             if (game == "Assetto Corsa")
@@ -218,7 +219,7 @@ namespace SecondMonitor.Collector
             DateTime now = DateTime.UtcNow;
             double dt = Math.Max(0.2, (now - _lastStats).TotalSeconds);
             long p = _server.PackagesSent;
-            long b = _server.BytesSent;
+            long b = _server.WireBytesSent; // ce qui part vraiment sur le réseau (compressé)
             PackagesPerSecond = (p - _lastPackages) / dt;
             KilobytesPerSecond = (b - _lastBytes) / dt / 1024;
             _lastPackages = p;
