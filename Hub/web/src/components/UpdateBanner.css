@@ -1,10 +1,11 @@
-/* Mises à jour : bandeau discret (en bas à gauche, au-dessus de la barre d'état) et carte des Réglages. */
+/* Mises à jour : bandeau discret (en bas au centre, au-dessus de la barre d'état ; la radio est en bas à gauche) et carte des Réglages. */
 .upd-banner {
-  position: fixed; left: 12px; bottom: 40px; z-index: 70; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 40px; z-index: 70; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   max-width: min(560px, calc(100vw - 24px)); padding: 6px 8px 6px 12px; border-radius: var(--radius);
   background: var(--surface-1); border: 1px solid color-mix(in oklab, var(--accent) 55%, transparent);
   box-shadow: 0 8px 24px rgba(0, 0, 0, .35); font-size: 13px;
 }
+@media (max-width: 760px) { .upd-banner { bottom: 156px; } }
 .upd-banner.warn { border-color: color-mix(in oklab, var(--warning) 60%, transparent); }
 .upd-text { flex: 1; min-width: 0; color: var(--text-secondary); }
 .upd-text b { color: var(--text-primary); }
