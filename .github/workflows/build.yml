@@ -79,10 +79,51 @@ jobs:
       - name: Outils (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get install -y zsh zip
+      # Mac : identité de signature STABLE si les secrets existent (packaging/mac/creer-identite-signature.sh --github).
+      # Sans elle, signature ad hoc : macOS redemande le micro et le réseau local à chaque nouvelle version.
+      - name: Identité de signature Mac (facultative)
+        if: runner.os == 'macOS'
+        env:
+          P12: ${{ secrets.MAC_SIGN_P12 }}
+          MDP: ${{ secrets.MAC_SIGN_P12_PASSWORD }}
+          NOM: ${{ secrets.MAC_SIGN_IDENTITY }}
+        run: |
+          if [ -z "$P12" ]; then echo "Pas d'identité de signature dans les secrets : signature ad hoc."; exit 0; fi
+          k="$RUNNER_TEMP/signature.keychain-db"
+          security create-keychain -p ci "$k"
+          security set-keychain-settings -lut 21600 "$k"
+          security unlock-keychain -p ci "$k"
+          printf '%s' "$P12" | base64 --decode > "$RUNNER_TEMP/identite.p12"
+          security import "$RUNNER_TEMP/identite.p12" -k "$k" -P "$MDP" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/identite.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k ci "$k" >/dev/null
+          security list-keychains -d user -s "$k" $(security list-keychains -d user | tr -d '"')
+          echo "ONEDROP3D_SIGN_IDENTITY=${NOM:-OneDrop3D SecondMonitor}" >> "$GITHUB_ENV"
       - name: Construire (${{ matrix.systeme }})
         run: ./construire.sh ${{ matrix.commande }}
 
       # Windows : le dossier part vers la machine Windows qui fabrique l'installateur.
+      - name: Contrôle du paquet Linux
+        if: matrix.systeme == 'linux'
+        run: |
+          set -e
+          d="$RUNNER_TEMP/controle"; mkdir -p "$d"; tar -xzf dist/SecondMonitor-*-linux-x64.tar.gz -C "$d"
+          file "$d/secondmonitor/SecondMonitorHub" "$d/secondmonitor/SecondMonitor-Collecteur" | tee /dev/stderr | grep -c "ELF 64-bit" | grep -qx 2
+          test -x "$d/secondmonitor/installer.sh" && test -x "$d/secondmonitor/SecondMonitorHub"
+          sh -n "$d/secondmonitor/installer.sh" && sh -n "$d/secondmonitor/desinstaller.sh"
+          # Installation et désinstallation réelles dans un dossier personnel jetable (sans écran : pas de fenêtre).
+          HOME="$RUNNER_TEMP/maison" XDG_DATA_HOME= "$d/secondmonitor/installer.sh" --silencieux --demarrage-auto </dev/null
+          test -f "$RUNNER_TEMP/maison/.local/share/applications/secondmonitor.desktop"
+          test -f "$RUNNER_TEMP/maison/.config/autostart/secondmonitor-collecteur.desktop"
+          HOME="$RUNNER_TEMP/maison" "$d/secondmonitor/installer.sh" --verifier </dev/null || true
+          echo '{"webPort": 8690, "enableHttps": false}' > "$RUNNER_TEMP/settings.json"; mkdir -p "$RUNNER_TEMP/donnees"; mv "$RUNNER_TEMP/settings.json" "$RUNNER_TEMP/donnees/"
+          SMHUB_DATA="$RUNNER_TEMP/donnees" "$RUNNER_TEMP/maison/.local/share/secondmonitor/SecondMonitorHub" --sans-fenetre & p=$!
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8690/api/update >/dev/null && break; sleep 1; done
+          curl -fs http://127.0.0.1:8690/api/status | head -c 300; echo
+          curl -fs -X POST http://127.0.0.1:8690/api/quit; wait $p || true
+          HOME="$RUNNER_TEMP/maison" "$RUNNER_TEMP/maison/.local/share/secondmonitor/desinstaller.sh"
+          test ! -e "$RUNNER_TEMP/maison/.local/share/secondmonitor"
+
       - name: Dossier Windows pour l'installateur
         if: matrix.systeme == 'windows'
         uses: actions/upload-artifact@v4

@@ -26,6 +26,12 @@ namespace SecondMonitor.Collector
         /// <summary>Affiche la fenêtre et bloque jusqu'à sa fermeture. Faux si la vue web manque (on passe alors en console).</summary>
         public static bool Run(CollectorRuntime runtime, bool minimized)
         {
+            // Linux sans session graphique (SSH) : GTK s'arrêterait net ; on passe en console.
+            if (OperatingSystem.IsLinux() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")))
+            {
+                return false;
+            }
+
             PhotinoWindow window;
             try
             {

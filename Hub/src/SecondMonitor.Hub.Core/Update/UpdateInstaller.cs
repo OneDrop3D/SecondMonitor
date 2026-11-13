@@ -258,13 +258,28 @@ namespace SecondMonitor.Hub.Core.Update
                 return Manual("SecondMonitor n'est pas lancé depuis une application installée : l'image disque est ouverte, glissez les deux applications dans Applications.", c.File);
             }
 
+            string myId = c.App == "hub" ? HubBundleId : CollectorBundleId;
+
+            // « App Translocation » : une application téléchargée (quarantaine) que le Finder n'a pas déplacée est lancée
+            // depuis une copie temporaire en lecture seule. On met à jour l'original (dans Applications) : la nouvelle
+            // version, sans quarantaine, ne sera plus jamais déplacée ni bloquée.
+            if (bundle.Contains("/AppTranslocation/", StringComparison.Ordinal))
+            {
+                string original = FindOtherBundle("/Applications", Path.GetFileName(bundle), myId, true);
+                if (original == null)
+                {
+                    return Manual("macOS a lancé SecondMonitor depuis un emplacement temporaire (application restée dans Téléchargements ?) : l'image disque est ouverte, glissez les deux applications dans Applications.", c.File);
+                }
+
+                bundle = original;
+            }
+
             string parent = Path.GetDirectoryName(bundle);
             if (!Writable(parent))
             {
                 return Manual($"SecondMonitor ne peut pas se remplacer lui-même (le dossier {parent} n'est pas modifiable par votre compte) : l'image disque est ouverte, glissez les deux applications dans Applications.", c.File);
             }
 
-            string myId = c.App == "hub" ? HubBundleId : CollectorBundleId;
             string otherId = c.App == "hub" ? CollectorBundleId : HubBundleId;
             string otherName = c.App == "hub" ? "SecondMonitor Collecteur.app" : "SecondMonitor.app";
             var targets = new List<(string Target, string Id, bool Initiator)> { (bundle, myId, true) };
