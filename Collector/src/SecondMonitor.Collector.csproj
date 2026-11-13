@@ -37,6 +37,8 @@
     <Compile Include="..\..\Hub\src\SecondMonitor.Hub.Core\Demo\DemoRaceSimulator.cs;..\..\Hub\src\SecondMonitor.Hub.Core\Demo\DemoTrackProfile.cs" LinkBase="Linked\Demo" />
     <!-- Mises à jour : même code que SecondMonitor (vérification, téléchargement vérifié, remplacement des deux applications). -->
     <Compile Include="..\..\Hub\src\SecondMonitor.Hub.Core\Update\*.cs" LinkBase="Linked\Update" />
+    <!-- Rejeu d'un enregistrement du hub (diagnostic : mesurer le collecteur sur une vraie course sans le jeu). -->
+    <Compile Include="..\..\Hub\src\SecondMonitor.Hub.Core\Network\CaptureFile.cs" LinkBase="Linked\Diagnostic" />
     <Compile Include="..\..\Remote\SecondMonitor.Remote\PacketCompressionLayer.cs;..\..\Remote\SecondMonitor.Remote\Adapter\*.cs;..\..\Remote\SecondMonitor.Remote\Comparators\*.cs" LinkBase="Linked\Remote" />
   </ItemGroup>
 

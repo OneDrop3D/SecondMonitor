@@ -65,6 +65,8 @@
   details { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
   summary { cursor: pointer; padding: 5px 10px; font-weight: 650; font-size: 12px; background: var(--head); border-radius: var(--radius); }
   details[open] summary { border-radius: var(--radius) var(--radius) 0 0; }
+  .mesures { display: none; flex: none; font-size: 12px; color: var(--muted); padding: 5px 10px; font-variant-numeric: tabular-nums; }
+  .mesures.show { display: block; }
   .log { flex: 1; min-height: 80px; display: flex; flex-direction: column; }
   .log .body { flex: 1; padding: 0; min-height: 0; }
   .maj { display: none; border-radius: var(--radius); border: 1px solid color-mix(in oklab, var(--accent) 55%, var(--line));
@@ -116,6 +118,7 @@
     <button class="btn primary" id="advice-btn" style="display:none"></button>
   </div>
 
+  <section class="mesures" id="mesures" title="Mode diagnostic (Réglages)"></section>
   <section>
     <h2>Adresse de ce PC</h2>
     <div class="body">
@@ -146,6 +149,7 @@
         <label class="switch"><input type="checkbox" id="autostart"><span id="autostart-label">Lancer à l'ouverture de session (fenêtre réduite)</span></label>
         <label class="switch"><input type="checkbox" id="maj-auto"><span>Rechercher les mises à jour (au démarrage puis toutes les 6 h, jamais pendant une course)</span></label>
         <label class="switch"><input type="checkbox" id="demo"><span>Démonstration : envoyer une course fictive (tester la liaison sans jeu)</span></label>
+        <label class="switch"><input type="checkbox" id="diagnostic"><span>Diagnostic : afficher ce que le collecteur coûte au PC (CPU, mémoire, réseau)</span></label>
       </div>
       <div class="row" style="margin-top:6px">
         <button class="btn primary" id="btn-visualiseur">Ouvrir SecondMonitor sur ce PC</button>
@@ -219,6 +223,9 @@
     $('autostart').checked = e.autostart;
     $('autostart-label').textContent = e.systeme === 'windows' ? 'Lancer avec Windows (fenêtre réduite)' : 'Lancer à l\'ouverture de session (fenêtre réduite)';
     $('demo').checked = e.demo;
+    $('diagnostic').checked = e.diagnostic;
+    $('mesures').classList.toggle('show', !!e.mesures);
+    $('mesures').textContent = e.mesures || '';
     $('btn-visualiseur').style.display = e.visualiseur ? '' : 'none';
     $('jeux').textContent = 'Jeux surveillés : ' + e.jeux.join(', ');
     const r = e.radio;
@@ -288,6 +295,7 @@
   document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => send('qualite', b.dataset.q)));
   $('autostart').addEventListener('change', (e) => send('autostart', e.target.checked));
   $('demo').addEventListener('change', (e) => send('demo', e.target.checked));
+  $('diagnostic').addEventListener('change', (e) => send('diagnostic', e.target.checked));
   $('btn-relancer').addEventListener('click', () => send('relancer'));
   $('btn-dossier').addEventListener('click', () => send('dossier'));
   $('btn-visualiseur').addEventListener('click', () => send('visualiseur'));

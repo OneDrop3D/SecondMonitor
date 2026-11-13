@@ -26,6 +26,8 @@ namespace SecondMonitor.Collector
         private long _lastPackages;
         private long _lastBytes;
         private DateTime _lastStats = DateTime.UtcNow;
+        private long _sourceReads;
+        private CollectorDiagnostics _diagnostics;
 
         public CollectorRuntime(CollectorSettings settings, string dataDirectory)
         {
@@ -53,7 +55,25 @@ namespace SecondMonitor.Collector
 
         public IReadOnlyList<string> GameNames => _host.GameNames;
 
-        public string ActiveGame => Demo ? "Course de démonstration" : _host.ActiveGame;
+        public string ActiveGame => Demo ? "Course de démonstration" : ReplayFile != null ? "Rejeu d'un enregistrement" : _host.ActiveGame;
+
+        /// <summary>Enregistrement du hub (.smrec) à renvoyer au lieu de lire le jeu (diagnostic, option « --rejouer »).</summary>
+        public string ReplayFile { get; set; }
+
+        /// <summary>Vitesse du rejeu (1 = temps réel).</summary>
+        public double ReplaySpeed { get; set; } = 1;
+
+        /// <summary>Lectures du jeu (ou de la démonstration / du rejeu) depuis le démarrage.</summary>
+        public long GameReads => _host.GameReads + Interlocked.Read(ref _sourceReads);
+
+        public long PackagesSent => _server.PackagesSent;
+
+        public long WireBytesSent => _server.WireBytesSent;
+
+        public long DatagramsSent => _server.DatagramsSent;
+
+        /// <summary>Mesures du mode diagnostic (créées à la première demande).</summary>
+        public CollectorDiagnostics Diagnostics => _diagnostics ??= new CollectorDiagnostics(this);
 
         public bool Paused => !Demo && _host.Paused;
 
@@ -65,7 +85,7 @@ namespace SecondMonitor.Collector
         public RadioButton Radio { get; private set; }
 
         /// <summary>Le jeu envoie-t-il de vraies données de course (pas seulement des signes de vie) ?</summary>
-        public bool GameDataFlowing => Demo || (_host.ActiveGame != null && (DateTime.UtcNow - _host.LastGameDataUtc).TotalSeconds < 5);
+        public bool GameDataFlowing => Demo || ReplayFile != null || (_host.ActiveGame != null && (DateTime.UtcNow - _host.LastGameDataUtc).TotalSeconds < 5);
 
         /// <summary>
         /// Ce qui bloque, en clair, et quoi faire : plugin à installer, droits administrateur, télémétrie du jeu désactivée…
@@ -107,7 +127,8 @@ namespace SecondMonitor.Collector
             {
                 string year = game.Contains("24", StringComparison.Ordinal) ? "2024" : game.Replace("F1 ", string.Empty, StringComparison.Ordinal);
                 return $"Activez la télémétrie dans le jeu : Options › Paramètres › Télémétrie. Télémétrie UDP : Activée · Mode diffusion : Désactivé · "
-                    + $"Adresse IP : 127.0.0.1 · Port : 20777 · Format UDP : {year}. Les données arrivent dès que vous êtes en piste (tour de formation compris).";
+                    + $"Adresse IP : 127.0.0.1 · Port : 20777 · Format UDP : {year}. Les données arrivent dès que vous êtes en piste (tour de formation compris). "
+                    + "Fréquence d'envoi UDP : 20 Hz suffit (30 Hz en qualité « Précis ») ; 60 Hz fait travailler le PC pour rien.";
             }
 
             if (game == "Assetto Corsa")
@@ -172,6 +193,10 @@ namespace SecondMonitor.Collector
                         {
                             await RunDemoAsync(token).ConfigureAwait(false);
                         }
+                        else if (ReplayFile != null)
+                        {
+                            await RunReplayAsync(token).ConfigureAwait(false);
+                        }
                         else
                         {
                             await _host.RunAsync(token).ConfigureAwait(false);
@@ -194,7 +219,7 @@ namespace SecondMonitor.Collector
             DateTime now = DateTime.UtcNow;
             double dt = Math.Max(0.2, (now - _lastStats).TotalSeconds);
             long p = _server.PackagesSent;
-            long b = _server.BytesSent;
+            long b = _server.WireBytesSent; // ce qui part vraiment sur le réseau (compressé)
             PackagesPerSecond = (p - _lastPackages) / dt;
             KilobytesPerSecond = (b - _lastBytes) / dt / 1024;
             _lastPackages = p;
@@ -280,6 +305,7 @@ namespace SecondMonitor.Collector
                 while (!token.IsCancellationRequested)
                 {
                     var data = sim.Step(dt);
+                    Interlocked.Increment(ref _sourceReads);
                     if (_server.PeerCount > 0)
                     {
                         if (!started)
@@ -301,6 +327,61 @@ namespace SecondMonitor.Collector
             finally
             {
                 Log("Démonstration arrêtée.");
+            }
+        }
+
+        /// <summary>
+        /// Rejoue un enregistrement du hub comme si le jeu tournait : le dernier état enregistré est renvoyé au rythme de lecture
+        /// du jeu ; les moments où le jeu se taisait (signes de vie dans l'enregistrement) restent silencieux. Mesure du coût réel
+        /// du collecteur sur une vraie course, sans le jeu.
+        /// </summary>
+        private async Task RunReplayAsync(CancellationToken token)
+        {
+            Log($"Rejeu de {System.IO.Path.GetFileName(ReplayFile)} (vitesse ×{ReplaySpeed:0.##}) : aucun jeu lu.");
+            int tick = Settings.Rates.TickMs;
+            while (!token.IsCancellationRequested)
+            {
+                var unpacker = new SecondMonitor.Remote.Adapter.DatagramPayloadUnPacker();
+                SecondMonitor.DataModel.Snapshot.SimulatorDataSet current = null;
+                DateTime clock = DateTime.MinValue;
+                foreach (var (time, bytes) in SecondMonitor.Hub.Core.Network.CaptureReader.Read(ReplayFile))
+                {
+                    var payload = ProtoBuf.Serializer.Deserialize<SecondMonitor.Remote.Models.DatagramPayload>(new System.IO.MemoryStream(bytes));
+                    var data = unpacker.UnpackDatagramPayload(payload);
+                    if (clock == DateTime.MinValue)
+                    {
+                        clock = time;
+                    }
+
+                    // Jusqu'au paquet suivant : on renvoie l'état courant à chaque lecture du jeu.
+                    while (clock < time && !token.IsCancellationRequested)
+                    {
+                        if (current != null && _server.PeerCount > 0)
+                        {
+                            Interlocked.Increment(ref _sourceReads);
+                            _server.SendData(current);
+                        }
+
+                        await Task.Delay(Math.Max(1, (int)(tick / ReplaySpeed)), token).ConfigureAwait(false);
+                        clock = clock.AddMilliseconds(tick);
+                    }
+
+                    switch (payload.PayloadKind)
+                    {
+                        case SecondMonitor.Remote.Models.DatagramPayloadKind.SessionStart:
+                            current = data;
+                            _server.SendSessionStarted(data);
+                            break;
+                        case SecondMonitor.Remote.Models.DatagramPayloadKind.Normal:
+                            current = data;
+                            break;
+                        default:
+                            current = null; // le jeu ne transmettait rien (menus, pause) : silence
+                            break;
+                    }
+                }
+
+                Log("Fin de l'enregistrement : rejeu depuis le début.");
             }
         }
 

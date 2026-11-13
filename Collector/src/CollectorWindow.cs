@@ -67,9 +67,33 @@ namespace SecondMonitor.Collector
 
             Timer timer = null;
             UpdateManager updates = null;
+            // Économies : rien n'est poussé quand la fenêtre est réduite, ni quand l'état n'a pas changé ;
+            // les lectures système (adresses, démarrage auto, visualiseur, version) ne sont pas refaites chaque seconde.
+            bool hidden = minimized;
+            string lastState = null;
+            var addresses = new Throttled<string[]>(CollectorRuntime.LocalAddresses, TimeSpan.FromSeconds(30));
+            var autostart = new Throttled<bool>(Autostart.IsEnabled, TimeSpan.FromSeconds(15));
+            System.Net.NetworkInformation.NetworkChange.NetworkAddressChanged += (_, _) => addresses.Invalidate();
+            bool viewer = ViewerPath() != null || OperatingSystem.IsMacOS();
+            string version = typeof(CollectorWindow).Assembly.GetName().Version?.ToString(3);
+            window.RegisterMinimizedHandler((_, _) => hidden = true)
+                .RegisterRestoredHandler((_, _) => { hidden = false; SendState(); })
+                .RegisterMaximizedHandler((_, _) => { hidden = false; SendState(); })
+                .RegisterFocusInHandler((_, _) => hidden = false);
+            int hiddenTicks = 0;
             void Send(object message)
             {
                 string text = JsonSerializer.Serialize(message, Json);
+                if (text.StartsWith("{\"type\":\"etat\"", StringComparison.Ordinal))
+                {
+                    if (text == lastState)
+                    {
+                        return;
+                    }
+
+                    lastState = text;
+                }
+
                 try
                 {
                     window.Invoke(() => window.SendWebMessage(text));
@@ -94,22 +118,24 @@ namespace SecondMonitor.Collector
                     demo = runtime.Demo,
                     envois = Math.Round(runtime.PackagesPerSecond),
                     ko = Math.Round(runtime.KilobytesPerSecond, 1),
-                    adresses = CollectorRuntime.LocalAddresses(),
+                    adresses = addresses.Value,
                     port = s.Port,
                     qualite = NormalizeQuality(s.Qualite),
                     lectures = 1000 / tick,
                     joueurHz = 1000 / player,
                     adversairesHz = Math.Round(1000.0 / others, 1),
                     jeux = runtime.GameNames,
-                    autostart = Autostart.IsEnabled(),
-                    version = typeof(CollectorWindow).Assembly.GetName().Version?.ToString(3),
+                    autostart = autostart.Value,
+                    version,
                     dossier = runtime.DataDirectory,
                     systeme = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "mac" : "linux",
-                    visualiseur = ViewerPath() != null || OperatingSystem.IsMacOS(),
+                    visualiseur = viewer,
                     donnees = runtime.GameDataFlowing,
                     voitures = runtime.Host.LastDriverCount,
                     conseil = runtime.Advice() is { } a ? new { titre = a.Title, texte = a.Text, action = a.Action } : null,
                     radio = new { supporte = RadioButton.Supported, bouton = runtime.Radio?.Description ?? "aucun", apprentissage = runtime.Radio?.Learning ?? false },
+                    diagnostic = s.Diagnostic,
+                    mesures = s.Diagnostic ? runtime.Diagnostics.Sample()?.Text : null,
                 });
             }
 
@@ -155,13 +181,21 @@ namespace SecondMonitor.Collector
                     {
                         case "pret":
                             Send(new { type = "journalComplet", lignes = runtime.LogLines() });
+                            lastState = null; // page (re)chargée : tout renvoyer
                             SendState();
                             if (updates != null)
                             {
                                 Send(new { type = "maj", maj = updates.Describe() });
                             }
 
-                            timer ??= new Timer(_ => SendState(), null, 1000, 1000);
+                            timer ??= new Timer(_ =>
+                            {
+                                // Réduite : une mise à jour toutes les 10 s seulement (au cas où le système ne signalerait pas sa réouverture).
+                                if (!hidden || ++hiddenTicks % 10 == 0)
+                                {
+                                    SendState();
+                                }
+                            }, null, 1000, 1000);
                             break;
                         case "maj-verifier":
                             _ = updates?.CheckAsync().ContinueWith(t => _ = t.Exception, System.Threading.Tasks.TaskScheduler.Default);
@@ -188,8 +222,14 @@ namespace SecondMonitor.Collector
                             runtime.SetDemo(root.GetProperty("valeur").GetBoolean());
                             SendState();
                             break;
+                        case "diagnostic":
+                            runtime.Settings.Diagnostic = root.GetProperty("valeur").GetBoolean();
+                            runtime.Settings.Save();
+                            SendState();
+                            break;
                         case "autostart":
                             runtime.Log(Autostart.Set(root.GetProperty("valeur").GetBoolean()));
+                            autostart.Invalidate();
                             SendState();
                             break;
                         case "relancer":
