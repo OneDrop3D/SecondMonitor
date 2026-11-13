@@ -25,6 +25,7 @@ import { ConnectionView, ConnectionHero } from './components/ConnectionView';
 import { GuideView } from './components/GuideView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { collectorAddress, linkStage, useHubStatus } from './status';
+import { UpdateBanner } from './components/UpdateBanner';
 
 type Tab = 'timing' | 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'ai' | 'connection' | 'settings';
 
@@ -191,6 +192,7 @@ function Shell() {
       {toast && <div className="sm-toast" role="status" onClick={() => setToast(null)}>{toast}</div>}
       {guide && <GuideView status={status} snapshot={snapshot} onClose={closeGuide} onNavigate={(t) => setTab(t)} />}
       <RadioDock onOpen={() => setTab('ai')} />
+      <UpdateBanner />
       {selected && <DriverDrawer driver={selected} onClose={() => setSelectedId(null)} />}
     </div>
   );

@@ -4,6 +4,7 @@ import type { HubSettings, HubStatus, RaceSnapshot } from '../types';
 import { ThermalProfiles } from './ThermalProfiles';
 import { WheelBindingCard } from './EngineerView';
 import { isRadioStation, setRadioStation } from '../radio';
+import { UpdateCard } from './UpdateBanner';
 
 export function SettingsView({ theme, setTheme, snapshot }: { theme: string; setTheme: (t: string) => void; snapshot: RaceSnapshot | null }) {
   const [settings, setSettings] = useState<HubSettings | null>(null);
@@ -73,6 +74,8 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
           </div>
         </div>
       </div>
+
+      <UpdateCard />
 
       {['localhost', '127.0.0.1'].includes(location.hostname) && (
         <div className="card">
