@@ -12,11 +12,19 @@ namespace SecondMonitor.Hub.Core.Track
     /// Tracés de circuits réels (bibliothèque libre, voir Track/Library/circuits.json et tools/circuits.py).
     /// Ils servent tant que le tracé n'a pas été appris dans le jeu (premier tour, ou jeu sans positions).
     /// Un tracé n'est retenu que si son nom ET sa longueur correspondent (± 8 %) : jamais le tracé complet pour une version courte.
+    /// Départ et sens sont recalés en roulant par TrackCalibration ; un tracé de faible confiance n'est montré qu'une fois calé.
     /// </summary>
     public static class TrackLibrary
     {
         private static readonly Lazy<List<LibraryTrack>> Tracks = new(Load);
-        private static readonly string[] VariantWords = { "short", "court", "national", "club", "indy", "west", "east", "oval", "nordschleife", "endurance", "historic" };
+        private static readonly string[] VariantWords =
+        {
+            "short", "court", "national", "club", "indy", "west", "east", "oval", "nordschleife", "endurance", "historic", "sprint", "outer",
+            "inner", "school", "paddock", "junior", "fosters", "island", "woodland", "bugatti", "classic", "200", "100", "kart", "karting", "drift",
+            "rallycross", "legends", "north", "south", "moto", "chicane", "1966", "1967", "1971", "1975", "1976", "1977", "1988", "1991", "1993",
+        };
+
+        private static readonly string[] ReverseWords = { "reverse", "reversed", "inverse", "inverted", "rev" };
 
         public static int Count => Tracks.Value.Count;
 
@@ -29,11 +37,13 @@ namespace SecondMonitor.Hub.Core.Track
                 return null;
             }
 
+            bool reverse = ReverseWords.Any(w => Contains(game, w));
             LibraryTrack best = null;
-            int bestScore = 0;
+            double bestScore = double.MinValue;
             foreach (LibraryTrack t in Tracks.Value)
             {
-                if (lapLength > 500 && Math.Abs(t.Length - lapLength) / lapLength > 0.08)
+                double error = lapLength > 500 ? Math.Abs(t.Length - lapLength) / lapLength : 0;
+                if (error > 0.08)
                 {
                     continue; // autre configuration du circuit
                 }
@@ -44,7 +54,14 @@ namespace SecondMonitor.Hub.Core.Track
                     continue;
                 }
 
-                int score = new[] { t.Name, t.Location }.Concat(t.Aliases).Select(Normalize).Where(n => n.Length >= 3 && Contains(game, n)).Select(n => n.Length).DefaultIfEmpty(0).Max();
+                int match = new[] { t.Name, t.Location }.Concat(t.Aliases).Select(Normalize).Where(n => n.Length >= 3 && Contains(game, n)).Select(n => n.Length).DefaultIfEmpty(0).Max();
+                if (match == 0)
+                {
+                    continue;
+                }
+
+                // Nom le plus précis d'abord, puis la longueur la plus proche (variantes d'un même circuit).
+                double score = match - (200 * error);
                 if (score > bestScore)
                 {
                     bestScore = score;
@@ -52,7 +69,7 @@ namespace SecondMonitor.Hub.Core.Track
                 }
             }
 
-            return best;
+            return best != null && reverse ? best.Reversed() : best;
         }
 
         private static bool Contains(string text, string word) => $" {text} ".Contains($" {word} ", StringComparison.Ordinal) || (word.Contains(' ') && text.Contains(word, StringComparison.Ordinal));
@@ -109,5 +126,27 @@ namespace SecondMonitor.Hub.Core.Track
 
         /// <summary>400 points [x est, z sud] en mètres, départ sur la ligne, sens de la course.</summary>
         public List<double[]> Points { get; set; } = new();
+
+        /// <summary>Confiance (0-1) dans le départ et le sens à l'import ; sous DisplayConfidence, le tracé attend d'être calé.</summary>
+        public double Confidence { get; set; } = 0.7;
+
+        /// <summary>Comment départ et sens ont été obtenus (rapport d'import).</summary>
+        public string Notes { get; set; }
+
+        public const double DisplayConfidence = 0.6;
+
+        /// <summary>Le même circuit parcouru en sens inverse (F1 25…) : départ inconnu, à caler en roulant.</summary>
+        public LibraryTrack Reversed() => new()
+        {
+            Id = Id + "-inverse",
+            Name = Name + " (sens inverse)",
+            Location = Location,
+            Aliases = Aliases,
+            Length = Length,
+            Source = Source,
+            Points = Enumerable.Range(0, Points.Count).Select(i => Points[(Points.Count - i) % Points.Count]).ToList(),
+            Confidence = Math.Min(Confidence, 0.3),
+            Notes = "sens inverse : départ à caler",
+        };
     }
 }

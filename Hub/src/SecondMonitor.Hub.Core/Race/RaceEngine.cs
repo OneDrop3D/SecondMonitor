@@ -119,6 +119,7 @@ namespace SecondMonitor.Hub.Core.Race
         private readonly TyreThermalWatch _thermal = new();
         private readonly DamageWatch _damage = new();
         private SecondMonitor.Hub.Core.Track.LibraryTrack _libraryTrack;
+        private readonly SecondMonitor.Hub.Core.Track.TrackCalibration _libraryCalibration = new();
 
         public RaceSnapshot BuildSnapshot()
         {
@@ -181,6 +182,7 @@ namespace SecondMonitor.Hub.Core.Race
             _thermal.Reset();
             _damage.Reset();
             _libraryTrack = null;
+            _libraryCalibration.Reset();
             _trackers.Clear();
             _player.Reset();
             _telemetry.Reset();
@@ -196,6 +198,18 @@ namespace SecondMonitor.Hub.Core.Race
             if (data.SimulatorSourceInfo?.WorldPositionInvalid == true)
             {
                 return;
+            }
+
+            // Recalage du tracé de bibliothèque : toutes les voitures en piste donnent (fraction du tour, x, z).
+            if (_trackMap.Outline == null && lapLength > 0)
+            {
+                foreach (DriverInfo d in data.DriversInfo ?? Array.Empty<DriverInfo>())
+                {
+                    if (d?.WorldPosition != null && !d.InPits && d.Speed?.InMs > 5)
+                    {
+                        _libraryCalibration.Add(d.LapDistance / lapLength, d.WorldPosition.X.InMeters, d.WorldPosition.Z.InMeters);
+                    }
+                }
             }
 
             DriverInfo reference = player != null && player.Speed?.InMs > 5 ? player
@@ -254,12 +268,15 @@ namespace SecondMonitor.Hub.Core.Race
             if (snap.Track.Outline == null)
             {
                 // Pas encore de tracé appris (premier tour, ou jeu sans positions) : le vrai tracé du circuit s'il est connu.
+                // Départ et sens recalés sur les positions du jeu ; rien n'est affiché tant qu'un tracé peu sûr n'est pas calé.
                 _libraryTrack ??= SecondMonitor.Hub.Core.Track.TrackLibrary.Find(snap.Track.Name, snap.Track.Layout, lapLength);
-                if (_libraryTrack != null)
+                var library = _libraryCalibration.Resolve(_libraryTrack);
+                if (library != null)
                 {
-                    snap.Track.Outline = _libraryTrack.Points;
+                    snap.Track.Outline = library.Points;
                     snap.Track.OutlineSource = "bibliothèque";
                     snap.Track.OutlineCredit = $"{_libraryTrack.Name} · {_libraryTrack.Source}";
+                    snap.Track.OutlineCalibration = library.Calibrated ? "calé" : "estimé";
                 }
             }
             snap.Weather = new WeatherDto

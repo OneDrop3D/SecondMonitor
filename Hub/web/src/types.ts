@@ -37,6 +37,7 @@ export interface TrackDto {
   worldPositionsValid: boolean;
   outlineSource: 'jeu' | 'bibliothèque' | null;
   outlineCredit: string | null;
+  outlineCalibration?: 'calé' | 'estimé' | null;
 }
 
 export interface WeatherDto {
