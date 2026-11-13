@@ -142,6 +142,46 @@ export interface PlayerStrategy {
   deltaBest: number | null;
   deltaLast: number | null;
   speed: number;
+  /** Réglages en roulant, hybride, limites de piste et pénalités (si le jeu les donne). */
+  controls?: CarControls | null;
+  /** Pédales et volant à l'instant (%, volant de -100 à 100). */
+  inputs?: DriverInputs | null;
+}
+
+export interface CarControls {
+  frontBrakeBiasPct: number | null;
+  motorMap: number | null; motorMapMax: number | null;
+  tc: number | null; tcMax: number | null;
+  tcCut: number | null; tcCutMax: number | null;
+  tcSlip: number | null; tcSlipMax: number | null;
+  abs: number | null; absMax: number | null;
+  migration: number | null; migrationMax: number | null;
+  frontAntiRoll: number | null; frontAntiRollMax: number | null;
+  rearAntiRoll: number | null; rearAntiRollMax: number | null;
+  regenKw: number | null;
+  electricMotor: string | null;
+  batteryPct: number | null;
+  virtualEnergyPct: number | null;
+  trackLimitsPoints: number | null;
+  trackLimitsPointsPerPenalty: number | null;
+  penalties: number | null;
+  lapInvalidated: boolean;
+  engineRunning: boolean;
+  pitRequested: boolean;
+}
+
+export interface DriverInputs { throttle: number; brake: number; clutch: number; steering: number; gear: string; rpm: number }
+
+/** Trace pédales / volant d'un tour (GET /api/analysis/inputs?lap=last|best|current|n), pas de `step` mètres. */
+export interface InputTrace {
+  lap: number;
+  time: number | null;
+  step: number;
+  throttle: (number | null)[];
+  brake: (number | null)[];
+  steering: (number | null)[];
+  speed: (number | null)[];
+  laps: number[];
 }
 
 export interface DamagePart {
@@ -291,6 +331,14 @@ export interface HubSettings {
     voice: string;
     language: string;
     proactiveRadio: boolean;
+    /** Alertes de pilotage dites tout de suite (limites de piste, temps annulé, pénalité, usure brutale, départ). */
+    drivingAlerts?: boolean;
+    /** « Copy », « Copy that » : accusés de réception en anglais. */
+    englishCalls?: boolean;
+    /** Modèle par spécialiste (« pneus », « stratégie », « voiture », « course ») ; vide = modèle « réflexion ». */
+    specialists?: Record<string, string>;
+    /** Au-delà (s), « Copy, je regarde ça et je reviens vers vous » et la réponse arrive ensuite. */
+    ackAfterSeconds?: number;
     proactiveMinIntervalSec: number;
     strictAnswers: boolean;
     wetThresholdPct: number;

@@ -281,3 +281,24 @@
 @keyframes nt-timer { to { transform: scaleX(0); } }
 @media (max-width: 760px) { .nt-stack { right: 12px; left: 12px; width: auto; } }
 @media (prefers-reduced-motion: reduce) { .nt-card { animation: none; } .nt-timer { display: none; } }
+
+/* ── Pilotage : réglages, limites de piste, pédales ── */
+.dr-controls { display: grid; grid-template-columns: 1fr auto; gap: 12px; height: 100%; overflow: auto; }
+.dr-kv { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.dr-limits { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; padding-left: 12px; border-left: 1px solid var(--border, rgba(127,127,127,.25)); min-width: 120px; }
+.dr-limits.danger .dr-dots span.on { background: var(--critical); }
+.dr-dots { display: flex; gap: 5px; }
+.dr-dots span { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--text-muted); }
+.dr-dots span.on { background: var(--warning); border-color: transparent; }
+.dr-pedals { display: flex; gap: 12px; height: 100%; min-height: 0; }
+.dr-live { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 92px; flex: none; }
+.dr-live > .dr-bar { display: inline-flex; }
+.dr-live { flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: flex-start; }
+.dr-bar { position: relative; width: 34px; height: 96px; border-radius: 6px; background: var(--surface-2, rgba(127,127,127,.15)); overflow: hidden; }
+.dr-bar-fill { position: absolute; left: 0; right: 0; bottom: 0; transition: height 80ms linear; }
+.dr-bar-label { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font-size: 10px; color: var(--text-primary); mix-blend-mode: difference; }
+.dr-wheel { position: relative; width: 74px; height: 8px; border-radius: 4px; background: var(--surface-2, rgba(127,127,127,.15)); }
+.dr-wheel-dot { position: absolute; top: -3px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--accent); }
+.dr-gear { font-size: 22px; font-weight: 700; width: 100%; text-align: center; }
+.dr-chart { flex: 1; min-width: 0; }
+@media (max-width: 560px) { .dr-pedals { flex-direction: column; } .dr-live { width: 100%; } .dr-controls { grid-template-columns: 1fr; } .dr-limits { border-left: 0; padding-left: 0; } }

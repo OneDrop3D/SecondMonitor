@@ -3,7 +3,7 @@ import { api, usePoll } from '../live';
 import { Recorder, audioPref, canChooseSpeaker, listAudioDevices, playBase64Wav, setAudioPref, testSpeaker } from '../audio';
 import { useRadio, type RadioMessage } from '../radio';
 import type { HubSettings, MemoryState, NodeStatus, OllamaModel } from '../types';
-import { CategoryPill } from './CarnetView';
+import { CategoryPill, type CarnetSummary } from './CarnetView';
 import { useStations } from '../stations';
 
 interface Diagnostic {
@@ -75,7 +75,13 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
     return () => window.removeEventListener('keydown', down);
   }, [r]);
 
-  const messages = r.testMode ? r.testReplies : radio;
+  const [sessionId, setSessionId] = useState<string>('current');
+  const past = usePoll<{ radios: { at: string; from?: string | null; question?: string | null; answer: string; kind?: string | null; category?: string | null; proactive: boolean }[] }>(
+    sessionId === 'current' ? null : `/api/carnets/${encodeURIComponent(sessionId)}`, 60000);
+  const pastMessages: RadioMessage[] = (past.data?.radios ?? []).map((x) => ({
+    at: x.at, from: x.from ?? '', question: x.question, answer: x.answer, kind: x.kind, category: x.category, proactive: x.proactive, milliseconds: 0,
+  }));
+  const messages = r.testMode ? r.testReplies : sessionId === 'current' ? radio : pastMessages;
   const lastProactive = [...radio].reverse().find((m) => m.awaitingAnswer);
 
   return (
@@ -92,6 +98,7 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
             </label>
           </div>
           <div className="card-body stack">
+            {!r.testMode && <SessionBar value={sessionId} onChange={setSessionId} />}
             {r.testMode && (
               <div className="callout test">
                 <span aria-hidden>🧪</span>
@@ -150,6 +157,7 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
             {r.error && <div className="status critical"><span className="ico">!</span>{r.error}</div>}
 
             <div className="stack-sm">
+              {sessionId !== 'current' && <div className="callout"><span aria-hidden>🗂</span><div>Session passée : échanges enregistrés dans le Carnet (lecture seule).</div></div>}
               {messages.length === 0 && <div className="muted">{r.testMode ? 'Posez une question pour tester.' : 'Aucun échange pour le moment.'}</div>}
               {[...messages].reverse().map((m, i) => <Message key={`${m.at}-${i}`} m={m} />)}
             </div>
@@ -164,6 +172,7 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
         <AudioDevicesCard />
         <WheelBindingCard />
         <ModelsCard settings={settings} save={save} models={models} reload={loadModels} />
+        <SpecialistsCard settings={settings} save={save} models={models} />
         <MachinesCard settings={settings} save={save} models={models} reload={loadModels} />
       </div>
     </div>
@@ -178,7 +187,45 @@ const KIND_LABEL: Record<string, string> = {
   conseil: 'conseil de réglage',
   suite: 'suite de la conversation',
   retour: 'retour du pilote',
+  accusé: 'réponse à venir',
+  alerte: 'alerte de pilotage',
 };
+
+const SESSION_NAME: Record<string, string> = { Race: 'Course', Qualification: 'Qualification', Practice: 'Essais', WarmUp: 'Warm-up' };
+
+/** Choix de la session à revoir (en cours ou passée, depuis le Carnet), et boutons « Terminer » / « Nouvelle session ». */
+export function SessionBar({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const { data, reload } = usePoll<CarnetSummary[]>('/api/carnets', 15000);
+  const [busy, setBusy] = useState(false);
+  const act = async (path: string, confirmText: string) => {
+    if (!window.confirm(confirmText)) return;
+    setBusy(true);
+    try {
+      await fetch(path, { method: 'POST' });
+      onChange('current');
+      reload();
+    } finally {
+      setBusy(false);
+    }
+  };
+  const sessions = (data ?? []).filter((c) => !c.current);
+  const label = (c: CarnetSummary) => {
+    const d = new Date(c.startedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return `${d} · ${SESSION_NAME[c.sessionType ?? ''] ?? 'Session'}${c.track ? ` · ${c.track}` : ''}${c.laps ? ` · ${c.laps} tours` : ''}`;
+  };
+  return (
+    <div className="row session-bar">
+      <span className="secondary">Session :</span>
+      <select className="select compact" value={value} onChange={(e) => onChange(e.target.value)} aria-label="Session à afficher">
+        <option value="current">En cours</option>
+        {sessions.map((c) => <option key={c.id} value={c.id}>{label(c)}</option>)}
+      </select>
+      <span className="spacer" />
+      <button className="chip" disabled={busy} onClick={() => act('/api/session/end', 'Terminer la session ? Le carnet est fermé et récapitulé ; rien n\'y sera plus ajouté jusqu\'à la prochaine session.')}>Terminer la session</button>
+      <button className="chip" disabled={busy} onClick={() => act('/api/session/new', 'Nouvelle session ? La mémoire de course et les calculs repartent de zéro (le carnet actuel est gardé).')}>Nouvelle session</button>
+    </div>
+  );
+}
 
 function Message({ m }: { m: RadioMessage }) {
   const [showFacts, setShowFacts] = useState(false);
@@ -187,6 +234,7 @@ function Message({ m }: { m: RadioMessage }) {
       {(m.transcript || m.question) && (
         <div className="msg-q"><b>{m.from?.startsWith('pilote') ? 'Pilote' : 'Ingénieur'}</b> : « {m.transcript ?? m.question} »</div>
       )}
+      {m.followUp && m.inReplyTo && <div className="msg-q muted">↩ réponse à « {m.inReplyTo} »</div>}
       <div className="row" style={{ alignItems: 'flex-start', flexWrap: 'nowrap' }}>
         <div className="msg-a">{m.proactive ? (m.awaitingAnswer ? '❓ ' : '📣 ') : '📻 '}{m.answer}</div>
         {m.audioBase64 && <button className="close" onClick={() => playBase64Wav(m.audioBase64!)} aria-label="Réécouter">▶</button>}
@@ -198,6 +246,7 @@ function Message({ m }: { m: RadioMessage }) {
         {m.milliseconds ? ` · total ${(m.milliseconds / 1000).toFixed(1)} s` : ''}
         {m.kind && KIND_LABEL[m.kind] && <span className="pill small-pill">{KIND_LABEL[m.kind]}</span>}
         {m.category && <CategoryPill category={m.category} />}
+        {m.specialist && m.kind === 'modèle' && <span className="pill small-pill">spécialiste {m.specialist}</span>}
         {m.awaitingAnswer && <span className="pill small-pill">attend votre réponse</span>}
         {m.scenario && <span className="pill small-pill">{m.scenario}</span>}
         {m.facts && <button className="chip tiny" onClick={() => setShowFacts(!showFacts)}>{showFacts ? 'masquer les faits' : 'faits utilisés'}</button>}
@@ -279,6 +328,29 @@ function BehaviourCard({ settings, save }: { settings: HubSettings | null; save:
           <span className="secondary">Pneus pluie conseillés au-delà de</span>
           <input className="input compact-input num" type="number" min={5} max={80} value={ai.wetThresholdPct} onChange={(e) => set({ wetThresholdPct: Math.max(5, Math.min(80, Number(e.target.value) || 25)) })} />
           <span className="secondary">% d'humidité de la piste</span>
+        </div>
+        <label className="switch">
+          <input type="checkbox" checked={ai.drivingAlerts ?? true} onChange={(e) => set({ drivingAlerts: e.target.checked })} />
+          <span>Alertes de pilotage immédiates</span>
+        </label>
+        <div className="secondary small">
+          Limites de piste (« Track limits virage 5 : trop large. 2 sur 3 »), temps annulé, pénalité, moteur coupé au départ,
+          et usure brutale d'un pneu analysée (où, dans quelle phase du virage, quel réglage essayer).
+        </div>
+        <label className="switch">
+          <input type="checkbox" checked={ai.englishCalls ?? true} onChange={(e) => set({ englishCalls: e.target.checked })} />
+          <span>Accusés de réception en anglais (« Copy »)</span>
+        </label>
+        <div className="row">
+          <span className="secondary">« Copy, je reviens vers vous » après</span>
+          <select className="select compact" value={ai.ackAfterSeconds ?? 2.5} onChange={(e) => set({ ackAfterSeconds: Number(e.target.value) })}>
+            {[1.5, 2.5, 4, 6, 10].map((v) => <option key={v} value={v}>{String(v).replace('.', ',')} s</option>)}
+          </select>
+          <span className="secondary">de réflexion</span>
+        </div>
+        <div className="secondary small">
+          Pendant que l'IA réfléchit, vous pouvez poser d'autres questions : les réponses calculées (pneus, essence, TC…) arrivent tout de suite,
+          les autres attendent leur tour, puis l'ingénieur revient (« Pour la stratégie : … »).
         </div>
         <label className="switch">
           <input type="checkbox" checked={ai.strictAnswers} onChange={(e) => set({ strictAnswers: e.target.checked })} />
@@ -570,6 +642,29 @@ function ModelsCard({ settings, save, models, reload }: { settings: HubSettings 
           </form>
         </div>
         <p className="secondary small">Les chiffres sont toujours calculés par le hub, jamais par l'IA : elle choisit et formule.</p>
+      </div>
+    </section>
+  );
+}
+
+const SPECIALISTS: [string, string][] = [['pneus', 'Pneus'], ['stratégie', 'Stratégie'], ['voiture', 'Voiture et réglages'], ['course', 'Course']];
+
+/** Un modèle par spécialiste (sinon le modèle « réflexion ») : chacun ne reçoit que les faits de son domaine. */
+function SpecialistsCard({ settings, save, models }: { settings: HubSettings | null; save: (p: (s: HubSettings) => HubSettings) => void; models: ModelsResponse | null }) {
+  if (!settings) return null;
+  const chat = (models?.models ?? []).filter((m) => m.capabilities.includes('completion'));
+  const set = (key: string, value: string) => save((s) => ({ ...s, ai: { ...s.ai, specialists: { ...(s.ai.specialists ?? {}), [key]: value } } }));
+  return (
+    <section className="card">
+      <div className="card-head"><span className="card-title">Spécialistes</span><span className="muted hide-xs">un domaine par question</span></div>
+      <div className="card-body stack-sm">
+        <div className="secondary small">
+          Chaque question libre va au spécialiste de son domaine, qui ne reçoit que ses faits : réponse plus rapide et plus juste,
+          puis son contexte est vidé. Par défaut, chacun utilise le modèle « réflexion ».
+        </div>
+        {SPECIALISTS.map(([key, label]) => (
+          <ModelSelect key={key} label={label} value={settings.ai.specialists?.[key] ?? ''} options={chat} onChange={(v) => set(key, v)} allowSame />
+        ))}
       </div>
     </section>
   );

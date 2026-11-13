@@ -822,3 +822,4 @@ details.cx-log > summary { cursor: pointer; list-style: none; }
 .pitplan-cut.ok { border-left-color: var(--good); }
 .pitplan-cut.threat { border-left-color: var(--critical); }
 .pill.on { background: color-mix(in oklab, var(--good) 35%, var(--surface-3)); color: var(--text-primary); }
+.session-bar { gap: 8px; flex-wrap: wrap; }

@@ -44,7 +44,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
         private static readonly (Topic Topic, string[] Words)[] Keywords =
         {
-            (Topic.Strategy, new[] { "undercut", "under cut", "overcut", "over cut", "si je rentre", "ressors", "ressortir", "ressortirai", "sortie des stands", "perte au stand", "couvrir", "stratégie d'arrêt", "strategie d'arret" }),
+            (Topic.Strategy, new[] { "undercut", "under cut", "overcut", "over cut", "si je rentre", "ressors", "ressortir", "ressortirai", "sortie des stands", "perte au stand", "couvrir", "stratégie d'arrêt", "strategie d'arret", "ma stratégie", "ma strategie", "la stratégie", "la strategie", "notre stratégie", "notre strategie" }),
             (Topic.Damage, new[] { "dégât", "degat", "cassé", "casse ", "aileron", "fond plat", "diffuseur", "ponton", "abîmé", "abime", "endommag", "touché", "réparer", "reparer", "mgu", "drs" }),
             (Topic.Laps, new[] { "meilleur tour", "meilleur temps", "meilleur chrono", "pire tour", "pire temps", "plus mauvais tour", "moins bon tour", "tour le plus lent", "plus lent tour", "dernier tour", "tour précédent", "tour precedent", "moyenne", "régularit", "regularit", "régulier", "regulier", "constan", "mes tours", "mes temps", "mes chronos" }),
             (Topic.Rules, new[] { "track limit", "tracks limit", "limites de piste", "limite de piste", "limites", "pénalité", "penalite", "pénalités", "penalites", "tour annulé", "tour annule", "temps annulé", "temps annule", "drive through", "stop and go" }),
@@ -59,7 +59,7 @@ namespace SecondMonitor.Hub.Core.Ai
             (Topic.Energy, new[] { "énergie", "energie", "virtuel", "ratio" }),
             (Topic.Car, new[] { "moteur", "huile", "l'eau", " eau", "frein", "radiateur" }),
             (Topic.Tyres, new[] { "pneu", "gomme", "usure", "température", "pression", "dégrad", "carcasse" }),
-            (Topic.Opponents, new[] { "stratégie", "strategie", "adversaire", "concurrent", "va s'arrêter", "va s'arreter", "ses pneus" }),
+            (Topic.Opponents, new[] { "sa stratégie", "sa strategie", "leur stratégie", "leur strategie", "adversaire", "concurrent", "va s'arrêter", "va s'arreter", "ses pneus" }),
             (Topic.Gap, new[] { "écart", "ecart", "derrière", "derriere", "devant", "gap", "revient", "reprend", "attaque", "loin", "rattrape" }),
             (Topic.Position, new[] { "position", "place", "classement", "rang", "leader", "premier", "combientième" }),
             (Topic.Session, new[] { "temps restant", "tours restants", "tour rest", "il reste combien de tours", "combien de tour", "tours bouclés", "tour bouclé", "fin de course", "minutes", "drapeau", "safety", "arrivée" }),
@@ -77,6 +77,14 @@ namespace SecondMonitor.Hub.Core.Ai
                 .Select(x => x.Topic)
                 .Distinct()
                 .ToList();
+
+            // « La stratégie de la voiture derrière / du numéro 7 » : la stratégie de l'adversaire.
+            if (Regex.IsMatch(q, @"strat[ée]gie") && Regex.IsMatch(q, @"voiture (devant|derri[èe]re)|adversaire|concurrent|num[ée]ro\s?\d+|\bdu \d+\b|#\d+"))
+            {
+                topics.Remove(Topic.Strategy);
+                topics.Remove(Topic.Opponents);
+                topics.Insert(0, Topic.Opponents);
+            }
 
             // Mots isolés : « TC », « ABS » (trop courts pour la recherche par morceau de mot).
             if (Regex.IsMatch(q, @"\b(tc|abs)\b") && !topics.Contains(Topic.Controls))
@@ -152,6 +160,27 @@ namespace SecondMonitor.Hub.Core.Ai
             }
 
             return topics;
+        }
+
+        /// <summary>
+        /// Demande courte sans verbe (« Pneus », « Fure des pneus », « Et la balance des freins », « TC ? ») : c'est une question
+        /// sur ce sujet, pas une remarque du pilote. Un symptôme (« ça glisse », « je bloque ») reste une remarque.
+        /// </summary>
+        public static bool IsShortRequest(string question)
+        {
+            string t = RadioCommands.Normalize(question);
+            int words = t.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+            if (words == 0 || words > 6 || SetupAdvisor.DetectSymptom(question) != null)
+            {
+                return false;
+            }
+
+            if (Regex.IsMatch(t, @"\b(glisse\w*|bloque\w*|patine\w*|vibre\w*|saute\w*|chauffe\w*|touche|casse\w*|crev\w*|abime\w*|mouill\w*|pleut|j ai|je suis|c est|ca)\b"))
+            {
+                return false;
+            }
+
+            return DetectTopics(question).Count > 0;
         }
 
         /// <summary>

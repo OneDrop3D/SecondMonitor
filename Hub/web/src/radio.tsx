@@ -20,6 +20,13 @@ export interface RadioMessage {
   /** Catégorie du carnet : « Stratégie », « Réglages de course », « Réglages de la voiture », « Informations course ». */
   category?: string | null;
   categorySource?: string | null;
+  /** Alerte de pilotage (limites de piste, usure brutale…). */
+  urgent?: boolean;
+  /** Réponse arrivée après « Copy, je reviens vers vous » ; inReplyTo rappelle la question. */
+  followUp?: boolean;
+  inReplyTo?: string | null;
+  /** Spécialiste qui a répondu : « pneus », « stratégie », « voiture », « course ». */
+  specialist?: string | null;
   at: string;
 }
 

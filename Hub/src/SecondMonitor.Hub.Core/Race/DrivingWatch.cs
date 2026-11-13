@@ -210,10 +210,32 @@ namespace SecondMonitor.Hub.Core.Race
             }
 
             int bin = Math.Clamp((int)(s.Dist / BinMeters), 0, _current.Throttle.Length - 1);
-            _current.Throttle[bin] = Math.Round(Math.Clamp(s.Throttle, 0, 1) * 100);
-            _current.Brake[bin] = Math.Round(Math.Clamp(s.Brake, 0, 1) * 100);
-            _current.Steer[bin] = Math.Round(Math.Clamp(s.Steer, -1, 1) * 100);
-            _current.Speed[bin] = Math.Round(s.Speed);
+            double thr = Math.Round(Math.Clamp(s.Throttle, 0, 1) * 100);
+            double brk = Math.Round(Math.Clamp(s.Brake, 0, 1) * 100);
+            double str = Math.Round(Math.Clamp(s.Steer, -1, 1) * 100);
+            double spd = Math.Round(s.Speed);
+
+            // Données espacées (jeu à 5-10 Hz, 300 km/h = 8 à 17 m entre deux mesures) : on relie les deux mesures en ligne droite
+            // pour que la trace du tour soit continue (jusqu'à 250 m de trou, démonstration accélérée comprise ; au-delà, pas de données inventées).
+            InputLap l = _current;
+            if (l.LastBin >= 0 && bin > l.LastBin + 1 && bin - l.LastBin <= 25)
+            {
+                int from = l.LastBin;
+                for (int i = from + 1; i < bin; i++)
+                {
+                    double f = (double)(i - from) / (bin - from);
+                    l.Throttle[i] = Math.Round(l.Throttle[from].Value + ((thr - l.Throttle[from].Value) * f));
+                    l.Brake[i] = Math.Round(l.Brake[from].Value + ((brk - l.Brake[from].Value) * f));
+                    l.Steer[i] = Math.Round(l.Steer[from].Value + ((str - l.Steer[from].Value) * f));
+                    l.Speed[i] = Math.Round(l.Speed[from].Value + ((spd - l.Speed[from].Value) * f));
+                }
+            }
+
+            l.Throttle[bin] = thr;
+            l.Brake[bin] = brk;
+            l.Steer[bin] = str;
+            l.Speed[bin] = spd;
+            l.LastBin = bin;
         }
 
         private void DetectWearSpike(Sample s, IReadOnlyList<TrackSegment> corners, double lapLength)
@@ -471,6 +493,9 @@ namespace SecondMonitor.Hub.Core.Race
             public int Lap { get; }
 
             public bool Complete { get; set; }
+
+            /// <summary>Dernière case remplie (pour relier deux mesures espacées), -1 au début du tour.</summary>
+            public int LastBin { get; set; } = -1;
 
             public double?[] Throttle { get; }
 

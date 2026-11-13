@@ -135,6 +135,8 @@ app.MapGet("/api/analysis/microsectors", (RaceEngine engine) => Results.Json(eng
 app.MapGet("/api/analysis/speeds", (RaceEngine engine) => Results.Json(engine.BuildSpeedAnalysis(), LiveHub.Json));
 app.MapGet("/api/analysis/speedtrace", (RaceEngine engine, string? ids, string? kind) => Results.Json(engine.BuildSpeedTraces(Ids(ids), kind != "last"), LiveHub.Json));
 app.MapGet("/api/analysis/trajectories", (RaceEngine engine, string? ids, string? seg, string? kind) => Results.Json(engine.BuildTrajectories(Ids(ids), seg, kind != "last"), LiveHub.Json));
+app.MapGet("/api/analysis/inputs", (RaceEngine engine, string? lap) =>
+    engine.InputTrace(lap ?? "last") is { } trace ? Results.Json(trace, LiveHub.Json) : Results.Json(new { laps = Array.Empty<int>() }, LiveHub.Json));
 app.MapGet("/api/player/laps", (RaceEngine engine) => Results.Json(engine.PlayerLaps(), LiveHub.Json));
 app.MapGet("/api/telemetry", (RaceEngine engine, double? since) => Results.Json(engine.ReadTelemetry(since ?? double.NegativeInfinity), LiveHub.Json));
 app.MapGet("/api/weather", (RaceEngine engine) => Results.Json(engine.BuildWeather(), LiveHub.Json));

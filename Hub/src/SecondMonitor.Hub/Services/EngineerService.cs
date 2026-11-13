@@ -213,7 +213,7 @@ public sealed class EngineerService
             return prep;
         }
 
-        if (dialog == null && answer == null)
+        if (dialog == null && answer == null && !RaceBriefing.IsShortRequest(question))
         {
             // Retour du pilote sur la voiture : base de réglages, réponse immédiate (jamais un simple « reçu »).
             dialog = RadioDialog.Feedback(question, memory, car, snapshot, prep.Lap);

@@ -163,6 +163,16 @@ En course multi-catégories, le tableau montre votre catégorie et les autres vo
 - Il prend la parole de lui-même quand une décision se présente :
   - **pneus trop chauds sur tout un tour** ou en surchauffe depuis plus de 30 s, ou encore froids au tour de formation ;
   - pluie, relais à allonger, box dans deux tours, voiture qui revient, freins ou moteur trop chauds.
+- **Alertes de pilotage** dites tout de suite, en une phrase : limites de piste (trop large ou coupé, points avant pénalité), temps annulé,
+  pénalité, moteur coupé au départ, et **usure brutale** d'un pneu analysée (virage, phase, cause probable, réglage à essayer avec les valeurs actuelles).
+- Il connaît la **voiture** : catégorie (Hypercar LMH ou LMDh, LMP2, LMGT3, GTE, GT3, GT4, F1), ce qui se règle en roulant et les **réglages actuels**
+  lus dans le jeu (répartition, migration, TC, ABS, cartographie, regen, énergie ; Le Mans Ultimate, et en partie F1 24 et ACC).
+- **Pédales et volant** enregistrés sur chaque tour : bloc *Pédales et volant* de l'accueil et analyse du pilotage à la voix.
+- Ton radio : réponses courtes, « Copy » en anglais (réglable). Si l'IA réfléchit plus de 2,5 s, il répond « Copy, je reviens vers vous » et vous pouvez
+  poser d'autres questions ; les questions pour l'IA passent une à la fois, chacune chez son **spécialiste** (pneus, stratégie, voiture, course).
+- **Demandes d'arrêt** à la voix (« je boxe », « softs neufs », « la réparation aussi ») confirmées et gardées pour l'arrêt. Le menu des stands du jeu
+  se règle encore dans le jeu.
+- Boutons **Terminer la session** / **Nouvelle session** et menu pour revoir une session passée (écran *Ingénieur IA*).
 - Il garde une **mémoire de la course** et on peut changer de modèle à la voix. Les modèles peuvent tourner sur plusieurs machines (un Raspberry Pi par exemple).
 - Un **mode test** fonctionne sans jeu.
 

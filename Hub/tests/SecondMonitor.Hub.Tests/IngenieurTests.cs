@@ -52,6 +52,17 @@ public class IngenieurTests
         Assert.That(RaceBriefing.DetectTopics(question).First(), Is.EqualTo(expected));
     }
 
+    [TestCase("Fure des pneus.", true)]
+    [TestCase("Et la balance des freins.", true)]
+    [TestCase("Pneus", true)]
+    [TestCase("Les pneus glissent", false)]
+    [TestCase("Je bloque l'avant au virage 1", false)]
+    [TestCase("Le volant vibre.", false)]
+    public void ShortRequests_AreQuestions(string text, bool expected)
+    {
+        Assert.That(RaceBriefing.IsShortRequest(text), Is.EqualTo(expected));
+    }
+
     [Test]
     public void Controls_AreReadFromTheGame()
     {

@@ -108,6 +108,17 @@ namespace SecondMonitor.Hub.Core.Race
             }
         }
 
+        /// <summary>« Nouvelle session » demandée par le pilote : calculs remis à zéro, comme un changement de session dans le jeu.</summary>
+        public void StartNewSession()
+        {
+            lock (_lock)
+            {
+                ResetInternal();
+            }
+
+            SessionReset?.Invoke();
+        }
+
         public void Reset()
         {
             lock (_lock)

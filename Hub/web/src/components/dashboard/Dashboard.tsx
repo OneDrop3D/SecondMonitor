@@ -5,6 +5,7 @@ import { Icon } from '../Timing';
 import { allBlocks, getBlock, onRegistryChange, type DashboardContext } from './registry';
 import { GAP, ROW, clamp, colsFor, limits, loadLayout, resetLayout, saveLayout, type LayoutItem, type LayoutMode } from './layout';
 import './BlocksCore';
+import './BlocksDriving';
 import './dashboard.css';
 
 /*
