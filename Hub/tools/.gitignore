@@ -1,0 +1,3 @@
+# Cache des requêtes Overpass de circuits.py
+.cache-osm/
+__pycache__/

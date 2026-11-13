@@ -81,6 +81,8 @@ export function TrackMap({ snapshot, classColor, onSelect, classView = 'all' }: 
 
   const classes = [...new Map(snapshot.drivers.map((d) => [d.classId, d.className ?? d.classId])).entries()];
   const drawOrder = [...placed].sort((a, b) => Number(a.d.isPlayer) - Number(b.d.isPlayer));
+  // Tracé de bibliothèque pas encore calé sur le jeu : voitures et ligne de départ en pointillé (rien d'affirmé).
+  const estimated = snapshot.track.outlineSource === 'bibliothèque' && snapshot.track.outlineCalibration === 'estimé';
   const start = frame && outline ? { x: frame.tx(outline[0][0]), y: frame.ty(outline[0][1]) } : { x: W / 2, y: 30 - 6 };
 
   return (
@@ -89,7 +91,9 @@ export function TrackMap({ snapshot, classColor, onSelect, classView = 'all' }: 
         <span className="card-title">Carte</span>
         <span className="muted">{snapshot.track.name}{snapshot.track.layout ? ` · ${snapshot.track.layout}` : ''}</span>
         {snapshot.track.outlineSource === 'bibliothèque' && (
-          <span className="pill small-pill" title={`Tracé réel (${snapshot.track.outlineCredit ?? ''}) en attendant celui appris en roulant`}>tracé réel</span>
+          <span className="pill small-pill" title={`Tracé réel (${snapshot.track.outlineCredit ?? ''}) en attendant celui appris en roulant. ${estimated
+            ? 'Ligne de départ et sens estimés : positions approximatives jusqu\'au calage sur les positions du jeu.'
+            : 'Ligne de départ et sens calés sur les positions du jeu.'}`}>{estimated ? 'tracé réel · départ estimé' : 'tracé réel'}</span>
         )}
         <span className="spacer" />
         {traffic.size > 0 && <span className="pill" title="Voitures d'autres catégories à moins de 5 s">{traffic.size} en trafic</span>}
@@ -105,7 +109,7 @@ export function TrackMap({ snapshot, classColor, onSelect, classView = 'all' }: 
         ) : (
           <circle cx={W / 2} cy={H / 2} r={Math.min(W, H) / 2 - 30} fill="none" stroke="var(--surface-3)" strokeWidth={12} />
         )}
-        <rect x={start.x - 2} y={start.y - 9} width={4} height={18} fill="var(--text-primary)" rx={1} />
+        <rect x={start.x - 2} y={start.y - 9} width={4} height={18} fill={estimated ? 'none' : 'var(--text-primary)'} stroke={estimated ? 'var(--text-primary)' : 'none'} strokeDasharray={estimated ? '2 2' : undefined} rx={1} />
 
         {drawOrder.map((p) => {
           const isP = p.d.isPlayer;
@@ -117,7 +121,7 @@ export function TrackMap({ snapshot, classColor, onSelect, classView = 'all' }: 
               onClick={() => onSelect(p.d)}
               onPointerMove={(e) => setHover({ p, cx: e.clientX, cy: e.clientY })}
               onPointerLeave={() => setHover(null)}
-              opacity={p.d.inPits ? 0.55 : 1}
+              opacity={p.d.inPits ? 0.55 : estimated ? 0.7 : 1}
             >
               <circle cx={p.x} cy={p.y} r={14} fill="transparent" />
               {isP && <circle cx={p.x} cy={p.y} r={11} fill="none" stroke="var(--accent)" strokeWidth={2} />}

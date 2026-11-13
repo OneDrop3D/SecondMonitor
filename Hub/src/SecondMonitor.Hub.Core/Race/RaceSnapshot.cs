@@ -80,6 +80,9 @@ namespace SecondMonitor.Hub.Core.Race
 
         /// <summary>Nom du tracé de bibliothèque utilisé, et sa source (crédit).</summary>
         public string OutlineCredit { get; set; }
+
+        /// <summary>Tracé de bibliothèque : « calé » (départ et sens vérifiés sur les positions du jeu) ou « estimé ».</summary>
+        public string OutlineCalibration { get; set; }
     }
 
     public sealed class WeatherDto

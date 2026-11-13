@@ -3,6 +3,10 @@
 SecondMonitor (l'application qui affiche) et SecondMonitor Collecteur (PC de jeu), pour Windows, Mac et Linux/SteamOS.
 Basé sur [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) de winzarten (licence MIT).
 
+## Non publié
+
+- **Tracés réels de circuits** : la bibliothèque passe de 40 à 130 circuits et variantes (ACC au complet, Le Mans Ultimate, Assetto Corsa, F1, rFactor 2, Automobilista 2 avec les circuits brésiliens, RaceRoom avec les circuits allemands et scandinaves, iRacing, Project CARS 2), d'après OpenStreetMap (© contributeurs OpenStreetMap, ODbL) et bacinger/f1-circuits (MIT). La ligne de départ et le sens de course sont recalés automatiquement sur les positions des voitures dans le jeu ; tant qu'un tracé n'est pas sûr, il est signalé « départ estimé » ou n'est pas affiché.
+
 ## Version 0.5.0
 
 - **Dégâts mécaniques** pièce par pièce, quand le jeu les donne :
