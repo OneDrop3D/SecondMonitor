@@ -1,0 +1,49 @@
+/* Écran « Carnet » : sessions enregistrées, radios par catégorie, récapitulatif. Blocs 6 px, contenu 4 px. */
+.layout-carnet { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: var(--gutter); align-items: start; }
+.layout-carnet-detail { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: var(--gutter); align-items: start; }
+@media (max-width: 1180px) { .layout-carnet-detail { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 860px) { .layout-carnet { grid-template-columns: minmax(0, 1fr); } }
+
+.carnet-list .card-body { max-height: calc(100vh - 180px); overflow-y: auto; }
+@media (max-width: 860px) { .carnet-list .card-body { max-height: 260px; } }
+
+.carnet-item {
+  display: flex; flex-direction: column; gap: 2px; text-align: left; width: 100%;
+  background: var(--surface-2); border: 1px solid transparent; border-radius: var(--radius-sm);
+  padding: 8px 10px; cursor: pointer; color: var(--text-primary); font: inherit;
+}
+.carnet-item:hover { background: var(--surface-hover); }
+.carnet-item.on { border-color: var(--accent); background: var(--accent-wash); }
+.carnet-item-head { display: flex; align-items: center; gap: 6px; }
+.carnet-live { background: color-mix(in oklab, var(--good) 30%, var(--surface-3)); color: var(--text-primary); margin-left: 0; }
+
+.carnet-ai {
+  margin: 0; padding: 10px 12px; background: var(--surface-2); border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent); line-height: 1.55; white-space: pre-wrap;
+}
+.carnet-recap { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.carnet-recap-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; padding: 6px 8px; background: var(--surface-2); border-radius: var(--radius-sm); }
+.carnet-recap-row dt { color: var(--text-secondary); font-weight: 650; font-size: 13px; }
+.carnet-recap-row dd { margin: 0; font-size: 13px; line-height: 1.5; }
+@media (max-width: 520px) { .carnet-recap-row { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+
+.carnet-radio .msg-a { font-size: 14px; }
+.carnet-radio-meta { margin: 0 0 4px; gap: 8px; }
+.carnet-radio-meta .cat-pill { margin-left: 0; }
+
+/* Couleurs des catégories (même code dans l'écran Ingénieur IA). */
+/* Sélecteurs doublés : passent devant « .pill » quel que soit l'ordre de chargement des feuilles de style. */
+.pill.cat-pill { color: var(--text-primary); }
+.pill.cat-pill.cat-strategy { background: color-mix(in oklab, var(--series-4) 30%, var(--surface-3)); }
+.pill.cat-pill.cat-race { background: color-mix(in oklab, var(--series-1) 32%, var(--surface-3)); }
+.pill.cat-pill.cat-setup { background: color-mix(in oklab, var(--series-7) 34%, var(--surface-3)); }
+.pill.cat-pill.cat-info { background: var(--surface-3); }
+.cat-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.cat-dot.cat-strategy { background: var(--series-4); }
+.cat-dot.cat-race { background: var(--series-1); }
+.cat-dot.cat-setup { background: var(--series-7); }
+.cat-dot.cat-info { background: var(--text-muted); }
+
+.decision-yes { color: var(--good); }
+.decision-no { color: var(--critical); }
+.decision-meh { color: var(--warning); }

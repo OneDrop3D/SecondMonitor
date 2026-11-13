@@ -134,7 +134,7 @@ namespace SecondMonitor.Hub.Core.Ai
                         return null;
                     }
 
-                    Remember(memory, advice, text, lap);
+                    Remember(memory, advice, text, lap, note: false); // précision du même retour, pas un nouveau
                     return new DialogReply(advice.Text, "conseil", advice.Category, advice.Symptom);
                 }
 
@@ -238,14 +238,21 @@ namespace SecondMonitor.Hub.Core.Ai
             memory.Thread.Propose(symptom, label, null, null, category, proposal, null);
         }
 
-        private static void Remember(RaceMemory memory, SetupAdvisor.Advice advice, string text, int? lap)
+        private static void Remember(RaceMemory memory, SetupAdvisor.Advice advice, string text, int? lap, bool note = true)
         {
             if (memory == null)
             {
                 return;
             }
 
-            memory.Add("pilote", "retour", Quote(text), lap, advice.Symptom, advice.Tyres);
+            if (note)
+            {
+                memory.Add("pilote", "retour", Quote(text), lap, advice.Symptom, advice.Tyres);
+            }
+            else
+            {
+                memory.Add("pilote", "précision", Quote(text), lap);
+            }
             if (advice.Main != null)
             {
                 // Les propositions déjà dites avant la principale (geste de pilotage) ne sont pas reproposées.

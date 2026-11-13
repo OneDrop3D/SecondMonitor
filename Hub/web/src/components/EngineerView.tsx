@@ -3,6 +3,7 @@ import { api, usePoll } from '../live';
 import { Recorder, audioPref, canChooseSpeaker, listAudioDevices, playBase64Wav, setAudioPref, testSpeaker } from '../audio';
 import { useRadio, type RadioMessage } from '../radio';
 import type { HubSettings, MemoryState, NodeStatus, OllamaModel } from '../types';
+import { CategoryPill } from './CarnetView';
 
 interface Diagnostic {
   step: string;
@@ -21,6 +22,7 @@ const QUICK_RACE = [
   'Undercut possible sur la voiture devant ?',
   'Si je rentre maintenant, je ressors où ?',
   'Quel rythme pour gagner ?',
+  'Mon meilleur tour ?',
   'Écart avec la voiture derrière ?',
   "Combien de tours d'essence ?",
   'Des dégâts sur la voiture ?',
@@ -33,6 +35,7 @@ const QUICK_PRACTICE = [
   'Quel est mon meilleur tour théorique ?',
   'Température des freins ?',
   'Quelle est ma vitesse de pointe ?',
+  'Je suis régulier ?',
   'Des dégâts sur la voiture ?',
   'La météo va évoluer ?',
 ];
@@ -138,7 +141,8 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
             <div className="muted small">
               Pour couper l'ingénieur : appuyez sur le bouton radio pendant qu'il parle ; si vous ne dites rien, la radio se referme toute seule.
               À la voix aussi : « on passe à mistral » (réflexion), « passe sur omni pour la voix », « utilise qwen sur le raspberry ».
-              Vos remarques (« l'arrière glisse ») sont gardées dans la mémoire de course.
+              Vos retours (« j'ai du sous-virage en sortie », « je bloque l'avant au virage 1 ») reçoivent tout de suite un conseil de réglage ;
+              répondez « oui », « non » ou « autre chose ? ». Tout est gardé dans le Carnet de la session.
             </div>
             {r.error && <div className="status critical"><span className="ico">!</span>{r.error}</div>}
 
@@ -168,6 +172,9 @@ const KIND_LABEL: Record<string, string> = {
   modèle: 'formulée par l\'IA',
   commande: 'commande',
   spontanée: 'l\'IA prend la parole',
+  conseil: 'conseil de réglage',
+  suite: 'suite de la conversation',
+  retour: 'retour du pilote',
 };
 
 function Message({ m }: { m: RadioMessage }) {
@@ -187,6 +194,7 @@ function Message({ m }: { m: RadioMessage }) {
         {m.thinkMilliseconds ? ` · réflexion ${(m.thinkMilliseconds / 1000).toFixed(1)} s` : ''}
         {m.milliseconds ? ` · total ${(m.milliseconds / 1000).toFixed(1)} s` : ''}
         {m.kind && KIND_LABEL[m.kind] && <span className="pill small-pill">{KIND_LABEL[m.kind]}</span>}
+        {m.category && <CategoryPill category={m.category} />}
         {m.awaitingAnswer && <span className="pill small-pill">attend votre réponse</span>}
         {m.scenario && <span className="pill small-pill">{m.scenario}</span>}
         {m.facts && <button className="chip tiny" onClick={() => setShowFacts(!showFacts)}>{showFacts ? 'masquer les faits' : 'faits utilisés'}</button>}

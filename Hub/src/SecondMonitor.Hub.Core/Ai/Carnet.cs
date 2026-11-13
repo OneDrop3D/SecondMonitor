@@ -454,7 +454,7 @@ namespace SecondMonitor.Hub.Core.Ai
             {
                 bool solved = c.Decisions.Any(d => d.Symptom == g.Key && d.Decision == "efficace");
                 string idea = solved ? null : SetupAdvisor.SetupIdea(g.Key, c.Decisions.Where(d => d.Decision == "refusé").Select(d => d.Key));
-                if (idea != null && !setup.Contains(idea))
+                if (idea != null && !setup.Any(x => x.StartsWith(idea, StringComparison.Ordinal)))
                 {
                     setup.Add($"{idea} (contre le {SymptomNames[g.Key]})");
                 }

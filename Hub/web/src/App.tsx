@@ -23,10 +23,11 @@ import type { ClassView } from './classView';
 import { Icon, StatusBar, TimingHeader, TimingScreen } from './components/Timing';
 import { ConnectionView, ConnectionHero } from './components/ConnectionView';
 import { GuideView } from './components/GuideView';
+import { CarnetView } from './components/CarnetView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { collectorAddress, linkStage, useHubStatus } from './status';
 
-type Tab = 'timing' | 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'ai' | 'connection' | 'settings';
+type Tab = 'timing' | 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'ai' | 'carnet' | 'connection' | 'settings';
 
 // Même organisation que SecondMonitor d'origine : le chronométrage d'abord, les autres écrans dans la barre de droite.
 const TABS: { id: Tab; label: string; icon: string }[] = [
@@ -39,6 +40,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'weather', label: 'Météo', icon: 'weather' },
   { id: 'strategy', label: 'Stratégies', icon: 'strategy' },
   { id: 'ai', label: 'Ingénieur IA', icon: 'ai' },
+  { id: 'carnet', label: 'Carnet', icon: 'carnet' },
   { id: 'connection', label: 'Connexion au PC de jeu', icon: 'link' },
   { id: 'settings', label: 'Réglages', icon: 'settings' },
 ];
@@ -132,7 +134,7 @@ function Shell() {
   const selection = useSelection(snapshot);
   const selected = snapshot?.drivers.find((d) => d.id === selectedId) ?? null;
   const onSelect = (d: DriverRow) => setSelectedId(d.id);
-  const needsData = !['ai', 'settings', 'connection'].includes(tab);
+  const needsData = !['ai', 'carnet', 'settings', 'connection'].includes(tab);
 
   return (
     <div className="app sm-shell">
@@ -144,6 +146,8 @@ function Shell() {
             <SettingsView theme={theme} setTheme={setThemeState} snapshot={snapshot} />
           ) : tab === 'ai' ? (
             <EngineerView radio={radio} hasLiveData={!!snapshot?.hasData} sessionType={snapshot?.sessionType} />
+          ) : tab === 'carnet' ? (
+            <CarnetView />
           ) : tab === 'connection' ? (
             <ConnectionView status={status} snapshot={snapshot} />
           ) : needsData && !snapshot?.hasData ? (

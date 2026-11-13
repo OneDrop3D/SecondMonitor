@@ -3,6 +3,10 @@
 SecondMonitor (l'application qui affiche) et SecondMonitor Collecteur (PC de jeu), pour Windows, Mac et Linux/SteamOS.
 Basé sur [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) de winzarten (licence MIT).
 
+## Non publié
+
+- **Ingénieur IA** : réponses chiffrées courtes et instantanées (meilleur / pire / dernier tour, moyenne, régularité, « Vitesse max 204 km/h au tour 7, en moyenne 202 km/h ; le plus rapide est le numéro 52 à 208 km/h » avec un conseil de sortie de virage ou d'aileron en cas de déficit) ; base « symptôme → réglages » (sous-virage / survirage selon la phase, blocages, roue intérieure, patinage, freinage instable, rebonds, pneus, pluie) adaptée au jeu et à la voiture, sans attendre le modèle ; fil de conversation (« oui », « non » → « Copy, compris », « autre chose ? », « c'est en sortie », « c'est mieux »), propositions refusées jamais reproposées ; chaque échange classé (Stratégie, Réglages de course, Réglages de la voiture, Informations course) ; **Carnet** de session enregistré automatiquement (dossier « carnets ») avec récapitulatif de fin de session (IA ou calculé) ; radio d'arrivée avec le résultat ; conseils batterie pour les hybrides (F1 : ERS, LMU : hypercars) ; quand une donnée manque, l'ingénieur dit laquelle et pourquoi.
+
 ## Version 0.5.0
 
 - **Dégâts mécaniques** pièce par pièce, quand le jeu les donne :
