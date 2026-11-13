@@ -59,6 +59,7 @@ Au premier lancement du collecteur, Windows demande l'accès au réseau : choisi
 ### Mac
 1. Ouvrez le `.dmg` et glissez **SecondMonitor** et **SecondMonitor Collecteur** dans *Applications*.
 2. Au premier lancement, macOS peut bloquer l'application (elle n'est pas enregistrée auprès d'Apple). Allez dans *Réglages Système › Confidentialité et sécurité*, puis **Ouvrir quand même**.
+   Une seule fois : les mises à jour suivantes s'installent depuis SecondMonitor, sans ce passage.
    Si macOS dit qu'elle est endommagée : `xattr -dr com.apple.quarantine /Applications/SecondMonitor*.app`.
 3. Acceptez l'accès au **réseau local** et, pour la radio, au **micro**.
 
@@ -69,9 +70,34 @@ Sur Mac, le collecteur sert aux jeux sur console (F1 et Forza envoient leurs don
 tar xzf SecondMonitor-*-linux-x64.tar.gz
 ./secondmonitor/installer.sh
 ```
-Les deux applications s'ajoutent au menu. Leurs fenêtres utilisent WebKitGTK (`libwebkit2gtk-4.1`). S'il n'est pas installé,
-SecondMonitor s'ouvre dans le navigateur et le collecteur dans un terminal. Le script indique la commande à taper.
-Pour les jeux lancés avec Proton, voir [Collector/LISEZ-MOI.md](Collector/LISEZ-MOI.md).
+Les deux applications s'ajoutent au menu (rien n'est demandé en mot de passe, tout va dans `~/.local/share/secondmonitor`).
+Le script vérifie les bibliothèques (WebKitGTK 4.1, libnotify, ICU, OpenSSL) et donne la commande exacte pour apt, dnf, pacman ou zypper
+s'il en manque. Sans WebKitGTK, SecondMonitor s'ouvre dans le navigateur et le collecteur dans un terminal.
+Options : `--demarrage-auto` (collecteur à l'ouverture de session), `--pare-feu` (UDP 52642, TCP 8686-8687 avec ufw ou firewalld),
+`--verifier`. Désinstaller : `~/.local/share/secondmonitor/desinstaller.sh` (`--tout` retire aussi les réglages).
+Détails, jeux compatibles (F1 et Forza en natif, les autres via Proton) et check-list de test : [packaging/linux/LISEZ-MOI-LINUX.md](packaging/linux/LISEZ-MOI-LINUX.md).
+
+## Mettre à jour
+
+SecondMonitor vérifie tout seul au démarrage puis toutes les 6 heures (réglable, ou désactivable, dans *Réglages › Mises à jour*).
+Quand une version sort, un petit bandeau « Mise à jour x.y.z disponible — **Installer** » apparaît. Un clic suffit :
+
+1. le fichier de votre système est téléchargé depuis les releases de ce dépôt, puis vérifié (taille et SHA-256) ;
+2. SecondMonitor se ferme, **les deux applications** (SecondMonitor et le collecteur) sont remplacées, puis rouvertes ;
+3. si la nouvelle version ne démarre pas, l'ancienne est remise en place et la raison s'affiche au démarrage suivant.
+
+Sur le PC de jeu, la fenêtre du **collecteur** a le même bouton (jamais de vérification pendant que le jeu envoie des données).
+
+- **Mac** : la mise à jour ne passe pas par le navigateur, donc pas de quarantaine : plus de *Réglages › Confidentialité et sécurité ›
+  Ouvrir quand même* après la première installation. Pour que macOS ne redemande pas non plus le micro à chaque version, les
+  applications doivent être signées avec une identité stable (voir `packaging/mac/creer-identite-signature.sh`).
+- **Windows** : l'installateur se lance en silencieux (une copie de l'installation actuelle est gardée jusqu'au démarrage réussi) ;
+  la version sans installation (.zip) remplace son dossier.
+- **Linux** : l'archive remplace `~/.local/share/secondmonitor` puis `installer.sh --silencieux` rafraîchit les raccourcis.
+
+Les versions sont annoncées par le manifeste `secondmonitor.json` du dépôt [OneDrop3D/mises-a-jour](https://github.com/OneDrop3D/mises-a-jour)
+(même format que Multibook et ClickDeck), écrit par OneDrop3D à chaque publication. Seuls les fichiers des releases de
+OneDrop3D/SecondMonitor, en https et avec leur SHA-256, sont acceptés.
 
 ## Démarrer
 

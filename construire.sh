@@ -127,8 +127,13 @@ EOS
 }
 
 signer() {
-  # Identité OneDrop3D si elle existe (autorisations gardées d'une version à l'autre), sinon signature ad hoc.
-  local id="${ONEDROP3D_SIGN_IDENTITY:-$(security find-identity -v -p codesigning 2>/dev/null | grep -oE '"(Multibook|ClickDeck|OneDrop3D)[^"]*"' | head -1 | tr -d '"')}"
+  # Identité STABLE si elle existe : les autorisations (micro, réseau local) sont gardées d'une version à l'autre.
+  # Sans elle, signature ad hoc : macOS redemande ces autorisations à chaque version.
+  # Créer l'identité (une fois) : packaging/mac/creer-identite-signature.sh [--github]
+  local ids="$(security find-identity -v -p codesigning 2>/dev/null)"
+  local id="${ONEDROP3D_SIGN_IDENTITY:-$(printf '%s\n' "$ids" | grep -oE '"OneDrop3D SecondMonitor"' | head -1 | tr -d '"')}"
+  [ -n "$id" ] || id="$(printf '%s\n' "$ids" | grep -oE '"(Multibook|ClickDeck|OneDrop3D)[^"]*"' | head -1 | tr -d '"')"
+  echo "Signature : ${id:-ad hoc (les autorisations seront redemandées à chaque version)}"
   codesign --force --deep --sign "${id:--}" --identifier "$2" "$1" >/dev/null 2>&1 || codesign --force --deep --sign - --identifier "$2" "$1"
   codesign --verify --deep --strict "$1"
 }
@@ -175,6 +180,7 @@ construire_win() {
   local dossier="$DIST/windows-x64/SecondMonitor"
   ensemble win-x64 "$dossier"
   cp packaging/windows/LISEZ-MOI.txt "$dossier/"
+  printf '%s\n' "$V" > "$dossier/version.txt"   # lu par la mise à jour intégrée
   rm -f "$DIST/SecondMonitor-$V-windows-x64.zip"
   (cd "$DIST/windows-x64" && zip -qr -X "$DIST/SecondMonitor-$V-windows-x64.zip" SecondMonitor)
   echo "→ dist/SecondMonitor-$V-windows-x64.zip"
@@ -198,11 +204,16 @@ construire_linux() {
   # Jeux lancés avec Proton (LMU, ACC, rFactor 2, AMS2…) : collecteur Windows à lancer dans le préfixe du jeu.
   collecteur win-x64 "$dossier/collecteur-windows" unique
   rm -f "$dossier/collecteur-windows/LISEZ-MOI.md"
-  cp Collector/linux/lancer-avec-proton.sh packaging/linux/installer.sh packaging/linux/desinstaller.sh "$dossier/"
-  cp packaging/icone.png "$dossier/"
-  chmod +x "$dossier/SecondMonitorHub" "$dossier/SecondMonitor-Collecteur" "$dossier"/*.sh
+  cp Collector/linux/lancer-avec-proton.sh packaging/linux/installer.sh packaging/linux/desinstaller.sh packaging/linux/LISEZ-MOI-LINUX.md "$dossier/"
+  cp packaging/icone.png packaging/icone.svg "$dossier/"
+  printf '%s\n' "$V" > "$dossier/version.txt"   # lu par la mise à jour intégrée
+  chmod 755 "$dossier/SecondMonitorHub" "$dossier/SecondMonitor-Collecteur" "$dossier"/*.sh
+  chmod -R u+rwX,go+rX,go-w "$dossier"
   rm -f "$DIST/SecondMonitor-$V-linux-x64.tar.gz"
-  tar -C "$TMP/linux" -czf "$DIST/SecondMonitor-$V-linux-x64.tar.gz" secondmonitor
+  # Archive propre aussi depuis un Mac : ni fichiers « ._ » ni attributs étendus, propriétaire neutre.
+  local options=(--owner=0 --group=0)
+  if tar --version 2>/dev/null | grep -q bsdtar; then options=(--uid 0 --gid 0 --no-mac-metadata --no-xattrs); fi
+  COPYFILE_DISABLE=1 tar "${options[@]}" -C "$TMP/linux" -czf "$DIST/SecondMonitor-$V-linux-x64.tar.gz" secondmonitor
   echo "→ dist/SecondMonitor-$V-linux-x64.tar.gz"
 }
 

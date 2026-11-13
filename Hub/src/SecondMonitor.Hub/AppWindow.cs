@@ -16,6 +16,12 @@ public static class AppWindow
     /// <summary>Affiche la fenêtre et bloque jusqu'à sa fermeture. Faux si aucune fenêtre n'a pu être créée.</summary>
     public static bool Run(string url, string title, Action? onCreated = null)
     {
+        if (!LinuxDisplayAvailable())
+        {
+            Console.WriteLine("Aucun écran graphique (DISPLAY / WAYLAND_DISPLAY) : l'interface s'ouvre dans le navigateur.");
+            return false;
+        }
+
         try
         {
             var window = new PhotinoWindow()
@@ -59,6 +65,30 @@ public static class AppWindow
         }
     }
 
+    /// <summary>
+    /// Linux : sans session graphique (SSH, serveur), GTK s'arrêterait net au lieu de lever une exception.
+    /// Avec une session : WebKitGTK sans le rendu DMA-BUF, qui donne une fenêtre blanche avec certains pilotes (NVIDIA).
+    /// </summary>
+    public static bool LinuxDisplayAvailable()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return true;
+        }
+
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")))
+        {
+            return false;
+        }
+
+        if (Environment.GetEnvironmentVariable("WEBKIT_DISABLE_DMABUF_RENDERER") == null)
+        {
+            Environment.SetEnvironmentVariable("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        }
+
+        return true;
+    }
+
     /// <summary>Ferme la fenêtre depuis n'importe quel fil (bouton « Quitter » des réglages).</summary>
     public static void Close()
     {
@@ -82,7 +112,7 @@ public static class AppWindow
     public static void Message(bool consoleOnly, string title, string text)
     {
         Console.WriteLine($"{title} : {text}");
-        if (consoleOnly)
+        if (consoleOnly || !LinuxDisplayAvailable())
         {
             return; // serveur sans fenêtre : pas de fenêtre surprise sur l'écran
         }

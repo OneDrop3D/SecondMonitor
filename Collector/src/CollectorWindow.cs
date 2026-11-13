@@ -8,6 +8,7 @@ namespace SecondMonitor.Collector
     using System.Text.Json;
     using System.Threading;
     using Photino.NET;
+    using SecondMonitor.Hub.Core.Update;
 
     /// <summary>
     /// Petite fenêtre d'état du collecteur : SecondMonitor connecté, jeu détecté, débit, qualité, démarrage automatique, journal.
@@ -25,6 +26,12 @@ namespace SecondMonitor.Collector
         /// <summary>Affiche la fenêtre et bloque jusqu'à sa fermeture. Faux si la vue web manque (on passe alors en console).</summary>
         public static bool Run(CollectorRuntime runtime, bool minimized)
         {
+            // Linux sans session graphique (SSH) : GTK s'arrêterait net ; on passe en console.
+            if (OperatingSystem.IsLinux() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")))
+            {
+                return false;
+            }
+
             PhotinoWindow window;
             try
             {
@@ -59,6 +66,7 @@ namespace SecondMonitor.Collector
             }
 
             Timer timer = null;
+            UpdateManager updates = null;
             void Send(object message)
             {
                 string text = JsonSerializer.Serialize(message, Json);
@@ -105,6 +113,33 @@ namespace SecondMonitor.Collector
                 });
             }
 
+            // Mises à jour (même code que SecondMonitor) : au démarrage puis toutes les 6 h, jamais pendant que le jeu envoie.
+            try
+            {
+                updates = new UpdateManager("collecteur", typeof(CollectorWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0", runtime.DataDirectory, runtime.Log)
+                {
+                    CanCheckNow = () => !runtime.GameDataFlowing,
+                };
+                updates.Changed += () => Send(new { type = "maj", maj = updates.Describe() });
+                updates.QuitRequested += () =>
+                {
+                    // Le script de mise à jour attend la fin de ce processus pour remplacer les applications.
+                    try
+                    {
+                        window.Invoke(window.Close);
+                    }
+                    catch (Exception)
+                    {
+                        // Déjà fermée.
+                    }
+                };
+                updates.Start(TimeSpan.FromSeconds(20));
+            }
+            catch (Exception ex)
+            {
+                runtime.Log($"Mises à jour indisponibles : {ex.Message}");
+            }
+
             string startQuality = NormalizeQuality(runtime.Settings.Qualite);
             void OnLog(string line) => Send(new { type = "journal", ligne = line });
             runtime.LogAdded += OnLog;
@@ -121,7 +156,27 @@ namespace SecondMonitor.Collector
                         case "pret":
                             Send(new { type = "journalComplet", lignes = runtime.LogLines() });
                             SendState();
+                            if (updates != null)
+                            {
+                                Send(new { type = "maj", maj = updates.Describe() });
+                            }
+
                             timer ??= new Timer(_ => SendState(), null, 1000, 1000);
+                            break;
+                        case "maj-verifier":
+                            _ = updates?.CheckAsync().ContinueWith(t => _ = t.Exception, System.Threading.Tasks.TaskScheduler.Default);
+                            break;
+                        case "maj-installer":
+                            updates?.InstallInBackground();
+                            break;
+                        case "maj-plus-tard":
+                            updates?.Dismiss(updates.Offer?.Version);
+                            break;
+                        case "maj-auto":
+                            updates?.SetPreferences(root.GetProperty("valeur").GetBoolean(), updates.Preferences.IntervalHours);
+                            break;
+                        case "maj-vu":
+                            updates?.AcknowledgeFailure();
                             break;
                         case "qualite":
                             runtime.Settings.Qualite = root.GetProperty("valeur").GetString();
@@ -185,6 +240,7 @@ namespace SecondMonitor.Collector
             finally
             {
                 timer?.Dispose();
+                updates?.Dispose();
             }
 
             runtime.LogAdded -= OnLog;

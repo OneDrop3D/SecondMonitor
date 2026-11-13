@@ -1,0 +1,22 @@
+/* Mises à jour : bandeau discret (en bas au centre, au-dessus de la barre d'état ; la radio est en bas à gauche) et carte des Réglages. */
+.upd-banner {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 40px; z-index: 70; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  max-width: min(560px, calc(100vw - 24px)); padding: 6px 8px 6px 12px; border-radius: var(--radius);
+  background: var(--surface-1); border: 1px solid color-mix(in oklab, var(--accent) 55%, transparent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35); font-size: 13px;
+}
+@media (max-width: 760px) { .upd-banner { bottom: 156px; } }
+.upd-banner.warn { border-color: color-mix(in oklab, var(--warning) 60%, transparent); }
+.upd-text { flex: 1; min-width: 0; color: var(--text-secondary); }
+.upd-text b { color: var(--text-primary); }
+.upd-btn { border: 1px solid var(--border-strong); background: var(--surface-3); color: var(--text-primary); border-radius: var(--radius-sm); padding: 4px 12px; cursor: pointer; font: inherit; }
+.upd-btn.primary { background: var(--accent); border-color: transparent; color: #fff; font-weight: 650; }
+.upd-close { border: 0; background: transparent; color: var(--text-muted); font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: var(--radius-sm); cursor: pointer; }
+.upd-close:hover { background: var(--surface-hover); color: var(--text-primary); }
+.upd-bar { display: block; flex-basis: 100%; height: 4px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
+.upd-bar > i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+.upd-offer { display: flex; flex-direction: column; gap: 8px; }
+.upd-notes { margin: 0; max-height: 180px; overflow-y: auto; white-space: pre-wrap; font: 12px/1.5 var(--font); color: var(--text-secondary);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; }
+.upd-progress { display: flex; flex-direction: column; gap: 6px; }
+.upd-error { color: var(--critical); }

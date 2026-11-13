@@ -67,6 +67,15 @@
   details[open] summary { border-radius: var(--radius) var(--radius) 0 0; }
   .log { flex: 1; min-height: 80px; display: flex; flex-direction: column; }
   .log .body { flex: 1; padding: 0; min-height: 0; }
+  .maj { display: none; border-radius: var(--radius); border: 1px solid color-mix(in oklab, var(--accent) 55%, var(--line));
+         background: color-mix(in oklab, var(--accent) 12%, var(--panel)); padding: 8px 12px; gap: 10px; align-items: center; }
+  .maj.show { display: flex; }
+  .maj.bad { border-color: #6d5414; background: #2e2510; }
+  .maj-text { flex: 1; min-width: 0; }
+  .maj-title { font-weight: 700; }
+  .maj-detail { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+  .maj-bar { height: 4px; border-radius: 2px; background: var(--panel-2); margin-top: 5px; overflow: hidden; display: none; }
+  .maj-bar > i { display: block; height: 100%; width: 0; background: var(--accent); }
   pre { margin: 0; padding: 8px 10px; font: 12px/1.5 var(--mono); color: #cfcfcf; white-space: pre-wrap; overflow-y: auto; height: 100%; }
 </style>
 </head>
@@ -76,6 +85,16 @@
     <h1>SecondMonitor Collecteur</h1>
     <span class="version" id="version"></span>
   </header>
+
+  <div class="maj" id="maj" role="status">
+    <div class="maj-text">
+      <div class="maj-title" id="maj-title"></div>
+      <div class="maj-detail" id="maj-detail"></div>
+      <div class="maj-bar" id="maj-bar"><i id="maj-pct"></i></div>
+    </div>
+    <button class="btn primary" id="btn-maj">Installer</button>
+    <button class="btn" id="btn-maj-tard">Plus tard</button>
+  </div>
 
   <div class="hero wait" id="hero">
     <div class="big" id="hero-icon">…</div>
@@ -125,11 +144,13 @@
       <div class="hint" id="radio-aide">Une touche du clavier ou un bouton du volant de ce PC, même pendant le jeu : un appui pour parler, un second pour envoyer.</div>
       <div style="margin-top:6px">
         <label class="switch"><input type="checkbox" id="autostart"><span id="autostart-label">Lancer à l'ouverture de session (fenêtre réduite)</span></label>
+        <label class="switch"><input type="checkbox" id="maj-auto"><span>Rechercher les mises à jour (au démarrage puis toutes les 6 h, jamais pendant une course)</span></label>
         <label class="switch"><input type="checkbox" id="demo"><span>Démonstration : envoyer une course fictive (tester la liaison sans jeu)</span></label>
       </div>
       <div class="row" style="margin-top:6px">
         <button class="btn primary" id="btn-visualiseur">Ouvrir SecondMonitor sur ce PC</button>
         <button class="btn" id="btn-dossier">Dossier des réglages</button>
+        <button class="btn" id="btn-maj-verifier">Vérifier les mises à jour</button>
       </div>
       <div class="hint" id="jeux"></div>
     </div>
@@ -211,11 +232,56 @@
     }
   }
 
+  // Mise à jour : un seul bouton « Installer » (téléchargement vérifié, puis le collecteur se ferme et se rouvre tout seul).
+  let maj = null, majVerifie = false;
+  function majVue(m) {
+    maj = m;
+    const o = m.offer, z = $('maj');
+    let titre = '', detail = '', bouton = '', tard = false, bad = false, pct = -1;
+    if (m.previousFailure) {
+      titre = 'La dernière mise à jour n\'a pas abouti'; detail = m.previousFailure + ' Votre version actuelle fonctionne normalement.';
+      bouton = 'Compris'; bad = true;
+    } else if (m.state === 'telechargement') {
+      pct = m.total ? Math.round(m.done * 100 / m.total) : 0;
+      titre = `Téléchargement de la version ${o ? o.version : ''}… ${pct} %`; detail = 'Vérifié (SHA-256) avant installation. Le jeu n\'est pas touché.';
+    } else if (m.state === 'installation' || m.state === 'redemarrage') {
+      titre = 'Installation…'; detail = 'Le collecteur se ferme et se rouvre tout seul avec la nouvelle version (SecondMonitor aussi s\'il est ouvert sur ce PC).'; pct = 100;
+    } else if (m.state === 'manuel') {
+      titre = 'Installation à terminer à la main'; detail = m.message || ''; bad = true;
+    } else if (o && (m.state === 'erreur' || m.error)) {
+      titre = `Version ${o.version} : échec`; detail = (m.error || '') + ' Votre version actuelle n\'a pas été modifiée.'; bouton = 'Réessayer'; bad = true;
+    } else if (o && (m.dismissed !== o.version || majVerifie)) {
+      titre = `Mise à jour ${o.version} disponible`;
+      detail = o.file ? `Vous avez ${m.current}. ${Math.max(1, Math.round(o.file.size / 1048576))} Mo, installe le collecteur et SecondMonitor ; réglages conservés.` : 'Pas de fichier pour ce système : voir la page de téléchargement.';
+      bouton = o.file ? 'Installer' : ''; tard = true;
+    } else if (majVerifie && m.state === 'attente') {
+      titre = m.lastCheckError ? 'Vérification impossible' : 'Le collecteur est à jour'; detail = m.lastCheckError || `Version ${m.current}.`; tard = true;
+    }
+    z.classList.toggle('show', !!titre);
+    z.classList.toggle('bad', bad);
+    $('maj-title').textContent = titre;
+    $('maj-detail').textContent = detail;
+    $('btn-maj').style.display = bouton ? '' : 'none';
+    $('btn-maj').textContent = bouton;
+    $('btn-maj-tard').style.display = tard ? '' : 'none';
+    $('maj-bar').style.display = pct >= 0 ? 'block' : 'none';
+    $('maj-pct').style.width = Math.max(0, pct) + '%';
+    $('maj-auto').checked = m.automatic;
+  }
+  $('btn-maj').addEventListener('click', () => {
+    if (maj && maj.previousFailure) { send('maj-vu'); return; }
+    send('maj-installer');
+  });
+  $('btn-maj-tard').addEventListener('click', () => { majVerifie = false; send('maj-plus-tard'); $('maj').classList.remove('show'); });
+  $('btn-maj-verifier').addEventListener('click', () => { majVerifie = true; send('maj-verifier'); });
+  $('maj-auto').addEventListener('change', (e) => send('maj-auto', e.target.checked));
+
   window.external.receiveMessage((text) => {
     const m = JSON.parse(text);
     if (m.type === 'etat') etat(m);
     else if (m.type === 'journalComplet') { lignes = m.lignes; journal(); }
     else if (m.type === 'journal') { lignes.push(m.ligne); if (lignes.length > 300) lignes.shift(); journal(); }
+    else if (m.type === 'maj') majVue(m.maj);
     else if (m.type === 'relancer') { $('relancer').classList.toggle('show', m.necessaire); $('options').open = true; }
   });
 
