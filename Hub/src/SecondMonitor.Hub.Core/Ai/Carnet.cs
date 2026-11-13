@@ -254,7 +254,8 @@ namespace SecondMonitor.Hub.Core.Ai
         public static void Update(CarnetSession c, RaceSnapshot snap, IEnumerable<LapDto> laps, RaceMemory memory)
         {
             DriverRow me = snap?.Drivers?.FirstOrDefault(d => d.IsPlayer);
-            if (me != null)
+            // Course finie : le résultat est figé au passage de la ligne (après, les autres finissent leur tour et le classement bouge).
+            if (me != null && !(c.Finished && c.Result != null))
             {
                 c.Car ??= me.Car;
                 c.ClassName ??= me.ClassName;
@@ -628,11 +629,11 @@ namespace SecondMonitor.Hub.Core.Ai
             return list.OrderByDescending(s => s.StartedAt).ToList();
         }
 
-        public static CarnetSummary Summarize(CarnetSession c)
+        public static CarnetSummary Summarize(CarnetSession c, bool current = false)
         {
             CarnetResult r = c.Result;
             string result = r == null ? null
-                : c.SessionType == "Race" ? $"P{(r.IsMultiClass ? r.ClassPosition : r.Position)}{(c.Finished ? string.Empty : " (en cours)")}"
+                : c.SessionType == "Race" ? $"P{(r.IsMultiClass ? r.ClassPosition : r.Position)}{(c.Finished ? string.Empty : current ? " (en cours)" : " (non terminée)")}"
                 : r.BestLap is > 0 ? Lap(r.BestLap) : null;
             return new CarnetSummary
             {

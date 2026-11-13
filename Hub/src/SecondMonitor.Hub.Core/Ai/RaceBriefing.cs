@@ -78,6 +78,12 @@ namespace SecondMonitor.Hub.Core.Ai
                 topics.Remove(Topic.Session);
             }
 
+            // « Mon réglage d'aileron ? » : c'est le setup, pas un dégât.
+            if (topics.Contains(Topic.Damage) && Regex.IsMatch(q, @"r[ée]glage|setup|\bcrans?\b") && !Regex.IsMatch(q, "dégât|degat|cass|abîm|abim|endommag|touch|répar|repar"))
+            {
+                topics.Remove(Topic.Damage);
+            }
+
             // « Meilleur tour théorique » : c'est le rythme (assemblage des meilleurs secteurs), pas la liste des tours.
             if (topics.Contains(Topic.Laps) && Regex.IsMatch(q, "théorique|theorique|idéal|ideal"))
             {
@@ -132,6 +138,14 @@ namespace SecondMonitor.Hub.Core.Ai
 
             string suggestion = null;
             Topic? main = topics.Where(sections.ContainsKey).Cast<Topic?>().FirstOrDefault();
+
+            // Données que le jeu ne donne pas (essence ou setup d'un adversaire, réglages de la voiture) : on le dit tout de suite,
+            // plutôt que de répondre à côté ou de laisser le modèle inventer.
+            if (UnavailableData.IsMatch(q))
+            {
+                main = null;
+                suggestion = Missing(question, snap, extras);
+            }
             if (main.HasValue)
             {
                 var lines = sections[main.Value];
@@ -181,6 +195,13 @@ namespace SecondMonitor.Hub.Core.Ai
                 Proposal = main.HasValue ? proposals.FirstOrDefault(p => p.Topic == main.Value).Proposal : null,
             };
         }
+
+        private static readonly Regex UnavailableData = new(
+            @"(\b(num[ée]ro|n°|#)\s?\d+|\bdu \d+\b|\bson |\bsa |\bleurs? |adversaire|concurrent|voiture (devant|derri[èe]re)).*\b(essence|carburant|fuel|setup|r[ée]glages?|pression)|" +
+            @"\b(essence|carburant|fuel|setup|r[ée]glages?)\b.*(\b(num[ée]ro|n°)\s?\d+|#\d+|\bdu \d+\b|adversaire|concurrent|de la voiture (devant|derri[èe]re))|" +
+            @"\b(mon|ma|mes|quel|quelle|quels|quelles)\b.*\b(r[ée]glages?|setup)\b.*\b(aileron|carrossage|barres?|ressorts?|amortisseurs?|hauteurs?|diff[ée]rentiel|r[ée]partition|abs|tc)\b|" +
+            @"\b(mon|ma|mes|quel|quelle)\b.*\b(aileron|carrossage|barres? antiroulis|ressorts?|amortisseurs?|hauteurs? de caisse|r[ée]partition de freinage|pr[ée]charge)\b.*\b(actuel|actuelle|actuels|r[ée]gl[ée]e?s?|mis|est (à|a) combien|combien)\b",
+            RegexOptions.Compiled);
 
         private static readonly Regex ForecastWords = new(@"prévision|prevision|évolu|evolu|tendance|va (pleuvoir|changer|monter|baisser|sécher|secher)|vont|reste de la course|plus tard|dans \d+ min", RegexOptions.Compiled);
 

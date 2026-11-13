@@ -85,7 +85,7 @@ public sealed class CarnetService : BackgroundService
             if (_current != null && _current.HasContent)
             {
                 list.RemoveAll(s => s.Id == _current.Id);
-                CarnetSummary cur = CarnetStore.Summarize(_current);
+                CarnetSummary cur = CarnetStore.Summarize(_current, current: true);
                 cur.Current = true;
                 list.Insert(0, cur);
             }

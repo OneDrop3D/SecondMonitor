@@ -481,4 +481,14 @@ public class BriefingTests
         Assert.That(store.Load("../etc"), Is.Null);
         Directory.Delete(dir, true);
     }
+
+    [TestCase("quel est mon réglage d'aileron actuel ?", "réglages de la voiture")]
+    [TestCase("quelle est l'essence du numéro 54 ?", "essence")]
+    public void UnavailableData_IsSaidInOneSentence(string question, string expected)
+    {
+        string a = RaceBriefing.Prepare(_snap, question, _extras).Suggestion;
+        TestContext.Out.WriteLine(a);
+        Assert.That(a, Does.Contain(expected));
+        Assert.That(Sentences(a), Is.EqualTo(1));
+    }
 }

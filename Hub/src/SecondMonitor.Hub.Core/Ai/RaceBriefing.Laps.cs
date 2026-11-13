@@ -224,7 +224,8 @@ namespace SecondMonitor.Hub.Core.Ai
                 return "Le jeu ne m'envoie pas les réglages de la voiture : je vois la télémétrie, pas le setup.";
             }
 
-            if (System.Text.RegularExpressions.Regex.IsMatch(q, @"\b(son|ses|leur|leurs|il a|ils ont)\b.*\b(essence|carburant|fuel|usure|setup|pression)\b"))
+            bool rival = System.Text.RegularExpressions.Regex.IsMatch(q, @"\b(son|ses|leur|leurs|il a|ils ont|numero \d+|du \d+|adversaires?|concurrents?|voiture devant|voiture derriere)\b");
+            if (rival && System.Text.RegularExpressions.Regex.IsMatch(q, @"\b(essence|carburant|fuel|usure|setup|reglages?|pression)\b"))
             {
                 return "Le jeu ne donne pas l'essence ni l'usure des adversaires : seulement leurs pneus, leurs arrêts et leurs temps.";
             }

@@ -318,8 +318,8 @@ namespace SecondMonitor.Hub.Core.Ai
             return p.Kind switch
             {
                 "setup" => alternative ? $"Sinon, au stand : {p.Note}. Je le note pour le setup ?" : $"Au stand : {p.Note}. Je le note pour le setup ?",
-                "pilotage" => alternative ? $"Sinon, {p.Infinitive}. Vous essayez ?" : $"Essayez de {p.Infinitive}.",
-                _ => alternative ? $"Sinon : {p.Infinitive}. On essaie ?" : $"{head} de {p.Infinitive}. On essaie ?",
+                "pilotage" => alternative ? $"Sinon, {p.Infinitive}. Vous essayez ?" : $"Essayez {De(p.Infinitive)}.",
+                _ => alternative ? $"Sinon : {p.Infinitive}. On essaie ?" : $"{head} {De(p.Infinitive)}. On essaie ?",
             };
         }
 
@@ -359,7 +359,7 @@ namespace SecondMonitor.Hub.Core.Ai
             {
                 parts.Add(askPhase
                     ? $"{head} : si c'est en entrée, {p.Imperative}. C'est en entrée, au milieu ou en sortie ?"
-                    : $"{head} : je propose de {p.Infinitive}. On essaie ?");
+                    : $"{head} : je propose {De(p.Infinitive)}. On essaie ?");
             }
             else if (p.Kind == "setup")
             {
@@ -429,6 +429,9 @@ namespace SecondMonitor.Hub.Core.Ai
             "ducts-open" or "ducts-close" => ctx.Game is "ACC" or "LMU" or "rF2" or "AMS2" or "Demo" or "autre",
             _ => true,
         };
+
+        /// <summary>« de reculer », « d'avancer ».</summary>
+        private static string De(string infinitive) => Regex.IsMatch(infinitive ?? string.Empty, "^[aeiouyéèêàâh]", RegexOptions.IgnoreCase) ? "d'" + infinitive : "de " + infinitive;
 
         private static Regex R(string pattern) => new(pattern, RegexOptions.Compiled);
 
