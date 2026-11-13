@@ -1,3 +1,4 @@
+import { registerBlock } from '../components/dashboard/registry';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { musicApi, type MusicItem, type MusicKind, type MusicSettings, type MusicStatus } from './music';
 import './music.css';
@@ -355,5 +356,16 @@ export const musicBlock = {
   title: 'Musique',
   Component: () => <MusicCard compact />,
 };
+
+// Bloc de l'accueil (Disposition › Ajouter un bloc).
+registerBlock({
+  type: 'musique',
+  title: 'Musique',
+  icon: 'music',
+  description: 'Deezer : titre en cours, lecture, recherche',
+  size: { w: 4, h: 5 },
+  medium: { w: 3, h: 5 },
+  render: () => <MusicCard compact />,
+});
 
 export default MusicCard;

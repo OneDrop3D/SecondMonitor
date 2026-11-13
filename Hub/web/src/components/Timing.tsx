@@ -469,6 +469,7 @@ export function StatusBar({ snapshot, link, version, status, onConnection }: {
 // ───────────────────────────── Icônes (traits simples, comme l'original) ─────────────────────────────
 
 const PATHS: Record<string, string> = {
+  music: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
   timing: 'M4 6h16M4 12h16M4 18h16M8 3v18',
   race: 'M5 21V4m0 0h12l-2 4 2 4H5',
   analysis: 'M3 20h18M5 16l4-5 4 3 6-8',
