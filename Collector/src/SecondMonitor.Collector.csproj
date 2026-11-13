@@ -35,6 +35,8 @@
     <Compile Include="..\..\Remote\SecondMonitor.Remote\Models\*.cs" Exclude="..\..\Remote\SecondMonitor.Remote\Models\LiteNetLibHostAddressValidator.cs" LinkBase="Linked\Remote" />
     <!-- Course de démonstration du hub : l option demo teste la liaison avec le Mac sans lancer de jeu. -->
     <Compile Include="..\..\Hub\src\SecondMonitor.Hub.Core\Demo\DemoRaceSimulator.cs;..\..\Hub\src\SecondMonitor.Hub.Core\Demo\DemoTrackProfile.cs" LinkBase="Linked\Demo" />
+    <!-- Rejeu d'un enregistrement du hub (diagnostic : mesurer le collecteur sur une vraie course sans le jeu). -->
+    <Compile Include="..\..\Hub\src\SecondMonitor.Hub.Core\Network\CaptureFile.cs" LinkBase="Linked\Diagnostic" />
     <Compile Include="..\..\Remote\SecondMonitor.Remote\PacketCompressionLayer.cs;..\..\Remote\SecondMonitor.Remote\Adapter\*.cs;..\..\Remote\SecondMonitor.Remote\Comparators\*.cs" LinkBase="Linked\Remote" />
   </ItemGroup>
 

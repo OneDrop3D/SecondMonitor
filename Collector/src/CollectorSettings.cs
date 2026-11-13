@@ -45,6 +45,9 @@ namespace SecondMonitor.Collector
         /// <summary>Priorité basse : le jeu passe toujours avant le collecteur.</summary>
         public bool PrioriteBasse { get; set; } = true;
 
+        /// <summary>Mode diagnostic : CPU, mémoire, débit réseau et lectures du jeu affichés dans la fenêtre (ou la console).</summary>
+        public bool Diagnostic { get; set; }
+
         [JsonIgnore]
         public string FilePath { get; private set; }
 

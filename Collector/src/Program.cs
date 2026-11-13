@@ -61,6 +61,8 @@ namespace SecondMonitor.Collector
                 settings.Port = port;
             }
 
+            settings.Diagnostic |= args.Contains("--diagnostic");
+
             ConfigureLogging(dataDir);
             LiteNetLib.NetDebug.Logger = new QuietNetLogger(); // pas de messages techniques du réseau
             if (settings.PrioriteBasse)
@@ -89,6 +91,16 @@ namespace SecondMonitor.Collector
             }
 
             runtime.Host.AutoInstall = console; // sans fenêtre : pas de bouton, les plugins s'installent directement
+            int replay = Array.IndexOf(args, "--rejouer");
+            if (replay >= 0 && replay + 1 < args.Length)
+            {
+                runtime.ReplayFile = Path.GetFullPath(args[replay + 1]);
+                if (double.TryParse(Arg(args, "--vitesse"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double speed) && speed > 0)
+                {
+                    runtime.ReplaySpeed = speed;
+                }
+            }
+
             runtime.SetDemo(args.Contains("--demo"));
 
             if (!console && CollectorWindow.Run(runtime, minimized: args.Contains("--reduit")))
@@ -113,6 +125,7 @@ namespace SecondMonitor.Collector
                 quit.Set();
             };
             var title = new Timer(_ => ConsoleTitle(runtime), null, 2000, 2000);
+            using var diagnostic = new Timer(_ => ConsoleDiagnostic(runtime), null, 5000, 5000);
             quit.Wait();
             title.Dispose();
             runtime.Log("Arrêt du collecteur.");
@@ -155,6 +168,15 @@ namespace SecondMonitor.Collector
             }
         }
 
+        /// <summary>Mode diagnostic en console : une ligne de mesures toutes les 5 secondes.</summary>
+        private static void ConsoleDiagnostic(CollectorRuntime runtime)
+        {
+            if (runtime.Settings.Diagnostic && runtime.Diagnostics.Sample() is DiagnosticSample d)
+            {
+                Console.WriteLine($"{DateTime.Now:HH:mm:ss}  [diagnostic] {d.Text}");
+            }
+        }
+
         private static void Say(bool console, string title, string text)
         {
             if (console || !CollectorWindow.Message(title, text))
@@ -190,6 +212,8 @@ namespace SecondMonitor.Collector
             Console.WriteLine("  --port 52642             port réseau");
             Console.WriteLine("  --autostart on|off       lancer (ou non) le collecteur à l'ouverture de session");
             Console.WriteLine("  --demo                   envoie une course fictive (tester la liaison sans jeu)");
+            Console.WriteLine("  --diagnostic             affiche CPU, mémoire, débit réseau et lectures du jeu");
+            Console.WriteLine("  --rejouer f.smrec [--vitesse 1]   renvoie un enregistrement de SecondMonitor (mesure sans jeu)");
         }
 
         private static string Arg(string[] args, string name)

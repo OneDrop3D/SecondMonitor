@@ -102,6 +102,8 @@ namespace SecondMonitor.Collector
                     voitures = runtime.Host.LastDriverCount,
                     conseil = runtime.Advice() is { } a ? new { titre = a.Title, texte = a.Text, action = a.Action } : null,
                     radio = new { supporte = RadioButton.Supported, bouton = runtime.Radio?.Description ?? "aucun", apprentissage = runtime.Radio?.Learning ?? false },
+                    diagnostic = s.Diagnostic,
+                    mesures = s.Diagnostic ? runtime.Diagnostics.Sample()?.Text : null,
                 });
             }
 
@@ -131,6 +133,11 @@ namespace SecondMonitor.Collector
                             break;
                         case "demo":
                             runtime.SetDemo(root.GetProperty("valeur").GetBoolean());
+                            SendState();
+                            break;
+                        case "diagnostic":
+                            runtime.Settings.Diagnostic = root.GetProperty("valeur").GetBoolean();
+                            runtime.Settings.Save();
                             SendState();
                             break;
                         case "autostart":

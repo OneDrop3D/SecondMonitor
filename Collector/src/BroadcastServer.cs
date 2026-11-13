@@ -44,6 +44,7 @@ namespace SecondMonitor.Collector
                 IPv6Enabled = false,
                 UnconnectedMessagesEnabled = true,
                 DisconnectTimeout = 10000,
+                EnableStatistics = true, // octets réellement envoyés (après compression), pour l'affichage du débit
             };
             _listener.ConnectionRequestEvent += request => request.AcceptIfKey(DatagramPayload.Version4);
             _listener.PeerConnectedEvent += peer =>
@@ -66,6 +67,12 @@ namespace SecondMonitor.Collector
         public long PackagesSent => Interlocked.Read(ref _packages);
 
         public long BytesSent => Interlocked.Read(ref _bytes);
+
+        /// <summary>Octets réellement partis sur le réseau (compressés, en-têtes compris).</summary>
+        public long WireBytesSent => _server.Statistics.BytesSent;
+
+        /// <summary>Paquets UDP réellement envoyés (fragments, accusés de réception et signes de vie compris).</summary>
+        public long DatagramsSent => _server.Statistics.PacketsSent;
 
         public bool Start(int port)
         {

@@ -21,6 +21,7 @@ namespace SecondMonitor.Collector
         private readonly CollectorSettings _settings;
         private IRawTelemetryConnector _active;
         private DateTime _noPeerSince = DateTime.MinValue;
+        private long _gameReads;
 
         public ConnectorHost(IPluginSettingsProvider provider, BroadcastServer server, CollectorSettings settings, Action<string> log)
         {
@@ -59,6 +60,9 @@ namespace SecondMonitor.Collector
         public DateTime LastGameDataUtc { get; private set; } = DateTime.MinValue;
 
         public int LastDriverCount { get; private set; }
+
+        /// <summary>Nombre de lectures du jeu (jeux de données reçus du connecteur) depuis le démarrage.</summary>
+        public long GameReads => Interlocked.Read(ref _gameReads);
 
         public DateTime ActiveSinceUtc { get; private set; }
 
@@ -230,6 +234,7 @@ namespace SecondMonitor.Collector
 
         private void OnData(object sender, DataEventArgs e)
         {
+            Interlocked.Increment(ref _gameReads);
             int drivers = e.Data?.DriversInfo?.Length ?? 0;
             if (drivers > 0)
             {
