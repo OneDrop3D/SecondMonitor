@@ -1,17 +1,18 @@
-import { useMemo } from 'react';
-import { clock, compoundInfo, flagLabel, gap, lapTime, num, sessionLabel, thermal, thermalColor } from '../format';
-import type { DriverRow, HubStatus, RaceSnapshot, TyreThermal, WheelStatus } from '../types';
+import { useMemo, type ReactNode } from 'react';
+import { clock, compass, compoundInfo, flagLabel, gap, lapTime, num, sessionLabel, thermal, thermalColor } from '../format';
+import type { DriverRow, HubStatus, MicroSectorReport, RaceSnapshot, TyreThermal, WheelStatus } from '../types';
 import { collectorAddress, linkStage } from '../status';
-import { visibleDrivers, type ClassView } from '../classView';
-import { TrackMap } from './TrackMap';
-import { BattlePanel } from './BattlePanel';
+import { classInterval, visibleDrivers, type ClassView } from '../classView';
 import { BrandLogo } from './BrandLogo';
 import { DamageList, PitPlanCard } from './RaceExtras';
+import { SessionClock } from './dashboard/SessionClock';
+import { useDismissable } from './dashboard/notices';
 
 /*
- * Écran « Chronométrage » : reprend la disposition de SecondMonitor d'origine
- * (bandeau de session en haut, grand tableau de chronométrage, état de la voiture et carte en bas),
- * avec les nouveautés du hub (catégories, pneus, arrêts estimés, duels).
+ * Écran « Chronométrage » : reprend la présentation de SecondMonitor d'origine
+ * (bandeau de session en haut, grand tableau de chronométrage, état de la voiture, carte),
+ * avec les nouveautés du hub (catégories, pneus, arrêts estimés, duels, mini-secteurs).
+ * L'accueil est une grille de blocs personnalisable : voir dashboard/Dashboard.tsx et dashboard/BlocksCore.tsx.
  */
 
 const EPS = 0.0005;
@@ -20,7 +21,7 @@ const same = (a: number | null | undefined, b: number | null | undefined) => a !
 interface SectorBest { time: number; driver: DriverRow; lap: number | null }
 
 /** Meilleurs secteurs et meilleur tour, par catégorie. */
-function classBests(drivers: DriverRow[]) {
+export function classBests(drivers: DriverRow[]) {
   const sectors = new Map<string, (SectorBest | null)[]>();
   const laps = new Map<string, { time: number; driver: DriverRow } | null>();
   for (const d of drivers) {
@@ -36,23 +37,29 @@ function classBests(drivers: DriverRow[]) {
   return { sectors, laps };
 }
 
-function sectorTime(v: number | null | undefined) {
+export function sectorTime(v: number | null | undefined) {
   if (v == null || v <= 0) return '—';
   return v >= 60 ? lapTime(v) : v.toFixed(3);
 }
 
 // ───────────────────────────── Bandeau du haut ─────────────────────────────
 
-export function TimingHeader({ snapshot }: { snapshot: RaceSnapshot }) {
+const PHASE: Record<string, string> = { Countdown: 'Départ imminent', Green: 'En cours', Checkered: 'Drapeau à damier' };
+
+export function TimingHeader({ snapshot, tools }: { snapshot: RaceSnapshot; tools?: ReactNode }) {
   const s = snapshot;
   const me = s.drivers.find((d) => d.isPlayer);
   const classId = me?.classId ?? s.drivers[0]?.classId;
   const { sectors, laps } = useMemo(() => classBests(s.drivers), [s.drivers]);
   const bestSectors = classId != null ? sectors.get(classId) ?? [null, null, null] : [null, null, null];
   const bestLap = classId != null ? laps.get(classId) : null;
-  const remaining = s.lengthType === 'Laps' && s.totalLaps > 0 ? `Tour ${Math.min(s.leaderLap, s.totalLaps)}/${s.totalLaps}` : `Temps : ${clock(s.timeRemaining)}`;
   const km = s.track.length > 0 ? `${(s.track.length / 1000).toFixed(2)} km` : '';
   const className = s.isMultiClass && me?.className ? ` ${me.className}` : '';
+  const phase = s.sessionPhase ? PHASE[s.sessionPhase] : null;
+  // Drapeaux : on peut masquer une pastille (elle revient si le drapeau tombe puis revient plus tard).
+  const flagTexts = [...s.flags.map(flagLabel), ...(s.safetyCar && s.safetyCar !== 'None' ? ['Safety car'] : [])];
+  const flags = useDismissable(flagTexts, 'drapeau', 5000);
+  const w = s.weather;
 
   return (
     <header className="tm-head">
@@ -61,12 +68,23 @@ export function TimingHeader({ snapshot }: { snapshot: RaceSnapshot }) {
           <span className="tm-session-type">{sessionLabel(s.sessionType)}</span>
           <span className="tm-track" title={s.track.layout ?? undefined}>{s.track.name ?? 'Circuit'}</span>
         </div>
-        <div className="tm-session-sub">{km}{s.source ? ` · ${s.source}` : ''}</div>
+        <div className="tm-session-sub">
+          {phase && <span className={`tm-phase ${s.sessionPhase === 'Green' ? 'green' : s.sessionPhase === 'Checkered' ? 'chequered' : ''}`}>{phase}</span>}
+          <span>{km}{s.source ? ` · ${s.source}` : ''}</span>
+        </div>
       </div>
+      <SessionClock snapshot={s} />
       <div className="tm-box tm-weather">
-        <span className="tm-wx" title="Température de l'air"><Icon name="air" /><b className="tnum">{num(s.weather.air, 1)} °C</b></span>
-        <span className="tm-wx" title="Température de la piste"><Icon name="track" /><b className="tnum">{num(s.weather.trackTemp, 1)} °C</b></span>
-        <span className="tm-wx" title="Pluie"><Icon name="rain" /><b className="tnum">{num(s.weather.rain, 0)} %</b></span>
+        <span className="tm-wx" title="Température de l'air"><Icon name="air" /><b className="tnum">{num(w.air, 1)}<small> °C</small></b><i>air</i></span>
+        <span className="tm-wx" title="Température de la piste"><Icon name="track" /><b className="tnum">{num(w.trackTemp, 1)}<small> °C</small></b><i>piste</i></span>
+        <span className="tm-wx" title="Pluie"><Icon name="rain" /><b className="tnum">{num(w.rain, 0)}<small> %</small></b><i>pluie</i></span>
+        {w.wetness > 0 && <span className="tm-wx" title="Piste mouillée"><Icon name="water" /><b className="tnum">{w.wetness}<small> %</small></b><i>mouillée</i></span>}
+        {w.wind != null && (
+          <span className="tm-wx tm-wx-wind" title={`Vent${w.windFrom != null ? ` venant du ${compass(w.windFrom)}` : ''}`}>
+            <Icon name="wind" /><b className="tnum">{num(w.wind, 0)}<small> km/h</small></b>
+            <i>{w.windFrom != null ? <><span className="tm-wind-arrow" style={{ transform: `rotate(${w.windFrom + 180}deg)` }} aria-hidden>↑</span> {compass(w.windFrom)}</> : 'vent'}</i>
+          </span>
+        )}
       </div>
       <div className="tm-box tm-deltas">
         <DeltaBar label="Δ meilleur tour perso" value={s.player?.deltaBest ?? null} />
@@ -81,22 +99,24 @@ export function TimingHeader({ snapshot }: { snapshot: RaceSnapshot }) {
         ))}
       </div>
       <div className="tm-box tm-best tm-bestlap">
+        <div className="tm-label">Meilleur tour{className}</div>
         <div className="tm-best-line tm-bestlap-line">
-          {bestLap ? <><span className="tm-best-name">{bestLap.driver.name}</span><span className="muted">{bestLap.driver.bestLapNumber ? ` (T${bestLap.driver.bestLapNumber})` : ''}</span> <b className="tnum">{lapTime(bestLap.time)}</b></> : <span className="muted">Pas encore de meilleur tour</span>}
+          {bestLap ? <><b className="tnum tm-bestlap-time">{lapTime(bestLap.time)}</b> <span className="tm-best-name">{bestLap.driver.name}</span><span className="muted">{bestLap.driver.bestLapNumber ? ` (T${bestLap.driver.bestLapNumber})` : ''}</span></> : <span className="muted">Pas encore de meilleur tour</span>}
         </div>
-        <div className="tm-remaining tnum">{remaining}</div>
-        {(s.flags.length > 0 || (s.safetyCar && s.safetyCar !== 'None')) && (
+        {flags.visible.length > 0 && (
           <div className="tm-flags">
-            {s.flags.map((f) => <span key={f} className="pill flag">⚑ {flagLabel(f)}</span>)}
-            {s.safetyCar && s.safetyCar !== 'None' && <span className="pill flag">Safety car</span>}
+            {flags.visible.map((f) => (
+              <span key={f} className="pill flag tm-flag">⚑ {f}<button className="tm-flag-x" onClick={() => flags.dismiss(f)} aria-label={`Masquer « ${f} »`} title="Masquer (revient si le drapeau tombe puis revient)">×</button></span>
+            ))}
           </div>
         )}
       </div>
+      {tools && <div className="tm-tools">{tools}</div>}
     </header>
   );
 }
 
-function DeltaBar({ label, value }: { label: string; value: number | null }) {
+export function DeltaBar({ label, value }: { label: string; value: number | null }) {
   const max = 2; // ± 2 s sur toute la largeur
   const pct = value == null ? 0 : Math.max(-1, Math.min(1, value / max)) * 50;
   const kind = value == null ? '' : value < 0 ? 'faster' : value > 0 ? 'slower' : '';
@@ -119,9 +139,11 @@ interface GridProps {
   classColor: (classId: string) => string;
   onSelect: (d: DriverRow) => void;
   classView: ClassView;
+  /** Mini-secteurs (/api/analysis/microsectors) : affichés à la place des colonnes S1 S2 S3 quand fournis. */
+  miniSectors?: MicroSectorReport | null;
 }
 
-export function TimingGrid({ snapshot, classColor, onSelect, classView }: GridProps) {
+export function TimingGrid({ snapshot, classColor, onSelect, classView, miniSectors }: GridProps) {
   const me = snapshot.drivers.find((d) => d.isPlayer);
   const { rows, traffic } = visibleDrivers(snapshot, classView);
   const { sectors, laps } = useMemo(() => classBests(snapshot.drivers), [snapshot.drivers]);
@@ -129,10 +151,12 @@ export function TimingGrid({ snapshot, classColor, onSelect, classView }: GridPr
   const multiClass = new Set(snapshot.drivers.map((d) => d.classId)).size > 1;
   const classPositions = multiClass && classView !== 'all';
   const myDistance = me ? me.laps + me.lapFraction : null;
+  const ms = miniSectors && miniSectors.count >= 3 ? miniSectors : null;
+  const msById = useMemo(() => new Map((ms?.drivers ?? []).map((x) => [x.id, x])), [ms]);
 
   return (
     <div className="tm-grid-wrap">
-      <table className="tm-grid">
+      <table className={`tm-grid ${ms ? 'has-ms' : ''}`}>
         <thead>
           <tr>
             <th className="c">#</th>
@@ -142,14 +166,17 @@ export function TimingGrid({ snapshot, classColor, onSelect, classView }: GridPr
             {multiClass && <th className="tm-col-class">Catégorie</th>}
             <th className="c">Tours</th>
             <th className="r">Dernier tour</th>
-            <th className="r tm-col-sector">S1</th>
-            <th className="r tm-col-sector">S2</th>
-            <th className="r tm-col-sector">S3</th>
+            {ms ? <th className="tm-col-sector tm-col-ms" title="Mini-secteurs du tour en cours (pâles : tour précédent). Violet : meilleur de la catégorie, vert : record personnel, jaune : plus lent. Sous chaque secteur : dernier temps et meilleur temps.">Mini-secteurs</th> : <>
+              <th className="r tm-col-sector">S1</th>
+              <th className="r tm-col-sector">S2</th>
+              <th className="r tm-col-sector">S3</th>
+            </>}
             <th className="r">Meilleur tour</th>
             <th className="r tm-col-current">Tour en cours</th>
-            <th className="tm-col-pits">Stands</th>
+            <th className="tm-col-pits c" title="Nombre d'arrêts au stand">Arrêts</th>
             <th className="tm-col-tyre">Pneus</th>
             <th className="r">{isRace ? 'Écart' : 'Écart meilleur'}</th>
+            {isRace && <th className="r tm-col-int" title="Écart avec la voiture précédente">Int.</th>}
           </tr>
         </thead>
         <tbody>
@@ -186,7 +213,9 @@ export function TimingGrid({ snapshot, classColor, onSelect, classView }: GridPr
                 {multiClass && <td className="tm-col-class"><span className="tm-class" style={{ borderColor: classColor(d.classId) }}>{d.className ?? d.classId}</span></td>}
                 <td className="c tnum">{d.laps}</td>
                 <td className={`r tnum ${lastBestClass ? 'cell-purple' : d.lastLapIsPersonalBest ? 'cell-green' : ''}`}>{lapTime(d.lastLap)}</td>
-                {[0, 1, 2].map((i) => {
+                {ms ? (
+                  <td className="tm-col-sector tm-col-ms"><MiniSectors d={d} report={ms} data={msById.get(d.id)} classSectors={cs} /></td>
+                ) : [0, 1, 2].map((i) => {
                   const v = d.lastSectors?.[i];
                   const cls = same(v, cs[i]?.time) ? 'cell-purple' : same(v, d.bestSectors?.[i]) ? 'cell-green' : '';
                   return <td key={i} className={`r tnum tm-col-sector ${cls}`}>{sectorTime(v)}</td>;
@@ -195,9 +224,8 @@ export function TimingGrid({ snapshot, classColor, onSelect, classView }: GridPr
                   {d.bestLap ? <>{d.bestLapNumber ? <span className="tm-lapno">T{d.bestLapNumber}/</span> : null}{lapTime(d.bestLap)}</> : '—'}
                 </td>
                 <td className={`r tnum tm-col-current ${d.currentLapValid ? '' : 'invalid'}`} title={d.currentLapValid ? undefined : 'Tour invalidé'}>{lapTime(d.currentLap)}</td>
-                <td className="tm-col-pits">
-                  {d.inPits ? <span className="tm-inpit">Au stand</span> : d.finishStatus === 'Finished' ? <span>Arrivé</span> : <span className="muted">En piste</span>}
-                  {d.pitStops > 0 && <span className="muted"> · {d.pitStops}</span>}
+                <td className="tm-col-pits c tnum" title={d.lastPitDuration ? `Dernier arrêt : ${d.lastPitDuration.toFixed(1)} s${d.lastPitLap ? ` au tour ${d.lastPitLap}` : ''}` : undefined}>
+                  {d.inPits ? <span className="tm-inpit">Stand</span> : d.finishStatus === 'Finished' ? <span>Arrivé</span> : <span className={d.pitStops > 0 ? '' : 'muted'}>{d.pitStops}</span>}
                 </td>
                 <td className="tm-col-tyre">
                   <span className="tyre" title={`${tyre.label} — ${d.tyres.stintLaps} tour(s)`}>
@@ -207,12 +235,68 @@ export function TimingGrid({ snapshot, classColor, onSelect, classView }: GridPr
                   {d.nextStop && <span className="muted tnum tm-nextstop" title={d.nextStop.reason}> → T{d.nextStop.lap}</span>}
                 </td>
                 <td className="r tnum">{gapText}</td>
+                {isRace && <td className="r tnum tm-col-int">{intervalText(d, rows, classPositions)}</td>}
               </tr>
             );
           })}
         </tbody>
       </table>
     </div>
+  );
+}
+
+function intervalText(d: DriverRow, rows: DriverRow[], byClass: boolean) {
+  if (byClass) {
+    const r = classInterval(d, rows);
+    return r.laps > 0 ? gap(null, r.laps) : r.seconds == null ? '—' : gap(r.seconds);
+  }
+  return d.position === 1 ? '—' : gap(d.interval, d.intervalLaps);
+}
+
+type MicroDriver = MicroSectorReport['drivers'][number];
+
+/** Mini-secteurs d'un pilote, groupés par secteur, avec le dernier temps et le meilleur temps de chaque secteur. */
+function MiniSectors({ d, report, data, classSectors }: { d: DriverRow; report: MicroSectorReport; data?: MicroDriver; classSectors: (SectorBest | null)[] }) {
+  const per = Math.floor(report.count / 3);
+  const classBest = report.classBest[d.classId] ?? [];
+  return (
+    <span className="ms-row">
+      {[0, 1, 2].map((g) => {
+        const last = d.lastSectors?.[g];
+        const tcls = same(last, classSectors[g]?.time) ? 'ms-t-overall' : same(last, d.bestSectors?.[g]) ? 'ms-t-personal' : '';
+        const n = g === 2 ? report.count - per * 2 : per;
+        return (
+          <span key={g} className="ms-group">
+            <span className="ms-bars" aria-hidden>
+              {Array.from({ length: n }, (_, j) => {
+                const i = g * per + j;
+                const live = data != null && i < data.currentIndex && data.current[i] != null;
+                const v = live ? data!.current[i] : data?.last[i] ?? null;
+                const pit = !live && !!data?.lastPit[i];
+                const kind = v == null ? 'none' : pit ? 'pit' : classBest[i] != null && v <= classBest[i]! + EPS ? 'overall' : data?.best[i] != null && v <= data.best[i]! + EPS ? 'personal' : 'slower';
+                return <i key={j} className={`ms-bar ${kind} ${live ? '' : 'old'}`} />;
+              })}
+            </span>
+            <span className="ms-times tnum"><b className={tcls}>{sectorTime(last)}</b><span className="muted">{sectorTime(d.bestSectors?.[g])}</span></span>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+/** Alertes (pneus, dégâts) que l'on peut masquer d'une croix ; elles ne reviennent pas en boucle. */
+export function AlertList({ alerts }: { alerts: string[] }) {
+  const { visible, dismiss } = useDismissable(alerts, 'alerte');
+  return (
+    <>
+      {visible.map((a) => (
+        <div key={a} className="tm-alert" role="alert">
+          <span>⚠ {a}</span>
+          <button className="tm-alert-x" onClick={() => dismiss(a)} aria-label="Masquer cette alerte" title="Masquer (reste dans Événements de course)">×</button>
+        </div>
+      ))}
+    </>
   );
 }
 
@@ -298,51 +382,16 @@ export function CarStatus({ snapshot }: { snapshot: RaceSnapshot }) {
   );
 }
 
-// ───────────────────────────── Écran complet ─────────────────────────────
+// ───────────────────────────── Stratégie (course) et ma voiture (essais) ─────────────────────────────
 
-export function TimingScreen(props: GridProps & { setClassView: (v: ClassView) => void }) {
-  const { snapshot, classColor, onSelect, classView, setClassView } = props;
-  const me = snapshot.drivers.find((d) => d.isPlayer);
-  const classes = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const d of snapshot.drivers) if (!seen.has(d.classId)) seen.set(d.classId, d.className ?? d.classId);
-    return [...seen.entries()];
-  }, [snapshot.drivers]);
-  return (
-    <div className="tm-screen">
-      {classes.length > 1 && (
-        <div className="tm-classbar" role="group" aria-label="Catégories affichées">
-          {me && <button className={`chip ${classView === 'mine' ? 'on' : ''}`} onClick={() => setClassView('mine')} title="Votre catégorie, plus les autres voitures à moins de 5 s de vous sur la piste">Ma catégorie</button>}
-          <button className={`chip ${classView === 'all' ? 'on' : ''}`} onClick={() => setClassView('all')}>Toutes</button>
-          {classes.filter(([id]) => id !== me?.classId).map(([id, name]) => (
-            <button key={id} className={`chip ${classView === id ? 'on' : ''}`} onClick={() => setClassView(classView === id ? 'mine' : id)}>
-              <span className="swatch" style={{ background: classColor(id) }} />{name}
-            </button>
-          ))}
-        </div>
-      )}
-      <TimingGrid snapshot={snapshot} classColor={classColor} onSelect={onSelect} classView={classView} />
-      <div className="tm-bottom">
-        <CarStatus snapshot={snapshot} />
-        <div className="tm-panel tm-map"><TrackMap snapshot={snapshot} classColor={classColor} onSelect={onSelect} classView={classView} /></div>
-        <div className="tm-side">
-          {snapshot.sessionType === 'Race'
-            ? <><BattlePanel snapshot={snapshot} onSelect={onSelect} /><NextStop snapshot={snapshot} /></>
-            : <MyCarPanel snapshot={snapshot} />}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function NextStop({ snapshot }: { snapshot: RaceSnapshot }) {
+export function NextStop({ snapshot }: { snapshot: RaceSnapshot }) {
   const p = snapshot.player;
   if (!p) return null;
   return (
     <div className="tm-panel tm-strategy">
-      {(p.alerts ?? []).map((a) => <div key={a} className="tm-alert" role="alert">⚠ {a}</div>)}
+      <AlertList alerts={p.alerts ?? []} />
       <div className="tm-panel-title">Stratégie</div>
-      <div className="tm-kv"><span>Tours restants</span><b className="tnum">{p.lapsRemaining != null ? `≈ ${p.lapsRemaining.toFixed(1)}` : '—'}</b></div>
+      <div className="tm-kv"><span>Tours restants</span><b className="tnum">{(snapshot.raceLength?.playerLapsRemaining ?? p.lapsRemaining) != null ? `${snapshot.raceLength?.estimated === false ? '' : '≈ '}${(snapshot.raceLength?.playerLapsRemaining ?? p.lapsRemaining)!.toFixed(1)}` : '—'}</b></div>
       <div className="tm-kv"><span>Relais</span><b className="tnum">{p.stintLaps} tours</b></div>
       <div className="tm-kv"><span>Rythme moyen</span><b className="tnum">{lapTime(p.averageLap)}</b></div>
       <div className="tm-kv"><span>Dégradation</span><b className="tnum">{p.degradation != null ? `${p.degradation > 0 ? '+' : ''}${p.degradation.toFixed(2)} s/tour` : '—'}</b></div>
@@ -353,7 +402,7 @@ function NextStop({ snapshot }: { snapshot: RaceSnapshot }) {
 }
 
 /** Essais et qualification : la voiture plutôt que la course (meilleur tour, pneus sur le tour, pressions). */
-function MyCarPanel({ snapshot }: { snapshot: RaceSnapshot }) {
+export function MyCarPanel({ snapshot }: { snapshot: RaceSnapshot }) {
   const p = snapshot.player;
   const me = snapshot.drivers.find((d) => d.isPlayer);
   if (!p || !me) return null;
@@ -361,7 +410,7 @@ function MyCarPanel({ snapshot }: { snapshot: RaceSnapshot }) {
   const label = (pos: string) => ({ FL: 'AvG', FR: 'AvD', RL: 'ArG', RR: 'ArD' } as Record<string, string>)[pos] ?? pos;
   return (
     <div className="tm-panel tm-strategy">
-      {(p.alerts ?? []).map((a) => <div key={a} className="tm-alert" role="alert">⚠ {a}</div>)}
+      <AlertList alerts={p.alerts ?? []} />
       <div className="tm-panel-title">{snapshot.sessionType === 'Qualification' ? 'Qualification' : 'Essais'} · ma voiture</div>
       <div className="tm-kv"><span>Meilleur tour</span><b className="tnum">{lapTime(me.bestLap)}{me.bestLapNumber ? <span className="muted"> (T{me.bestLapNumber})</span> : null}</b></div>
       <div className="tm-kv"><span>Écart au meilleur de la catégorie</span><b className="tnum">{me.bestLap && isFinite(classBest) ? (me.bestLap - classBest < 0.0005 ? '—' : `+${(me.bestLap - classBest).toFixed(3)}`) : '—'}</b></div>
@@ -438,6 +487,22 @@ const PATHS: Record<string, string> = {
   fuel: 'M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h14M7 8h6M15 10h2a2 2 0 0 1 2 2v5a1 1 0 0 0 2 0V9l-3-3',
   water: 'M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z',
   oil: 'M4 14h10l4-4h3M4 14v4h10l3-3M7 10V7h4v3',
+  // Accueil (blocs)
+  wind: 'M3 9h11a3 3 0 1 0-3-3M3 15h15a3 3 0 1 1-3 3M3 12h8',
+  radio: 'M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4',
+  flag: 'M5 21V4m0 0h12l-2 4 2 4H5',
+  trophy: 'M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6',
+  gauge: 'M12 14l4-4M4 18a8 8 0 1 1 16 0',
+  wrench: 'M14.5 5.5a4 4 0 0 0 4.9 4.9L21 12l-9 9-3-3 9-9-1.6-1.6a4 4 0 0 1-4.9-4.9L14 4z',
+  map: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14',
+  layout: 'M4 4h7v9H4zM13 4h7v5h-7zM13 11h7v9h-7zM4 15h7v5H4z',
+  plus: 'M12 5v14M5 12h14',
+  grip: 'M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01',
+  hide: 'M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6C3.9 8.4 2 12 2 12s4 7 10 7a9.7 9.7 0 0 0 5.4-1.6',
+  delta: 'M12 4 3 20h18L12 4z',
+  stop: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 3',
+  play: 'M7 5v14l11-7z',
+  close: 'M6 6l12 12M18 6 6 18',
 };
 
 export function Icon({ name, size = 16 }: { name: string; size?: number }) {

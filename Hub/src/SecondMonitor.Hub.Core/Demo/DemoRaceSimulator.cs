@@ -188,7 +188,8 @@ namespace SecondMonitor.Hub.Core.Demo
 
             SessionInfo s = data.SessionInfo;
             s.SessionTime = TimeSpan.FromSeconds(_time);
-            s.SessionType = SessionType.Race;
+            // SMHUB_DEMO_SESSION=essais|qualif : même plateau, en essais ou qualification (pour vérifier l'affichage hors course).
+            s.SessionType = Environment.GetEnvironmentVariable("SMHUB_DEMO_SESSION") switch { "essais" => SessionType.Practice, "qualif" => SessionType.Qualification, _ => SessionType.Race };
             s.SessionPhase = _cars.Any(c => c.Finished) ? SessionPhase.Checkered : SessionPhase.Green;
             s.SessionLengthType = SessionLengthType.Time;
             s.SessionTimeRemaining = Math.Max(0, _raceDuration - _time);

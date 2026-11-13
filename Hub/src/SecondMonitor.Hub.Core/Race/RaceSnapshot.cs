@@ -53,6 +53,13 @@ namespace SecondMonitor.Hub.Core.Race
 
         /// <summary>Plages de température personnalisées appliquées (« LMU · 963 »), null = valeurs du jeu.</summary>
         public string ThermalProfile { get; set; }
+
+        /// <summary>Accueil : temps / tours restants (estimés en course au temps) et dernier événement de course (voir RaceEngine.Dashboard.cs).</summary>
+        public RaceLengthDto RaceLength { get; set; }
+
+        public long LastEventId { get; set; }
+
+        public long EventSessionId { get; set; }
     }
 
     public sealed class DataRateDto

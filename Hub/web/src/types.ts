@@ -23,6 +23,10 @@ export interface RaceSnapshot {
   capabilities: string[];
   dataRate: { playerHz: number; opponentsHz: number };
   thermalProfile: string | null;
+  /** Accueil : temps / tours restants et dernier événement de course (RaceEngine.Dashboard.cs). */
+  raceLength?: RaceLength | null;
+  lastEventId?: number;
+  eventSessionId?: number;
 }
 
 export interface TrackDto {
@@ -443,4 +447,37 @@ export interface WeatherReport {
   rainPerHour: number | null;
   trendMinutes: number;
   summary: string | null;
+}
+
+// ───── Accueil : temps / tours restants, événements de course (/api/race/events) ─────
+
+export interface RaceLength {
+  mode: 'laps' | 'time' | 'time+1' | null;
+  timeRemaining: number | null;
+  timeTotal: number | null;
+  leaderLap: number | null;
+  leaderTotalLaps: number | null;
+  leaderLapsRemaining: number | null;
+  playerLap: number | null;
+  playerTotalLaps: number | null;
+  playerLapsRemaining: number | null;
+  playerFinishIn: number | null;
+  playerLapsPossible: number | null;
+  progress: number;
+  estimated: boolean;
+  leaderPace: number | null;
+  playerPace: number | null;
+  leaderFinished: boolean;
+}
+
+export interface RaceEvent {
+  id: number;
+  time: number;
+  lap: number | null;
+  kind: 'flag' | 'session' | 'pit' | 'bestlap' | 'track' | 'penalty' | 'retire' | 'position' | 'tyres' | 'damage' | string;
+  level: 'info' | 'good' | 'warn' | 'bad';
+  title: string;
+  text: string | null;
+  driverId: string | null;
+  isPlayer: boolean;
 }

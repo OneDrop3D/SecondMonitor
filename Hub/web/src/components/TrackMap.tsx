@@ -6,13 +6,15 @@ import { useWidth } from '../charts/useSize';
 import { visibleDrivers, type ClassView } from '../classView';
 
 const PAD = 18;
-const MAX_H = 440;
+const DEFAULT_MAX_H = 440;
 
 interface Props {
   snapshot: RaceSnapshot;
   classColor: (classId: string) => string;
   onSelect: (driver: DriverRow) => void;
   classView?: ClassView;
+  /** Hauteur maximale du dessin (px) : la carte s'adapte au bloc de l'accueil. 440 par défaut. */
+  maxHeight?: number;
 }
 
 interface Placed {
@@ -25,7 +27,8 @@ interface Placed {
  * Carte de piste : tracé appris automatiquement (un tour complet suffit), voitures colorées par catégorie.
  * Tant que le tracé n'est pas connu, on affiche un « cercle de chronométrage » (position sur le tour).
  */
-export function TrackMap({ snapshot, classColor, onSelect, classView = 'all' }: Props) {
+export function TrackMap({ snapshot, classColor, onSelect, classView = 'all', maxHeight }: Props) {
+  const MAX_H = Math.max(140, maxHeight ?? DEFAULT_MAX_H);
   const [hover, setHover] = useState<{ p: Placed; cx: number; cy: number } | null>(null);
   const outline = snapshot.track.outline;
   const { ref, width } = useWidth<HTMLDivElement>(400);
@@ -37,13 +40,13 @@ export function TrackMap({ snapshot, classColor, onSelect, classView = 'all' }: 
     const zs = outline.map((p) => p[1]);
     const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs);
     const scale = Math.min((W - PAD * 2) / Math.max(1, maxX - minX), (MAX_H - PAD * 2) / Math.max(1, maxZ - minZ));
-    const h = Math.max(160, (maxZ - minZ) * scale + PAD * 2);
+    const h = Math.max(Math.min(160, MAX_H), (maxZ - minZ) * scale + PAD * 2);
     const ox = (W - (maxX - minX) * scale) / 2;
     const tx = (x: number) => ox + (x - minX) * scale;
     const ty = (z: number) => PAD + (z - minZ) * scale;
     const path = outline.map((p, i) => `${i === 0 ? 'M' : 'L'}${tx(p[0]).toFixed(1)},${ty(p[1]).toFixed(1)}`).join(' ') + ' Z';
     return { tx, ty, h, path };
-  }, [outline, W]);
+  }, [outline, W, MAX_H]);
 
   const H = frame?.h ?? Math.min(MAX_H, W * 0.8);
 

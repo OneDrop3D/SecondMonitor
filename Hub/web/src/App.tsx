@@ -20,7 +20,10 @@ import { RadioProvider, isRadioStation, type RadioMessage } from './radio';
 import { playBase64Wav, stopPlayback } from './audio';
 import { useSelection } from './selection';
 import type { ClassView } from './classView';
-import { Icon, StatusBar, TimingHeader, TimingScreen } from './components/Timing';
+import { Icon, StatusBar, TimingHeader } from './components/Timing';
+import { Dashboard } from './components/dashboard/Dashboard';
+import { NoticeProvider, NoticeStack, useNotices } from './components/dashboard/notices';
+import { useRaceEvents } from './components/dashboard/raceEvents';
 import { ConnectionView, ConnectionHero } from './components/ConnectionView';
 import { GuideView } from './components/GuideView';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -53,7 +56,9 @@ function writePref(key: string, value: string) {
 export default function App() {
   return (
     <RadioProvider>
-      <Shell />
+      <NoticeProvider>
+        <Shell />
+      </NoticeProvider>
     </RadioProvider>
   );
 }
@@ -84,34 +89,40 @@ function Shell() {
   const version = status?.version ? String(status.version).split('.').slice(0, 3).join('.') : null;
   const [guide, setGuide] = useState(() => readPref('smhub-guide-vu', '') === '');
   const closeGuide = () => { setGuide(false); writePref('smhub-guide-vu', '1'); };
-  const [toast, setToast] = useState<string | null>(null);
+  const notices = useNotices();
+  const [layoutEdit, setLayoutEdit] = useState(false);
+  // Événements de course du hub ; drapeaux, dégâts et pénalités s'affichent aussi en notification (croix, disparition seule).
+  const raceEvents = useRaceEvents(snapshot, (added) => {
+    for (const e of added) {
+      if (e.kind === 'flag' && e.level !== 'good' || e.kind === 'damage' || e.kind === 'penalty') {
+        notices.notify({ key: `course-${e.kind}-${e.title}`, title: e.title, text: e.text ?? '', level: e.level, source: 'Course', ttl: e.level === 'bad' ? 12000 : 8000, fromEvent: true, quietAfterClose: 60_000 });
+      }
+    }
+  });
   const stage = linkStage(status, snapshot);
   const lastStage = useRef(stage);
   useEffect(() => {
     // Notification quand la chaîne se met à fonctionner (ou se coupe) : on voit tout de suite que ça marche.
     const before = lastStage.current;
     lastStage.current = stage;
-    let text: string | null = null;
+    // (Notification avec croix, fermée toute seule ; avant, elle pouvait rester bloquée si l'état changeait deux fois de suite.)
     if (stage === 'ok' && before !== 'ok' && before !== 'demo') {
       const game = status?.source.receiver?.game ?? snapshot?.source;
       const pc = collectorAddress(status);
-      text = `✓ Données reçues${game ? ` : ${game}` : ''}${pc ? ` (PC ${pc})` : ''}`;
+      notices.resolve('connexion-perdue');
+      notices.notify({ key: 'connexion-ok', text: `Données reçues${game ? ` : ${game}` : ''}${pc ? ` (PC ${pc})` : ''}`, level: 'good', source: 'Connexion', ttl: 6000 });
     } else if (before === 'no-collector' && stage !== 'no-collector' && stage !== 'demo') {
-      text = `✓ Collecteur connecté${collectorAddress(status) ? ` : ${collectorAddress(status)}` : ''}`;
+      notices.resolve('connexion-perdue');
+      notices.notify({ key: 'collecteur-ok', text: `Collecteur connecté${collectorAddress(status) ? ` : ${collectorAddress(status)}` : ''}`, level: 'good', source: 'Connexion', ttl: 6000 });
     } else if (before === 'ok' && stage === 'no-collector') {
-      text = 'Connexion au PC de jeu perdue : reconnexion automatique…';
-    }
-    if (text) {
-      setToast(text);
-      const t = window.setTimeout(() => setToast(null), 6000);
-      return () => window.clearTimeout(t);
+      notices.notify({ key: 'connexion-perdue', text: 'Connexion au PC de jeu perdue : reconnexion automatique…', level: 'warn', source: 'Connexion', ttl: 20000 });
     }
   }, [stage]); // eslint-disable-line react-hooks/exhaustive-deps
   const [classView, setClassViewState] = useState<ClassView>(() => readPref('smhub-classview', 'mine'));
   const setClassView = (v: ClassView) => { setClassViewState(v); writePref('smhub-classview', v === 'mine' || v === 'all' ? v : 'mine'); };
   const classOrder = useRef(new Map<string, number>());
 
-  const setTab = (t: Tab) => { setTabState(t); window.scrollTo({ top: 0 }); };
+  const setTab = (t: Tab) => { setTabState(t); setLayoutEdit(false); window.scrollTo({ top: 0 }); };
 
   useEffect(() => {
     if (theme === 'auto') document.documentElement.removeAttribute('data-theme');
@@ -136,7 +147,16 @@ function Shell() {
 
   return (
     <div className="app sm-shell">
-      {snapshot?.hasData && <TimingHeader snapshot={snapshot} />}
+      {snapshot?.hasData && (
+        <TimingHeader
+          snapshot={snapshot}
+          tools={tab === 'timing' ? (
+            <button className={`tm-tool ${layoutEdit ? 'on' : ''}`} onClick={() => setLayoutEdit((v) => !v)} aria-pressed={layoutEdit} title="Organiser les blocs de l'accueil (déplacer, taille, masquer, ajouter)">
+              <Icon name="layout" size={18} /> {layoutEdit ? 'Terminé' : 'Disposition'}
+            </button>
+          ) : undefined}
+        />
+      )}
       <div className="sm-body">
         <main className={`content ${tab === 'timing' && snapshot?.hasData ? 'content-full' : ''}`}>
           <ErrorBoundary label={TABS.find((t) => t.id === tab)?.label ?? tab} resetKey={tab}>
@@ -149,7 +169,11 @@ function Shell() {
           ) : needsData && !snapshot?.hasData ? (
             <Waiting link={link} status={status} snapshot={snapshot} onConnection={() => setTab('connection')} onSettings={() => setTab('settings')} onGuide={() => setGuide(true)} />
           ) : snapshot && tab === 'timing' ? (
-            <TimingScreen snapshot={snapshot} classColor={classColor} onSelect={onSelect} classView={classView} setClassView={setClassView} />
+            <Dashboard
+              ctx={{ snapshot, classColor, onSelect, classView, setClassView, radio, events: raceEvents, noticeHistory: notices.history }}
+              editing={layoutEdit}
+              onDone={() => setLayoutEdit(false)}
+            />
           ) : snapshot && tab === 'race' ? (
             <div className="layout-race">
               <div className="area-board"><Leaderboard snapshot={snapshot} classColor={classColor} onSelect={onSelect} classView={classView} setClassView={setClassView} /></div>
@@ -188,7 +212,7 @@ function Shell() {
         </nav>
       </div>
       <StatusBar snapshot={snapshot} link={link} version={version} status={status} onConnection={() => setTab('connection')} />
-      {toast && <div className="sm-toast" role="status" onClick={() => setToast(null)}>{toast}</div>}
+      <NoticeStack />
       {guide && <GuideView status={status} snapshot={snapshot} onClose={closeGuide} onNavigate={(t) => setTab(t)} />}
       <RadioDock onOpen={() => setTab('ai')} />
       {selected && <DriverDrawer driver={selected} onClose={() => setSelectedId(null)} />}

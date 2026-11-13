@@ -235,6 +235,7 @@ app.MapPost("/api/client-log", (ClientLog entry) =>
     return Results.Ok();
 });
 // ───── Petits écrans et boutons externes (ClickDeck, touche du clavier ou bouton du volant du PC de jeu) ─────
+DashboardApi.Map(app); // accueil : événements de course
 app.MapGet("/api/deck", (RaceEngine engine, LiveHub hub) => Results.Json(DeckApi.Build(engine.BuildSnapshot(), hub.LastRadioText), LiveHub.Json));
 app.MapPost("/api/radio/press", async (LiveHub hub, HttpContext ctx) =>
 {

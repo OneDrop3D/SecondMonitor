@@ -3,6 +3,12 @@
 SecondMonitor (l'application qui affiche) et SecondMonitor Collecteur (PC de jeu), pour Windows, Mac et Linux/SteamOS.
 Basé sur [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) de winzarten (licence MIT).
 
+## Non publié
+
+- **Accueil en tableau de bord personnalisable** : bouton « Disposition » dans la barre du haut pour déplacer les blocs (glisser, au doigt sur iPad et téléphone), changer leur largeur et leur hauteur, les masquer, en ajouter ou tout réinitialiser. Disposition enregistrée sur chaque appareil (grand écran, tablette, téléphone sur une colonne). Blocs : Classement (mini-secteurs violet / vert / jaune avec temps de secteur, intervalle, places gagnées ▲▼, arrêts, pneu et âge), Carte du circuit, Radio (derniers échanges pilote ↔ ingénieur, réécoute de la voix), Événements de course (drapeaux, arrêts des voisins, meilleurs tours, tours invalidés, abandons, alertes pneus et dégâts, notifications passées, filtre par type), Ma voiture, Prochain arrêt, Meilleurs tours, Duels, Dégâts, Météo, Delta.
+- **Barre du haut** : nouveau bloc temps restant / tours restants avec barre d'avancement ; en course au temps, le hub estime vos tours restants (et ceux du leader) à partir du rythme réel et de la règle de fin (le tour en cours se termine quand le temps est écoulé). État de la session, vent et piste mouillée affichés.
+- **Notifications** : chacune a sa croix, disparaît seule, ne revient pas en boucle pour le même événement et reste consultable dans « Événements de course » (correction : la notification « Données reçues » pouvait rester bloquée). Les alertes pneus / dégâts et les drapeaux se masquent aussi d'une croix.
+
 ## Version 0.5.0
 
 - **Dégâts mécaniques** pièce par pièce, quand le jeu les donne :

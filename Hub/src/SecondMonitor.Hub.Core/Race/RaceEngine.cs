@@ -124,7 +124,9 @@ namespace SecondMonitor.Hub.Core.Race
         {
             lock (_lock)
             {
-                return BuildSnapshotInternal();
+                RaceSnapshot snap = BuildSnapshotInternal();
+                DecorateSnapshot(snap); // temps / tours restants, événements de course (RaceEngine.Dashboard.cs)
+                return snap;
             }
         }
 
