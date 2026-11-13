@@ -81,6 +81,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<LiveHub>());
 builder.Services.AddHttpClient<OllamaClient>();
 builder.Services.AddSingleton<EngineerService>();
 builder.Services.AddHostedService<ProactiveService>();
+CarnetApi.Register(builder.Services); // carnet de session (IA)
 builder.Services.ConfigureHttpJsonOptions(o =>
 {
     o.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
@@ -256,6 +257,8 @@ app.MapPost("/api/radio/stop", async (EngineerService engineer) =>
 });
 app.MapPost("/api/ai/say", async (EngineerService engineer, AskRequest req, CancellationToken ct) =>
     Results.Json(await engineer.SayAsync(req.Text, req.From ?? "ingénieur", ct)));
+
+CarnetApi.Map(app); // carnet de session : /api/carnets
 
 // Toute autre route → l'application web (navigation côté client).
 app.MapFallbackToFile("index.html");

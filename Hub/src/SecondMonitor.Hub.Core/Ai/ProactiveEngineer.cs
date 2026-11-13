@@ -60,6 +60,10 @@ namespace SecondMonitor.Hub.Core.Ai
             PlayerStrategy p = snap.Player;
             TyreAlerts(p, me, candidates);
             DamageAlerts(p, candidates);
+            if (HybridAdvisor.Proactive(snap, me) is ProactiveMessage battery)
+            {
+                candidates.Add(battery); // batterie : attaque / défense, dernier tour, batterie vide ou basse, tour de sortie
+            }
             if (snap.SessionType is "Practice" or "WarmUp")
             {
                 PracticeDebrief(snap, me, p, candidates);

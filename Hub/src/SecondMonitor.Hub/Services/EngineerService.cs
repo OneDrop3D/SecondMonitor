@@ -16,7 +16,8 @@ public sealed class EngineerService
         "Réponds TOUJOURS en français, en une ou deux phrases courtes, faciles à entendre en pilotant, en vouvoyant le pilote. " +
         "Utilise UNIQUEMENT les chiffres des informations ci-dessous, recopiés tels quels ; ne fais aucun calcul. " +
         "Ne parle jamais de « document », de « texte » ni de « fiche » : le pilote ne les voit pas. " +
-        "Si l'information manque, dis simplement « Je n'ai pas cette information pour le moment ». " +
+        "Si une information manque vraiment, dis en une phrase laquelle et pourquoi (le jeu ne l'envoie pas, ou il faut encore un tour). " +
+        "Pour un problème d'équilibre ou de freinage, propose d'abord ce qui se règle en roulant (répartition de freinage, ABS, TC, cartographie), puis le setup au stand. " +
         "Le classement qui compte est celui de la catégorie du pilote ; les autres catégories ne sont que du trafic. " +
         "« Rentrer », « box » ou « stand » signifient l'arrêt au stand, pas la fin de la course. " +
         "Tiens compte de la mémoire de course (retours du pilote). Pas de liste, pas d'emoji, pas de markdown. " +
@@ -35,7 +36,7 @@ public sealed class EngineerService
         _ => string.Empty,
     };
 
-    private const string Unknown = "Je n'ai pas cette information pour le moment.";
+    private readonly RaceMemory _testMemory = new();
 
     private readonly OllamaClient _ollama;
     private readonly SettingsStore _settings;
@@ -67,6 +68,9 @@ public sealed class EngineerService
     }
 
     public RaceMemory Memory { get; }
+
+    /// <summary>Chaque échange radio diffusé (question / réponse, message spontané) : le carnet de session s'y abonne.</summary>
+    public event Action<EngineerReply>? Replied;
 
     /// <summary>
     /// Le pilote coupe la radio (appui sur le bouton) : on arrête la voix sur tous les écrans et on ne fera pas parler
@@ -101,29 +105,47 @@ public sealed class EngineerService
             int? lap = snapshot.Drivers.FirstOrDefault(d => d.IsPlayer)?.Laps;
             string? facts = null;
             string kind;
-            string? answer = await HandleCommandAsync(question, test, lap, ct);
-            if (answer != null)
+            string? category;
+            string categorySource = "règles";
+            // Mode test : mémoire à part (le fil de conversation marche, sans toucher à la vraie course).
+            RaceMemory memory = test ? _testMemory : Memory;
+            CarContext car = CarContext.From(snapshot, ai.WetThresholdPct);
+
+            // Suites de conversation (« oui », « non », « autre chose ? ») avant les politesses : « ok » répond à la proposition.
+            DialogReply? dialog = RadioDialog.FollowUp(question, memory, car, lap);
+            string? answer = dialog?.Text ?? await HandleCommandAsync(question, test, lap, ct);
+            if (dialog == null && answer == null)
+            {
+                // Retour du pilote sur la voiture : base de réglages, réponse immédiate (jamais un simple « reçu »).
+                dialog = RadioDialog.Feedback(question, memory, car, snapshot, lap);
+            }
+
+            if (dialog != null)
+            {
+                answer = dialog.Text;
+                kind = dialog.Kind;
+                category = dialog.Category;
+            }
+            else if (answer != null)
             {
                 kind = "commande";
+                category = ExchangeCategorizer.FromText(question) ?? ExchangeCategorizer.RaceInfo;
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(ai.ThinkModel))
-                {
-                    throw new InvalidOperationException("Choisissez d'abord un modèle « réflexion » dans l'onglet Ingénieur IA.");
-                }
-
                 var extras = new BriefingExtras
                 {
                     Speeds = snapshot.HasData && !test ? _engine.BuildSpeedAnalysis() : null,
                     MicroSectors = snapshot.HasData && !test ? _engine.BuildMicroSectors() : null,
                     Weather = snapshot.HasData && !test ? _engine.BuildWeather() : null,
-                    Memory = test ? null : Memory,
+                    Laps = snapshot.HasData && !test ? _engine.PlayerLaps() : null,
+                    Memory = memory,
                     WetThresholdPct = ai.WetThresholdPct,
                 };
                 BriefingResult brief = RaceBriefing.Prepare(snapshot, question, extras);
                 facts = brief.Facts;
-                if (brief.Suggestion != null && ai.StrictAnswers)
+                category = ExchangeCategorizer.Categorize(question, brief.Topics);
+                if (brief.Suggestion != null && (ai.StrictAnswers || string.IsNullOrWhiteSpace(ai.ThinkModel)))
                 {
                     // Réponse calculée par le hub : dite telle quelle (fiable, et sans attendre le modèle).
                     answer = brief.Suggestion;
@@ -131,8 +153,25 @@ public sealed class EngineerService
                 }
                 else
                 {
-                    answer = await ThinkAsync(question, brief, test, ct);
+                    if (string.IsNullOrWhiteSpace(ai.ThinkModel))
+                    {
+                        throw new InvalidOperationException("Choisissez d'abord un modèle « réflexion » dans l'onglet Ingénieur IA.");
+                    }
+
+                    answer = await ThinkAsync(question, brief, snapshot, test, ct);
                     kind = answer == brief.Suggestion ? "calculée" : "modèle";
+                }
+
+                if (answer == brief.Suggestion && brief.Proposal != null)
+                {
+                    // La réponse propose quelque chose (un cran d'aileron, une sortie de virage) : « oui » / « non » s'y rattachent.
+                    RadioDialog.Offered(memory, brief.Proposal, "vitesse", "Vitesse de pointe", category ?? ExchangeCategorizer.RaceInfo);
+                }
+
+                if (category == null)
+                {
+                    category = ExchangeCategorizer.RaceInfo;
+                    categorySource = "défaut"; // le carnet demandera au modèle de classer l'échange
                 }
             }
 
@@ -168,12 +207,15 @@ public sealed class EngineerService
                 Scenario = test ? scenario : null,
                 UsedPreparedAnswer = kind == "calculée",
                 Kind = kind,
+                Category = category,
+                CategorySource = categorySource,
             };
 
             // Tous les écrans (Mac, iPad, poste du pilote) voient et peuvent entendre l'échange (sauf en mode test).
             if (!test)
             {
                 await _hub.BroadcastAsync("radio", reply);
+                Replied?.Invoke(reply);
             }
 
             return reply;
@@ -228,30 +270,14 @@ public sealed class EngineerService
             return null;
         }
 
-        // Réponse du pilote à une question que l'IA vient de lui poser.
-        PendingQuestion? pending = Memory.Pending();
-        if (pending != null && (RadioCommands.YesNo(text) != null || RadioCommands.IsFeedback(text) || !RadioCommands.IsQuestion(text)))
-        {
-            Memory.ClearPending();
-            var (reply, note) = ProactiveEngineer.HandleAnswer(pending, text, Memory);
-            Memory.Add("pilote", pending.Topic, note, lap);
-            return reply;
-        }
-
-        // Remarque spontanée sur la voiture ou la piste : on la garde pour la suite de la course.
-        if (RadioCommands.IsFeedback(text))
-        {
-            Memory.Add("pilote", "retour", $"« {text.Trim().TrimEnd('.', '!')} »", lap);
-            return "Reçu, c'est noté. J'en tiens compte pour la suite.";
-        }
-
+        // Réponses aux questions de l'IA et retours du pilote : voir RadioDialog (appelé par AskAsync).
         return null;
     }
 
-    private async Task<string> ThinkAsync(string question, BriefingResult brief, bool test, CancellationToken ct)
+    private async Task<string> ThinkAsync(string question, BriefingResult brief, RaceSnapshot snapshot, bool test, CancellationToken ct)
     {
         AiSettings ai = _settings.Current.Ai;
-        string system = SystemPrompt + "\n\n" + SessionFocus(_engine.BuildSnapshot().SessionType) + "\n\nINFORMATIONS (chiffres exacts calculés par l'ordinateur) :\n" + brief.Facts;
+        string system = SystemPrompt + "\n\n" + SessionFocus(snapshot.SessionType) + "\n\nINFORMATIONS (chiffres exacts calculés par l'ordinateur) :\n" + brief.Facts;
         if (brief.Suggestion != null)
         {
             system += "\n\nRÉPONSE PRÉPARÉE POUR CETTE QUESTION (à dire au pilote, presque mot pour mot) :\n" + brief.Suggestion;
@@ -278,7 +304,13 @@ public sealed class EngineerService
         if (invented || RadioCommands.IsUnusableAnswer(answer))
         {
             _logger.LogInformation("Réponse IA écartée : {Answer}", answer);
-            return brief.Suggestion ?? Unknown;
+            return brief.Suggestion ?? RaceBriefing.Missing(question, snapshot);
+        }
+
+        // « Je n'ai pas cette information » : on dit plutôt quelle donnée manque et pourquoi.
+        if (RadioCommands.Normalize(answer).Contains("pas cette information"))
+        {
+            return brief.Suggestion ?? RaceBriefing.Missing(question, snapshot);
         }
 
         return answer;
@@ -413,12 +445,13 @@ public sealed class EngineerService
     }
 
     /// <summary>Message radio sans question (alerte du hub, consigne de l'ingénieur humain, intervention spontanée de l'IA).</summary>
-    public async Task<EngineerReply> SayAsync(string text, string from, CancellationToken ct, bool proactive = false, bool awaitingAnswer = false)
+    public async Task<EngineerReply> SayAsync(string text, string from, CancellationToken ct, bool proactive = false, bool awaitingAnswer = false, string? category = null)
     {
         var started = DateTime.UtcNow;
         string? audio = await TrySpeakAsync(text, ct);
-        var reply = new EngineerReply { Answer = text, From = from, AudioBase64 = _stopRequestedUtc > started ? null : audio, Proactive = proactive, AwaitingAnswer = awaitingAnswer, Kind = proactive ? "spontanée" : "message" };
+        var reply = new EngineerReply { Answer = text, From = from, AudioBase64 = _stopRequestedUtc > started ? null : audio, Proactive = proactive, AwaitingAnswer = awaitingAnswer, Kind = proactive ? "spontanée" : "message", Category = category ?? ExchangeCategorizer.FromText(text) ?? ExchangeCategorizer.RaceInfo };
         await _hub.BroadcastAsync("radio", reply);
+        Replied?.Invoke(reply);
         return reply;
     }
 
@@ -492,6 +525,12 @@ public sealed class EngineerReply
 
     /// <summary>L'IA attend une réponse du pilote.</summary>
     public bool AwaitingAnswer { get; set; }
+
+    /// <summary>Catégorie du carnet : « Stratégie », « Réglages de course », « Réglages de la voiture », « Informations course ».</summary>
+    public string? Category { get; set; }
+
+    /// <summary>« règles » ou « défaut » (le carnet fait alors classer l'échange par le modèle).</summary>
+    public string? CategorySource { get; set; }
 
     public DateTime At { get; set; } = DateTime.Now;
 }

@@ -15,6 +15,7 @@ public sealed class ProactiveService : BackgroundService
     private readonly SettingsStore _settings;
     private readonly ILogger<ProactiveService> _logger;
     private readonly ProactiveEngineer _rules = new();
+    private readonly RaceFinishRadio _finish = new();
 
     public ProactiveService(RaceEngine engine, EngineerService engineer, SettingsStore settings, ILogger<ProactiveService> logger)
     {
@@ -27,6 +28,7 @@ public sealed class ProactiveService : BackgroundService
             lock (_rules)
             {
                 _rules.Reset();
+                _finish.Reset();
             }
         };
     }
@@ -45,6 +47,20 @@ public sealed class ProactiveService : BackgroundService
             try
             {
                 RaceSnapshot snap = _engine.BuildSnapshot();
+
+                // Arrivée de la course : la radio du résultat (une fois).
+                string? finish;
+                lock (_rules)
+                {
+                    finish = _finish.Check(snap);
+                }
+
+                if (finish != null)
+                {
+                    await _engineer.SayAsync(finish, "ingénieur IA", stoppingToken, proactive: true, category: ExchangeCategorizer.RaceInfo);
+                    continue;
+                }
+
                 ProactiveMessage? message;
                 lock (_rules)
                 {
@@ -73,7 +89,7 @@ public sealed class ProactiveService : BackgroundService
                     });
                 }
 
-                await _engineer.SayAsync(message.Text, "ingénieur IA", stoppingToken, proactive: true, awaitingAnswer: message.IsQuestion);
+                await _engineer.SayAsync(message.Text, "ingénieur IA", stoppingToken, proactive: true, awaitingAnswer: message.IsQuestion, category: ExchangeCategorizer.FromProactiveTopic(message.Topic));
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

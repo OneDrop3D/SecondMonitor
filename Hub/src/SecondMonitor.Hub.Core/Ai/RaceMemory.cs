@@ -22,6 +22,9 @@ namespace SecondMonitor.Hub.Core.Ai
         /// <summary>Décidé avec le pilote : finir sans s'arrêter.</summary>
         public bool NoStopPlanned { get; set; }
 
+        /// <summary>Fil de la conversation : dernière proposition de l'ingénieur, réglages acceptés ou refusés.</summary>
+        public ConversationThread Thread { get; } = new();
+
         public IReadOnlyList<MemoryEntry> Entries
         {
             get
@@ -33,11 +36,11 @@ namespace SecondMonitor.Hub.Core.Ai
             }
         }
 
-        public MemoryEntry Add(string source, string topic, string text, int? lap)
+        public MemoryEntry Add(string source, string topic, string text, int? lap, string symptom = null, string tyres = null)
         {
             lock (_lock)
             {
-                var e = new MemoryEntry { Id = _nextId++, Source = source, Topic = topic, Text = text.Trim(), Lap = lap, At = DateTime.Now };
+                var e = new MemoryEntry { Id = _nextId++, Source = source, Topic = topic, Text = text.Trim(), Lap = lap, At = DateTime.Now, Symptom = symptom, Tyres = tyres };
                 _entries.Add(e);
                 if (_entries.Count > 100)
                 {
@@ -65,6 +68,8 @@ namespace SecondMonitor.Hub.Core.Ai
                 PlannedStopLap = null;
                 NoStopPlanned = false;
             }
+
+            Thread.Clear();
         }
 
         public void Ask(PendingQuestion question)
@@ -96,7 +101,8 @@ namespace SecondMonitor.Hub.Core.Ai
         public string Facts()
         {
             List<MemoryEntry> list = Entries.TakeLast(12).ToList();
-            if (list.Count == 0 && PlannedStopLap == null && !NoStopPlanned)
+            string decisions = Thread.Facts();
+            if (list.Count == 0 && PlannedStopLap == null && !NoStopPlanned && decisions == null)
             {
                 return null;
             }
@@ -117,6 +123,11 @@ namespace SecondMonitor.Hub.Core.Ai
                 sb.Append($"\n- {(e.Lap.HasValue ? $"Tour {e.Lap}" : e.At.ToString("HH:mm"))}, {e.Source} : {e.Text}");
             }
 
+            if (decisions != null)
+            {
+                sb.Append("\n- " + decisions);
+            }
+
             return sb.ToString();
         }
     }
@@ -135,6 +146,12 @@ namespace SecondMonitor.Hub.Core.Ai
         public string Topic { get; set; }
 
         public string Text { get; set; }
+
+        /// <summary>Symptôme reconnu (« understeer », « lock-front »…) pour un retour du pilote sur la voiture.</summary>
+        public string Symptom { get; set; }
+
+        /// <summary>État des pneus au moment du retour : « neufs », « mi-usure », « usés ».</summary>
+        public string Tyres { get; set; }
     }
 
     public sealed class PendingQuestion
