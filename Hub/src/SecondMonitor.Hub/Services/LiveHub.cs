@@ -95,7 +95,7 @@ public sealed class LiveHub : BackgroundService
             lock (_radioHistory)
             {
                 // Historique sans l'audio (trop lourd à renvoyer à chaque nouvel écran).
-                _radioHistory.Add(data is EngineerReply r ? new EngineerReply { Question = r.Question, Transcript = r.Transcript, Answer = r.Answer, From = r.From, Facts = r.Facts, Milliseconds = r.Milliseconds, At = r.At, Kind = r.Kind, Proactive = r.Proactive, AwaitingAnswer = r.AwaitingAnswer, ListenMilliseconds = r.ListenMilliseconds, ThinkMilliseconds = r.ThinkMilliseconds, UsedPreparedAnswer = r.UsedPreparedAnswer } : data);
+                _radioHistory.Add(data is EngineerReply r ? new EngineerReply { Question = r.Question, Transcript = r.Transcript, Answer = r.Answer, From = r.From, Facts = r.Facts, Milliseconds = r.Milliseconds, At = r.At, Kind = r.Kind, Proactive = r.Proactive, AwaitingAnswer = r.AwaitingAnswer, ListenMilliseconds = r.ListenMilliseconds, ThinkMilliseconds = r.ThinkMilliseconds, UsedPreparedAnswer = r.UsedPreparedAnswer, Category = r.Category, CategorySource = r.CategorySource } : data);
                 if (_radioHistory.Count > 50)
                 {
                     _radioHistory.RemoveAt(0);

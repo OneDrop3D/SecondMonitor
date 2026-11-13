@@ -81,6 +81,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<LiveHub>());
 builder.Services.AddHttpClient<OllamaClient>();
 builder.Services.AddSingleton<EngineerService>();
 builder.Services.AddHostedService<ProactiveService>();
+CarnetApi.Register(builder.Services); // carnet de session (IA)
 builder.Services.ConfigureHttpJsonOptions(o =>
 {
     o.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
@@ -260,6 +261,7 @@ app.MapPost("/api/ai/say", async (EngineerService engineer, AskRequest req, Canc
 
 MusicApi.Map(app, dataDir); // Musique Deezer (/api/music/*, commandes vocales, priorité radio)
 UpdateApi.Map(app, dataDir, headless); // mises à jour (UpdateApi.cs)
+CarnetApi.Map(app); // carnet de session : /api/carnets
 
 // Toute autre route → l'application web (navigation côté client).
 app.MapFallbackToFile("index.html");

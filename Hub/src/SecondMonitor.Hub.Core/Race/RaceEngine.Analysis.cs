@@ -140,6 +140,10 @@ namespace SecondMonitor.Hub.Core.Race
 
                     var clean = traces.Where(tr => !tr.Pit).ToList();
                     row.TopSpeedBest = clean.Select(tr => Max(tr.Speed)).Where(v => v.HasValue).DefaultIfEmpty(null).Max();
+                    // Tour de la meilleure Vmax et moyenne des Vmax par tour (réponse radio « vitesse max au tour X, en moyenne … »).
+                    var tops = clean.Select(tr => (tr.Lap, Top: Max(tr.Speed))).Where(x => x.Top.HasValue).ToList();
+                    row.TopSpeedBestLap = tops.Count > 0 ? tops.OrderByDescending(x => x.Top).First().Lap + 1 : null;
+                    row.TopSpeedAverage = tops.Count > 0 ? Math.Round(tops.Average(x => x.Top.Value), 1) : null;
                     if (_segments.Count > 0)
                     {
                         double?[] lastValues = last != null ? SegmentValues(last) : null;
@@ -402,6 +406,10 @@ namespace SecondMonitor.Hub.Core.Race
         public double? TopSpeedLast { get; set; }
 
         public double? TopSpeedBest { get; set; }
+
+        public int? TopSpeedBestLap { get; set; }
+
+        public double? TopSpeedAverage { get; set; }
 
         /// <summary>Par segment : Vmin (virage) ou Vmax (ligne droite), en km/h, au dernier tour complet.</summary>
         public Dictionary<string, double> Last { get; set; } = new();

@@ -104,7 +104,7 @@ public sealed class OllamaClient
         return result;
     }
 
-    public async Task<string> ChatAsync(string spec, IEnumerable<object> messages, CancellationToken ct)
+    public async Task<string> ChatAsync(string spec, IEnumerable<object> messages, CancellationToken ct, int maxTokens = 160)
     {
         var (url, model, _) = Resolve(spec);
         var body = new
@@ -112,7 +112,7 @@ public sealed class OllamaClient
             model,
             stream = false,
             keep_alive = "30m",
-            options = new { temperature = 0.2, num_predict = 160 },
+            options = new { temperature = 0.2, num_predict = maxTokens },
             messages,
         };
         using var resp = await _http.PostAsJsonAsync($"{url}/api/chat", body, ct);

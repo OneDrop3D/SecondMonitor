@@ -22,5 +22,12 @@
 
         [ProtoMember(5, IsRequired = true)]
         public bool IsElectricOnly { get; set; } = false;
+
+        /// <summary>
+        /// Énergie récupérée depuis le début du tour (0 - 1 ; F1 : part des 4 MJ). Null si le jeu ne la donne pas.
+        /// Champ ajouté par le fork (nouveau numéro : compatible avec les versions qui ne le connaissent pas).
+        /// </summary>
+        [ProtoMember(6)]
+        public double? HarvestedThisLapPercentage { get; set; }
     }
 }

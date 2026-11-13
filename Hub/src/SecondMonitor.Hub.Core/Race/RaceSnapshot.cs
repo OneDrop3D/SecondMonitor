@@ -462,6 +462,28 @@ namespace SecondMonitor.Hub.Core.Race
         public double ChargePct { get; set; }
 
         public string Mode { get; set; }
+
+        // ── Suivi tour par tour (HybridTracker) : conseils batterie de l'ingénieur ──
+
+        /// <summary>« deploy » (la batterie se vide), « harvest » (elle se recharge) ou null.</summary>
+        public string ChargeChange { get; set; }
+
+        /// <summary>Énergie déployée / récupérée sur le tour en cours (% de la limite par tour, F1 uniquement).</summary>
+        public double? DeployedLapPct { get; set; }
+
+        public double? HarvestedLapPct { get; set; }
+
+        /// <summary>Dernier tour complet : charge au début, à la fin, minimum, et distance (m) où la batterie a été vide.</summary>
+        public double? LastLapStartPct { get; set; }
+
+        public double? LastLapEndPct { get; set; }
+
+        public double? LastLapMinPct { get; set; }
+
+        public double? LastLapEmptyAt { get; set; }
+
+        /// <summary>« F1 » (ERS, modes de déploiement), « LMU » (hypercar : batterie + énergie virtuelle) ou « autre ».</summary>
+        public string System { get; set; }
     }
 
     public sealed class LapDto

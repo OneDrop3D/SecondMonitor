@@ -299,6 +299,7 @@
             };
 
             hybridSystem.RemainingPerLapChargePercentage = (rawCarStatusData.ErsDeployedThisLap / 4000000.0);
+            hybridSystem.HarvestedThisLapPercentage = (rawCarStatusData.ErsHarvestedThisLapMguk + rawCarStatusData.ErsHarvestedThisLapMguh) / 4000000.0;
         }
 
         private void ComputeDistanceToPlayer(DriverInfo player, DriverInfo driverInfo)

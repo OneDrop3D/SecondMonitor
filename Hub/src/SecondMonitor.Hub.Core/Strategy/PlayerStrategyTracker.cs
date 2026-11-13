@@ -21,6 +21,7 @@ namespace SecondMonitor.Hub.Core.Strategy
         private double? _energyAtLapStart;
         private double[] _wearAtLapStart;
         private readonly List<LapConsumption> _history = new();
+        private readonly HybridTracker _hybrid = new();
 
         public IReadOnlyList<LapConsumption> History => _history;
 
@@ -31,6 +32,7 @@ namespace SecondMonitor.Hub.Core.Strategy
             _energyAtLapStart = null;
             _wearAtLapStart = null;
             _history.Clear();
+            _hybrid.Reset();
         }
 
         public void Update(DriverInfo player, DriverTracker tracker)
@@ -40,6 +42,7 @@ namespace SecondMonitor.Hub.Core.Strategy
                 return;
             }
 
+            _hybrid.Update(player, Environment.TickCount64 / 1000.0);
             FuelInfo fuel = player.CarInfo.FuelSystemInfo;
             double fuelNow = fuel?.FuelRemaining?.InLiters ?? 0;
             double? energyNow = fuel?.HasVirtualTank == true ? fuel.VirtualTank.InRatio * 100 : null;
@@ -185,7 +188,14 @@ namespace SecondMonitor.Hub.Core.Strategy
             HybridSystem hybrid = player.CarInfo.HybridSystem;
             if (hybrid != null && hybrid.RemainingChargePercentage > 0)
             {
-                result.Hybrid = new HybridDto { ChargePct = hybrid.RemainingChargePercentage, Mode = hybrid.HybridSystemMode.ToString() };
+                result.Hybrid = new HybridDto { ChargePct = hybrid.RemainingChargePercentage * 100, Mode = hybrid.HybridSystemMode.ToString() };
+            }
+
+            // Batterie suivie tour par tour (même vide : une batterie à 0 % reste une batterie).
+            result.Hybrid = _hybrid.Fill(result.Hybrid, hybrid, data?.Source);
+            if (result.Hybrid != null)
+            {
+                result.Hybrid.ChargePct = Math.Clamp(hybrid.RemainingChargePercentage, 0, 1) * 100;
             }
 
             // Arrêt recommandé = première limite atteinte (carburant, énergie, pneus usés).

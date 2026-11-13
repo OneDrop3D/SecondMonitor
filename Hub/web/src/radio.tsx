@@ -17,6 +17,9 @@ export interface RadioMessage {
   kind?: string | null;
   proactive?: boolean;
   awaitingAnswer?: boolean;
+  /** Catégorie du carnet : « Stratégie », « Réglages de course », « Réglages de la voiture », « Informations course ». */
+  category?: string | null;
+  categorySource?: string | null;
   at: string;
 }
 

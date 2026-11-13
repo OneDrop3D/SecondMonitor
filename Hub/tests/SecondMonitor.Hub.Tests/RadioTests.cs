@@ -72,7 +72,7 @@ public class RadioTests
     [Test]
     public void Answers_TopSpeed_And_TimeLoss()
     {
-        Assert.That(RaceBriefing.Prepare(_snap, "quelle est ma vitesse de pointe", _extras).Suggestion, Does.Contain("kilomètres heure"));
+        Assert.That(RaceBriefing.Prepare(_snap, "quelle est ma vitesse de pointe", _extras).Suggestion, Does.Contain("km/h"));
         Assert.That(RaceBriefing.Prepare(_snap, "ou je perd du temps", _extras).Suggestion, Does.Contain("micro-secteur").Or.Contain("au niveau des meilleurs"));
         Assert.That(RaceBriefing.Prepare(_snap, "pneu pluie ?", _extras).Suggestion, Does.Contain("pneus"));
     }
