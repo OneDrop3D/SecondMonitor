@@ -9,8 +9,10 @@ using SecondMonitor.Hub.Services;
 //   (sans option)    fenêtre de l'application
 //   --navigateur     interface dans le navigateur au lieu de la fenêtre
 //   --sans-fenetre   serveur seul (machine sans écran, Raspberry Pi…)
+//   --sans-gpu       fenêtre sans accélération graphique (Windows : fenêtre noire avec certains pilotes)
 bool headless = args.Contains("--sans-fenetre") || args.Contains("--serveur");
 bool useBrowser = args.Contains("--navigateur") || args.Contains("--ouvrir");
+bool noGpu = args.Contains("--sans-gpu");
 // Diagnostic : rejoue un enregistrement (dossier « enregistrements ») au lieu d'écouter le réseau.
 int replayIndex = Array.IndexOf(args, "--rejouer");
 if (replayIndex >= 0 && replayIndex + 1 < args.Length)
@@ -36,14 +38,17 @@ var builder = Directory.Exists(Path.Combine(installedRoot, "wwwroot"))
     ? WebApplication.CreateBuilder(new WebApplicationOptions { Args = args, ContentRootPath = installedRoot, WebRootPath = Path.Combine(installedRoot, "wwwroot") })
     : WebApplication.CreateBuilder(args);
 int webPort = settings.Current.WebPort;
-string localUrl = $"http://localhost:{webPort}";
+// Windows : 127.0.0.1 plutôt que « localhost » (Kestrel n'écoute qu'en IPv4 ; WebView2 peut essayer ::1 d'abord).
+// Mac et Linux gardent « localhost » : les préférences de la fenêtre (disposition, bouton du volant…) dépendent de l'adresse.
+string localUrl = OperatingSystem.IsWindows() ? $"http://127.0.0.1:{webPort}" : $"http://localhost:{webPort}";
+noGpu |= settings.Current.FenetreSansGpu;
 var (portFree, alreadyRunning) = AppWindow.ProbePort(webPort);
 if (!portFree)
 {
     if (alreadyRunning && !headless)
     {
         // SecondMonitor tourne déjà (autre fenêtre, ou lancé sans fenêtre) : on ouvre simplement son interface.
-        if (useBrowser || !AppWindow.Run(localUrl, "SecondMonitor"))
+        if (useBrowser || !AppWindow.Run(localUrl, "SecondMonitor", dataDir, noGpu))
         {
             AppWindow.OpenBrowser(localUrl);
         }
@@ -139,8 +144,7 @@ app.MapPut("/api/settings", (SettingsStore store, HubSettings incoming) =>
         s.DemoMode = incoming.DemoMode;
         s.DemoSpeed = incoming.DemoSpeed;
         s.Ai = incoming.Ai ?? new AiSettings();
-        s.ThermalProfiles = incoming.ThermalProfiles ?? new List<SecondMonitor.Hub.Core.Race.ThermalProfile>();
-    });
+        s.ThermalProfiles = incoming.ThermalProfiles ?? new List<SecondMonitor.Hub.Core.Race.ThermalProfile>();    });
     return Results.Ok(store.Current);
 });
 
@@ -289,7 +293,7 @@ if (headless)
     return;
 }
 
-if (useBrowser || !AppWindow.Run(localUrl, "SecondMonitor"))
+if (useBrowser || !AppWindow.Run(localUrl, "SecondMonitor", dataDir, noGpu))
 {
     // Pas de fenêtre : interface dans le navigateur. Pour arrêter : Réglages › Quitter.
     AppWindow.OpenBrowser(localUrl);

@@ -49,9 +49,11 @@ namespace SecondMonitor.Collector
                     .SetMinimized(minimized);
                 // Windows : dossier de travail de WebView2 dans le profil de l'utilisateur (le dossier du programme peut être
                 // en lecture seule ; WebView2 ne peut alors pas démarrer et la fenêtre reste noire).
+                // Un dossier à part pour le collecteur : WebView2 refuse deux réglages différents sur un même dossier,
+                // et SecondMonitor (sur ce même PC) utilise d'autres réglages que le collecteur.
                 if (OperatingSystem.IsWindows())
                 {
-                    window.SetTemporaryFilesPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SecondMonitor", "WebView2"));
+                    window.SetTemporaryFilesPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SecondMonitor", "WebView2-Collecteur"));
                 }
 
                 string icon = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "SecondMonitor.ico" : "icone.png");

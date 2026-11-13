@@ -240,7 +240,11 @@ Une session peut être rejouée : `SecondMonitorHub --rejouer <fichier.smrec> [-
 
 Options de SecondMonitor :
 - `--navigateur` ouvre l'interface dans le navigateur au lieu de la fenêtre ;
-- `--sans-fenetre` lance le serveur seul (machine sans écran, Raspberry Pi).
+- `--sans-fenetre` lance le serveur seul (machine sans écran, Raspberry Pi) ;
+- `--sans-gpu` affiche la fenêtre sans accélération graphique (Windows : fenêtre noire avec certains pilotes) ; même effet avec `"fenetreSansGpu": true` dans `settings.json`.
+
+Si la fenêtre n'affiche pas l'interface au bout de 15 s, SecondMonitor l'ouvre dans le navigateur et en note la raison dans `journal.txt`.
+Sous Windows, SecondMonitor et le collecteur ont chacun leur dossier WebView2 (`%LOCALAPPDATA%\SecondMonitor\WebView2-Affichage` et `WebView2-Collecteur`).
 
 ## Crédits et licence
 

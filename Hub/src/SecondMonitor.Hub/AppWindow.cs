@@ -13,8 +13,16 @@ public static class AppWindow
 {
     private static PhotinoWindow? _window;
 
-    /// <summary>Affiche la fenêtre et bloque jusqu'à sa fermeture. Faux si aucune fenêtre n'a pu être créée.</summary>
-    public static bool Run(string url, string title, Action? onCreated = null)
+    /// <summary>Délai laissé à la page pour signaler qu'elle a démarré avant d'ouvrir l'interface dans le navigateur.</summary>
+    private static readonly TimeSpan ReadyTimeout = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    /// Affiche la fenêtre et bloque jusqu'à sa fermeture. Faux si aucune fenêtre n'a pu être créée.
+    /// Si la page ne signale pas qu'elle est prête (vue web restée noire), la raison va dans journal.txt
+    /// (<paramref name="dataDirectory"/>) et l'interface s'ouvre dans le navigateur ; la fenêtre reste ouverte.
+    /// <paramref name="noGpu"/> : WebView2 sans accélération graphique (option « --sans-gpu », pilote graphique capricieux).
+    /// </summary>
+    public static bool Run(string url, string title, string? dataDirectory = null, bool noGpu = false)
     {
         if (!LinuxDisplayAvailable())
         {
@@ -41,27 +49,104 @@ public static class AppWindow
 
             // Windows : dossier de travail de WebView2 dans le profil de l'utilisateur (le dossier du programme peut être
             // en lecture seule ; WebView2 ne peut alors pas démarrer et la fenêtre reste noire).
+            // Un dossier à part pour SecondMonitor : WebView2 refuse deux réglages différents (micro, lecture automatique…)
+            // sur un même dossier, et celui du collecteur peut être encore utilisé (processus msedgewebview2 restés ouverts).
+            string? webViewFolder = null;
             if (OperatingSystem.IsWindows())
             {
-                window.SetTemporaryFilesPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SecondMonitor", "WebView2"));
+                webViewFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SecondMonitor", "WebView2-Affichage");
+                window.SetTemporaryFilesPath(webViewFolder);
+                if (noGpu)
+                {
+                    window.SetBrowserControlInitParameters("--disable-gpu");
+                }
             }
+
             string icon = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "SecondMonitor.ico" : "icone.png");
             if (!OperatingSystem.IsMacOS() && File.Exists(icon))
             {
                 window.SetIconFile(icon);
             }
 
-            window.RegisterWindowCreatedHandler((_, _) => onCreated?.Invoke());
+            // Filet de sécurité : la page envoie « pret » dès qu'elle tourne (main.tsx). Sans nouvelles, la vue web est
+            // sans doute restée noire : on le note dans le journal et on ouvre l'interface dans le navigateur.
+            int ready = 0;
+            Timer? watchdog = null;
+            window.RegisterWebMessageReceivedHandler((_, message) =>
+            {
+                if (message != null && message.Contains("pret", StringComparison.Ordinal))
+                {
+                    Interlocked.Exchange(ref ready, 1);
+                }
+            });
+            window.RegisterWindowCreatedHandler((_, _) => watchdog = new Timer(_ => NotReady(), null, ReadyTimeout, Timeout.InfiniteTimeSpan));
+
+            void NotReady()
+            {
+                if (Volatile.Read(ref ready) != 0 || _window == null)
+                {
+                    return;
+                }
+
+                string where = webViewFolder != null ? $", dossier {webViewFolder}" : string.Empty;
+                string hint = noGpu || !OperatingSystem.IsWindows() ? string.Empty : " Si elle reste noire, essayez l'option --sans-gpu (ou \"fenetreSansGpu\": true dans settings.json).";
+                string reason = $"La fenêtre n'a pas affiché l'interface en {ReadyTimeout.TotalSeconds:0} s ({WebViewDescription()}{where}{(noGpu ? ", sans GPU" : string.Empty)}) : "
+                    + $"interface ouverte dans le navigateur ({url}).{hint}";
+                Console.WriteLine(reason);
+                if (dataDirectory != null)
+                {
+                    HubJournal.Write(dataDirectory, "fenêtre", reason);
+                }
+
+                OpenBrowser(url);
+            }
+
             window.Load(new Uri(url));
             _window = window;
-            window.WaitForClose();
-            _window = null;
+            try
+            {
+                window.WaitForClose();
+            }
+            finally
+            {
+                _window = null;
+                watchdog?.Dispose();
+            }
+
             return true;
         }
         catch (Exception ex) when (ex is DllNotFoundException or TypeInitializationException or EntryPointNotFoundException or BadImageFormatException or InvalidOperationException)
         {
             Console.WriteLine($"Fenêtre indisponible ({ex.Message}) : l'interface s'ouvre dans le navigateur.");
             return false;
+        }
+    }
+
+    /// <summary>Vue web utilisée, pour le journal (sous Windows : version de WebView2 installée, si on la trouve).</summary>
+    private static string WebViewDescription()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return OperatingSystem.IsMacOS() ? "WebKit" : "WebKitGTK";
+        }
+
+        try
+        {
+            // « WebView2 Runtime » (Evergreen), installé pour la machine ou pour l'utilisateur.
+            const string client = @"Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
+            foreach (string key in new[] { $@"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\{client}", $@"HKEY_LOCAL_MACHINE\SOFTWARE\{client}", $@"HKEY_CURRENT_USER\Software\{client}" })
+            {
+                if (Microsoft.Win32.Registry.GetValue(key, "pv", null) is string v && v.Length > 0 && v != "0.0.0.0")
+                {
+                    return $"WebView2 {v}";
+                }
+            }
+
+            return "WebView2 introuvable : à installer depuis https://go.microsoft.com/fwlink/p/?LinkId=2124703";
+        }
+        catch (Exception)
+        {
+            return "WebView2";
         }
     }
 

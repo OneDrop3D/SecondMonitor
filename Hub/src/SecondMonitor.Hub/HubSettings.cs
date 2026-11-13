@@ -24,6 +24,8 @@ public sealed class HubSettings
 
     public AiSettings Ai { get; set; } = new();
 
+    /// <summary>Fenêtre sans accélération graphique (comme l'option « --sans-gpu ») : Windows, fenêtre noire avec certains pilotes.</summary>
+    public bool FenetreSansGpu { get; set; }
     /// <summary>Plages de température (bleu = froid, vert = bon, rouge = trop chaud) par jeu et par voiture.</summary>
     public List<Core.Race.ThermalProfile> ThermalProfiles { get; set; } = new();
 }
