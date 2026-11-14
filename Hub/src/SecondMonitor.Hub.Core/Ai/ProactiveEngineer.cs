@@ -336,7 +336,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 case "pluie" when yes == true:
                     return ("Bien reçu, on reste dehors. Je surveille l'humidité de la piste.", $"pluie : le pilote peut continuer avec ses pneus actuels ({quoted})");
                 case "usure":
-                    return ("Copy, c'est noté. Je surveille l'usure sur les prochains tours.", $"usure anormale, explication du pilote : {quoted}");
+                    return ("Copy, c'est noté.", $"usure anormale, explication du pilote : {quoted}");
                 default:
                     return ("Copy, c'est noté.", $"{q.Topic} : {quoted}");
             }
