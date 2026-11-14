@@ -427,7 +427,7 @@ function LexiconCard({ settings, save }: { settings: HubSettings | null; save: (
             ))}
           </div>
         )}
-        <div className="row">
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr) auto', gap: 6, alignItems: 'center' }}>
           <input className="input compact-input" placeholder="entendu (ex. vexe)" value={heard} onChange={(e) => setHeard(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
           <span className="muted">→</span>
           <input className="input compact-input" placeholder="voulu (ex. BB)" value={meant} onChange={(e) => setMeant(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
