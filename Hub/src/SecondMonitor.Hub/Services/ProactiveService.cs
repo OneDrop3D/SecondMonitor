@@ -87,7 +87,7 @@ public sealed class ProactiveService : BackgroundService
                 }
             }
 
-            if (!ai.ProactiveRadio || DateTime.UtcNow < nextRules)
+            if (DateTime.UtcNow < nextRules)
             {
                 continue;
             }
@@ -98,7 +98,7 @@ public sealed class ProactiveService : BackgroundService
             {
                 RaceSnapshot snap = _engine.BuildSnapshot();
 
-                // Arrivée de la course : la radio du résultat (une fois).
+                // Fin de la course, de la qualification ou des essais : le résultat, une fois, même sans interventions spontanées.
                 string? finish;
                 lock (_rules)
                 {
@@ -108,6 +108,11 @@ public sealed class ProactiveService : BackgroundService
                 if (finish != null)
                 {
                     await _engineer.SayAsync(finish, "ingénieur IA", stoppingToken, proactive: true, category: ExchangeCategorizer.RaceInfo);
+                    continue;
+                }
+
+                if (!ai.ProactiveRadio)
+                {
                     continue;
                 }
 

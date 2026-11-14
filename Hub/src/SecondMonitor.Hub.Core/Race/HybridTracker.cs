@@ -124,7 +124,7 @@ namespace SecondMonitor.Hub.Core.Race
 
         private static double? Round(double? v) => v.HasValue ? Math.Round(v.Value, 1) : null;
 
-        private static bool HasHybrid(HybridSystem hs) =>
+        internal static bool HasHybrid(HybridSystem hs) =>
             hs.RemainingChargePercentage > 0 || hs.HybridSystemMode != HybridSystemMode.UnAvailable || hs.HybridChargeChange != HybridChargeChange.Unavailable;
     }
 }

@@ -288,6 +288,9 @@ namespace SecondMonitor.Hub.Core.Race
 
         public HybridDto Hybrid { get; set; }
 
+        /// <summary>Batterie, énergie virtuelle et essence en direct sur le tour en cours (comparées au tour précédent au même endroit).</summary>
+        public SecondMonitor.Hub.Core.Strategy.LiveEnergyDto Live { get; set; }
+
         public EngineDto Engine { get; set; }
 
         public List<BattleDto> Battles { get; set; } = new();
@@ -342,6 +345,9 @@ namespace SecondMonitor.Hub.Core.Race
         /// <summary>Quantité à mettre au prochain arrêt (plafonnée au plein).</summary>
         public double? NextStopAdd { get; set; }
 
+        /// <summary>Consommation au tour estimée sur le tour en cours (aucun tour bouclé utilisable pour l'instant).</summary>
+        public bool PerLapEstimated { get; set; }
+
         public string Status { get; set; }
     }
 
@@ -357,6 +363,9 @@ namespace SecondMonitor.Hub.Core.Race
 
         /// <summary>Énergie à recharger au prochain arrêt (plafonnée à 100 %).</summary>
         public double? NextStopAddPct { get; set; }
+
+        /// <summary>Consommation au tour estimée sur le tour en cours (aucun tour bouclé utilisable pour l'instant).</summary>
+        public bool PerLapEstimated { get; set; }
 
         public string Status { get; set; }
     }

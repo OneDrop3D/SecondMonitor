@@ -45,16 +45,69 @@ namespace SecondMonitor.Hub.Core.Ai
             if (h.LastLapStartPct is double s && h.LastLapEndPct is double e)
             {
                 double net = e - s;
-                parts.Add(Math.Abs(net) < 2 ? "bilan du dernier tour équilibré" : net > 0 ? $"+{N(net, 0)} % sur le dernier tour" : $"{N(net, 0)} % sur le dernier tour");
+                parts.Add(Math.Abs(net) < 2 ? "bilan du dernier tour équilibré" : net > 0 ? $"tu en as gagné {N(net, 0)} % au dernier tour" : $"tu en as perdu {N(-net, 0)} % au dernier tour");
             }
 
             string text = string.Join(", ", parts) + ".";
+            if (snap.Player?.Live?.Battery is { } live)
+            {
+                text += LiveBattery(live);
+            }
+
             if (h.System == "LMU" && snap.Player?.Energy is { } en)
             {
                 text += $" Énergie virtuelle {N(en.RemainingPct, 0)} %{(en.PerLapPct.HasValue ? $", {N(en.PerLapPct.Value, 1)} %/tour" : string.Empty)}.";
             }
 
             return text;
+        }
+
+        /// <summary>
+        /// « Tu la vides le plus dans la ligne droite 2 (−18 %), tu la recharges le plus au virage 5 (+9 %). Ce tour-ci : 3 % de mieux
+        /// qu'au même endroit, fin de tour estimée à −4 %. » Vide si rien n'est encore mesuré.
+        /// </summary>
+        public static string LiveBattery(SecondMonitor.Hub.Core.Strategy.LiveQuantity b)
+        {
+            string text = string.Empty;
+            var spend = b.Zones?.FirstOrDefault(z => z.Change < 0);
+            var gain = b.Zones?.FirstOrDefault(z => z.Change > 0);
+            if (spend != null || gain != null)
+            {
+                var where = new List<string>();
+                if (spend != null)
+                {
+                    where.Add($"tu la vides le plus {Place(spend)} ({N(spend.Change, 0)} %)");
+                }
+
+                if (gain != null)
+                {
+                    where.Add($"tu la recharges le plus {Place(gain)} (+{N(gain.Change, 0)} %)");
+                }
+
+                text += " " + Cap(string.Join(", ", where)) + ".";
+            }
+
+            if (b.ChangeSoFar is double so && b.LastLapChangeAtSameDistance is double same)
+            {
+                double diff = so - same;
+                string now = Math.Abs(diff) < 1 ? "comme au même endroit du tour précédent"
+                    : diff > 0 ? $"{N(diff, 0)} % de mieux qu'au même endroit du tour précédent"
+                    : $"{N(-diff, 0)} % de plus dépensés qu'au même endroit du tour précédent";
+                string end = b.ProjectedLapChange is double p ? $", fin de tour estimée à {(p >= 0 ? "+" : string.Empty)}{N(p, 0)} %" : string.Empty;
+                text += $" Ce tour-ci : {now}{end}.";
+            }
+            else if (b.ChangeSoFar is double so2)
+            {
+                text += $" Ce tour-ci, depuis la ligne : {(so2 >= 0 ? "+" : string.Empty)}{N(so2, 0)} %.";
+            }
+
+            return text;
+        }
+
+        private static string Place(SecondMonitor.Hub.Core.Strategy.ZoneChange z)
+        {
+            string name = z.Name.Length > 1 ? char.ToLowerInvariant(z.Name[0]) + z.Name[1..] : z.Name;
+            return z.Kind == "corner" ? $"au {name}" : $"dans la {name}";
         }
 
         /// <summary>Un seul conseil, le plus utile maintenant.</summary>

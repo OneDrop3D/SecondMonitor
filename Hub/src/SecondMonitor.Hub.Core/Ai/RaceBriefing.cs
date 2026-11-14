@@ -207,6 +207,31 @@ namespace SecondMonitor.Hub.Core.Ai
         public static string Build(RaceSnapshot snap, string question = null, BriefingExtras extras = null) => Prepare(snap, question, extras).Facts;
 
         /// <summary>
+        /// Consommation du tour en cours comparée au précédent au même endroit, et estimation du tour entier :
+        /// « Ce tour-ci : 0,3 L de moins qu'au même endroit, environ 7,1 L pour le tour. » Vide si rien n'est mesuré.
+        /// </summary>
+        public static string LiveConsumption(SecondMonitor.Hub.Core.Strategy.LiveQuantity q, string unit, int digits)
+        {
+            if (q?.ProjectedLapChange is not double projected || projected >= 0)
+            {
+                return string.Empty;
+            }
+
+            string sp = unit == "%" ? " " : " ";
+            if (q.ChangeSoFar is double so && q.LastLapChangeAtSameDistance is double same && !q.Extrapolated)
+            {
+                double diff = so - same; // négatif : plus consommé que le tour précédent
+                double tiny = unit == "%" ? 0.2 : 0.1;
+                string vs = Math.Abs(diff) < tiny ? "autant qu'au même endroit du tour précédent"
+                    : diff < 0 ? $"{N(-diff, digits)}{sp}{unit} de plus qu'au même endroit du tour précédent"
+                    : $"{N(diff, digits)}{sp}{unit} de moins qu'au même endroit du tour précédent";
+                return $" Ce tour-ci : {vs}, environ {N(-projected, digits)}{sp}{unit} pour le tour.";
+            }
+
+            return $" Estimation sur ce tour : environ {N(-projected, digits)}{sp}{unit} par tour.";
+        }
+
+        /// <summary>
         /// Question difficile : pas de réponse calculée, et une question longue, à plusieurs sujets, ou qui demande une analyse
         /// (« pourquoi », « qu'est-ce que je fais », « compare », « stratégie »…). Les questions simples restent sur le modèle habituel.
         /// </summary>
@@ -567,7 +592,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 {
                     if (p.Fuel.PerLap.HasValue)
                     {
-                        string fuel = $"Il te reste {N(p.Fuel.LapsLeft ?? 0, 1)} tours d'essence ({N(p.Fuel.Remaining, 1)} L, {N(p.Fuel.PerLap.Value, 2)} L/tour).";
+                        string fuel = $"Il te reste {N(p.Fuel.LapsLeft ?? 0, 1)} tours d'essence ({N(p.Fuel.Remaining, 1)} L, {N(p.Fuel.PerLap.Value, 2)} L/tour{(p.Fuel.PerLapEstimated ? " estimés sur ce tour" : string.Empty)}).";
                         if (p.Fuel.ToAdd <= 0)
                         {
                             fuel += " Assez pour finir.";
@@ -579,7 +604,7 @@ namespace SecondMonitor.Hub.Core.Ai
                                 : $" Il manque {N(p.Fuel.ToAdd.Value, 0)} L pour finir.";
                         }
 
-                        Add(Topic.Fuel, fuel);
+                        Add(Topic.Fuel, fuel + LiveConsumption(p.Live?.Fuel, "L", 1));
                     }
                     else
                     {
@@ -590,7 +615,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 if (p.Energy != null)
                 {
                     string e = p.Energy.PerLapPct.HasValue
-                        ? $"Il te reste {N(p.Energy.LapsLeft ?? 0, 1)} tours d'énergie virtuelle ({N(p.Energy.RemainingPct, 0)} %, {N(p.Energy.PerLapPct.Value, 1)} %/tour)."
+                        ? $"Il te reste {N(p.Energy.LapsLeft ?? 0, 1)} tours d'énergie virtuelle ({N(p.Energy.RemainingPct, 0)} %, {N(p.Energy.PerLapPct.Value, 1)} %/tour{(p.Energy.PerLapEstimated ? " estimés sur ce tour" : string.Empty)})." + LiveConsumption(p.Live?.VirtualEnergy, "%", 1)
                         : $"Énergie virtuelle : {N(p.Energy.RemainingPct, 0)} % ; consommation en cours de calcul.";
                     Add(Topic.Energy, e);
                     if (p.Energy.LapsLeft is double veLaps && p.Fuel?.LapsLeft is double fuelLaps)

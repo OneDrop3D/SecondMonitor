@@ -372,6 +372,7 @@ namespace SecondMonitor.Hub.Core.Race
                 g => g.Key,
                 g => g.SelectMany(t => t.Stints.Where(s => s.EndLap.HasValue && s.Laps >= 3).Select(s => (double)s.Laps)).ToList());
 
+            _player.Segments = _segments;
             PlayerStrategy playerStrategy = playerInfo != null ? _player.Build(data, playerInfo, playerTracker, lapLength) : null;
             snap.Player = playerStrategy;
             if (playerStrategy != null)

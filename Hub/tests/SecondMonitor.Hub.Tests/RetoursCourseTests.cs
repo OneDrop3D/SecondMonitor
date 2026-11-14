@@ -200,4 +200,119 @@ public class RetoursCourseTests
         Assert.That(a.Key, Is.EqualTo(b.Key), "même clé : le délai entre deux conseils vaut pour tous les adversaires");
         Assert.That(a.CooldownSeconds, Is.GreaterThanOrEqualTo(600));
     }
+
+    // ───── Batterie, énergie et essence pendant le tour ─────
+
+    private static readonly List<TrackSegment> Segments = new()
+    {
+        new() { Id = "s1", Kind = "straight", Name = "Ligne droite 1 (principale)", Start = 2000, End = 4000 },
+        new() { Id = "c1", Kind = "corner", Name = "Virage 5", Start = 5000, End = 5500 },
+    };
+
+    /// <summary>Un tour de 10 km : la batterie descend de 20 % sur la ligne droite, remonte de 10 % au virage 5.</summary>
+    private static double Battery(double d, double start, double spendFactor = 1.0)
+    {
+        double b = start;
+        b -= 20 * spendFactor * Math.Clamp((d - 2000) / 2000, 0, 1);
+        b += 10 * Math.Clamp((d - 5000) / 500, 0, 1);
+        return b;
+    }
+
+    [Test]
+    public void BatteriePendantLeTour()
+    {
+        var trace = new EnergyLapTrace();
+        for (double d = 0; d < 10000; d += 10)
+        {
+            trace.Update(3, d, Battery(d, 60), 80 - (d / 1000), 50 - (d / 2000), false);
+        }
+
+        // Tour suivant, jusqu'à 3 000 m, en dépensant moins dans la ligne droite.
+        for (double d = 0; d <= 3000; d += 10)
+        {
+            trace.Update(4, d, Battery(d, 50, spendFactor: 0.5), 70 - (d / 1000), 45 - (d / 2000), false);
+        }
+
+        LiveEnergyDto live = trace.Build(10000, Segments);
+        Assert.That(live.Lap, Is.EqualTo(5));
+        Assert.That(live.Battery.Now, Is.EqualTo(45).Within(0.2));
+        Assert.That(live.Battery.LastLapChange, Is.EqualTo(-10).Within(0.3), "dernier tour : −20 + 10");
+        Assert.That(live.Battery.ChangeSoFar, Is.EqualTo(-5).Within(0.3));
+        Assert.That(live.Battery.LastLapChangeAtSameDistance, Is.EqualTo(-10).Within(0.3));
+        Assert.That(live.Battery.ProjectedLapChange, Is.EqualTo(-5).Within(0.5), "dernier tour corrigé de l'écart actuel");
+        Assert.That(live.Battery.Zones.Select(z => z.Name), Is.EqualTo(new[] { "Ligne droite 1 (principale)", "Virage 5" }));
+
+        string radio = HybridAdvisor.LiveBattery(live.Battery);
+        Assert.That(radio, Does.Contain("tu la vides le plus dans la ligne droite 1 (principale) (-20 %)").IgnoreCase);
+        Assert.That(radio, Does.Contain("tu la recharges le plus au virage 5 (+10 %)"));
+        Assert.That(radio, Does.Contain("5 % de mieux qu'au même endroit du tour précédent"));
+        Assert.That(radio, Does.Contain("fin de tour estimée à -5 %"));
+
+        // Énergie virtuelle : 1 %/km, comme au tour précédent.
+        Assert.That(live.VirtualEnergy.ProjectedLapChange, Is.EqualTo(-10).Within(0.3));
+        Assert.That(RaceBriefing.LiveConsumption(live.VirtualEnergy, "%", 1), Does.Contain("autant qu'au même endroit du tour précédent, environ 10,0 % pour le tour"));
+    }
+
+    [Test]
+    public void PremierTourEstimationParExtrapolation()
+    {
+        var trace = new EnergyLapTrace();
+        for (double d = 0; d <= 6000; d += 10)
+        {
+            trace.Update(0, d, null, null, 60 - (d / 2000), false); // 0,5 L/km
+        }
+
+        LiveEnergyDto live = trace.Build(10000, Segments);
+        Assert.That(live.Battery, Is.Null, "voiture sans batterie");
+        Assert.That(live.Fuel.ProjectedLapChange, Is.EqualTo(-5).Within(0.1));
+        Assert.That(live.Fuel.Extrapolated, Is.True);
+        Assert.That(RaceBriefing.LiveConsumption(live.Fuel, "L", 1), Does.Contain("Estimation sur ce tour : environ 5,0 L par tour"));
+    }
+
+    [Test]
+    public void TourAvecRavitaillementPasDeReference()
+    {
+        var trace = new EnergyLapTrace();
+        for (double d = 0; d < 10000; d += 10)
+        {
+            double ve = d < 5000 ? 30 - (d / 1000) : 90; // ravitaillement au milieu du tour
+            trace.Update(7, d, null, ve, null, false);
+        }
+
+        for (double d = 0; d <= 4000; d += 10)
+        {
+            trace.Update(8, d, null, 90 - (d / 1000), null, false);
+        }
+
+        LiveEnergyDto live = trace.Build(10000, Segments);
+        Assert.That(live.VirtualEnergy.LastLapChange, Is.Null, "le tour ravitaillé ne sert pas de comparaison");
+        Assert.That(live.VirtualEnergy.Extrapolated, Is.True);
+    }
+
+    [Test]
+    public void FinDeQualificationEtDEssais()
+    {
+        RaceSnapshot snap(string type) => new()
+        {
+            HasData = true,
+            SessionType = type,
+            SessionPhase = "Checkered",
+            Drivers = new List<DriverRow>
+            {
+                new() { Id = "a", ClassId = "h", BestLap = 218.0, Laps = 9 },
+                new() { Id = "me", ClassId = "h", IsPlayer = true, BestLap = 218.4, BestLapNumber = 5, Laps = 12 },
+                new() { Id = "b", ClassId = "h", BestLap = 219.9, Laps = 8 },
+            },
+        };
+        string q = new RaceFinishRadio().Check(snap("Qualification"));
+        Assert.That(q, Does.StartWith("Fin de la qualification : P2, meilleur tour 3:38.400 au tour 5, à 0,40 s de la pole."));
+        Assert.That(q, Does.Contain("bravo"));
+        string p = RaceFinishRadio.BuildSession(snap("Practice"));
+        Assert.That(p, Does.Contain("12 tours bouclés"));
+        Assert.That(p, Does.Contain("du meilleur temps"));
+        var once = new RaceFinishRadio();
+        Assert.That(once.Check(snap("Practice")), Is.Not.Null);
+        Assert.That(once.Check(snap("Practice")), Is.Null, "une seule fois");
+    }
 }
+
