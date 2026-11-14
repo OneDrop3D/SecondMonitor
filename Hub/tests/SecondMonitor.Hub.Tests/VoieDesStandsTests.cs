@@ -139,6 +139,19 @@ public class VoieDesStandsTests
         Assert.That(entry.For("F1", 80).PitLaneLossSeconds, Is.EqualTo(20));
     }
 
+    [Test]
+    public void ArretLmuSelonLEnergiePrevue()
+    {
+        // « On mettra 10 % d'énergie » : 2 s + 0,40 s × 10 + 12 s de pneus = 18 s, pas les 52 s d'un plein complet.
+        RaceSnapshot snap = Snap("Circuit de la Sarthe", "24 Heures du Mans", 13626);
+        snap.Player.Energy = new EnergyStrategy { RemainingPct = 40, ToAddPct = 10 };
+        PitLossEstimate e = PitLossEstimator.For(snap);
+        Assert.That(e, Is.Not.Null);
+        Assert.That(e.StopTime, Is.EqualTo(18));
+        Assert.That(e.StopDetail, Is.EqualTo("10 % d'énergie et quatre pneus"));
+        Assert.That(e.Total, Is.EqualTo(e.LaneLoss + 18).Within(0.1));
+    }
+
     private static RaceSnapshot Snap(string track, string layout, double length, string source = "LM Ultimate", string car = "Porsche 963", string cls = "Hypercar") => new()
     {
         HasData = true,

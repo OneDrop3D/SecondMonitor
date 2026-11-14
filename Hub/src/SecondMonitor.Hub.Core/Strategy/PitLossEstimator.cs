@@ -40,6 +40,15 @@ namespace SecondMonitor.Hub.Core.Strategy
 
             StopTimeEntry stop = PitLaneLibrary.StopTime(car.Game, car.CarClass);
             double stopTime = stop?.Seconds ?? 0;
+            string stopDetail = stop?.Detail;
+
+            // Le Mans Ultimate : l'arrêt dépend de l'énergie remise (formule des outils LMU : 2 s + 0,40 s par % + 12 s pour quatre pneus).
+            // Si la stratégie sait déjà ce qu'on mettra (« 10 % d'énergie »), on l'utilise plutôt que le plein complet.
+            if (car.Game == "LMU" && snap.Player?.Energy is { } energy && (energy.ToAddPct ?? energy.NextStopAddPct) is double add && add is > 0 and < 100)
+            {
+                stopTime = Math.Round(2 + (0.40 * add) + 12, 0);
+                stopDetail = $"{N(add)} % d'énergie et quatre pneus";
+            }
             string laneText = lane.IsEstimate ? $"{N(laneLoss)} s de voie des stands, estimées sur sa longueur," : $"{N(laneLoss)} s de voie des stands";
             return new PitLossEstimate
             {
@@ -51,7 +60,7 @@ namespace SecondMonitor.Hub.Core.Strategy
                 LaneConfidence = lane.Confidence,
                 LaneIsEstimate = lane.IsEstimate,
                 StopTime = stopTime,
-                StopDetail = stop?.Detail,
+                StopDetail = stopDetail,
                 Total = Math.Round(laneLoss + stopTime, 1),
                 Source = stopTime > 0
                     ? $"d'après le circuit : {laneText} et environ {N(stopTime)} s d'arrêt"
