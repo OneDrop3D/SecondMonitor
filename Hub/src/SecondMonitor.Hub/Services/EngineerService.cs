@@ -600,6 +600,19 @@ public sealed class EngineerService
             energyTarget = 100;
             fuelTarget = 9999;
         }
+        else if (plan.Fuel == "tours" && plan.FuelLaps is int extra && p != null)
+        {
+            // « deux tours de carburant » : ce qu'il reste plus N tours, au rythme de consommation mesuré.
+            if (p.Energy?.PerLapPct is double ePerLap && ePerLap > 0)
+            {
+                energyTarget = Math.Min(100, p.Energy.RemainingPct + (extra * ePerLap) + 1);
+            }
+
+            if (p.Fuel?.PerLap is double fPerLap && fPerLap > 0)
+            {
+                fuelTarget = p.Fuel.Remaining + (extra * fPerLap) + 1;
+            }
+        }
         else if (plan.Fuel != null && p != null)
         {
             if (p.Energy != null)

@@ -19,8 +19,11 @@ namespace SecondMonitor.Hub.Core.Ai
 
         public bool Repair { get; set; }
 
-        /// <summary>Carburant / énergie : « plein », « jusqu'à la fin », ou null.</summary>
+        /// <summary>Carburant / énergie : « plein », « jusqu'à la fin », « tours » (voir <see cref="FuelLaps"/>), ou null.</summary>
         public string Fuel { get; set; }
+
+        /// <summary>« deux tours de carburant » : tours à ajouter à ce qu'il reste.</summary>
+        public int? FuelLaps { get; set; }
 
         public bool IsEmpty => !BoxNow && Tyres == null && !NoTyres && !Repair && Fuel == null;
     }
@@ -70,7 +73,8 @@ namespace SecondMonitor.Hub.Core.Ai
                 };
             }
 
-            if (Regex.IsMatch(t, @"\b(repar\w*|repare|reparation|reparer|rachat de la voiture|degats? a reparer)\b") && (request || Regex.IsMatch(t, @"\b(aussi|et|la)\b")))
+            // « répar(ation) » mais pas « répar(tition) » (la balance des freins déclenchait une demande d'arrêt), et dans une demande.
+            if (Regex.IsMatch(t, @"\b(repar(?!ti)\w*|rachat de la voiture|degats? a reparer)\b") && (request || Regex.IsMatch(t, @"\b(aussi|au stand|a l arret|pour l arret)\b")))
             {
                 order.Repair = true;
             }
@@ -83,9 +87,31 @@ namespace SecondMonitor.Hub.Core.Ai
             {
                 order.Fuel = "jusqu'à la fin";
             }
+            else if (Regex.Match(t, @"\b(\d+|un|une|deux|trois|quatre|cinq|six|sept|huit|neuf|dix) tours? (de |d )?(carburant|essence|fuel|energie|plus)\b") is { Success: true } laps
+                && (request || Regex.IsMatch(t, @"\b(rajout\w*|ajout\w*|mets|met|arret|stand|box)\b")))
+            {
+                // « en rajoutant deux tours de carburant » : de quoi faire N tours de plus que ce qui reste.
+                order.Fuel = "tours";
+                order.FuelLaps = Number(laps.Groups[1].Value);
+            }
 
             return order.IsEmpty ? null : order;
         }
+
+        private static int Number(string w) => w switch
+        {
+            "un" or "une" => 1,
+            "deux" => 2,
+            "trois" => 3,
+            "quatre" => 4,
+            "cinq" => 5,
+            "six" => 6,
+            "sept" => 7,
+            "huit" => 8,
+            "neuf" => 9,
+            "dix" => 10,
+            _ => int.TryParse(w, out int n) ? System.Math.Clamp(n, 1, 50) : 1,
+        };
 
         /// <summary>« 3 L et 10 % d'énergie » : ce qui manque pour finir d'après la stratégie calculée, ou null si rien.</summary>
         public static string NeededAtStop(RaceSnapshot snap)
@@ -122,6 +148,7 @@ namespace SecondMonitor.Hub.Core.Ai
             plan.NoTyres = order.NoTyres || (plan.NoTyres && order.Tyres == null);
             plan.Repair |= order.Repair;
             plan.Fuel = order.Fuel ?? plan.Fuel;
+            plan.FuelLaps = order.Fuel != null ? order.FuelLaps : plan.FuelLaps;
             if (memory != null)
             {
                 memory.PitPlan = plan;
@@ -149,7 +176,9 @@ namespace SecondMonitor.Hub.Core.Ai
 
             if (plan.Fuel != null)
             {
-                parts.Add(plan.Fuel == "plein" ? "le plein" : autoFuel ?? "carburant jusqu'à la fin");
+                parts.Add(plan.Fuel == "plein" ? "le plein"
+                    : plan.Fuel == "tours" ? $"carburant pour {plan.FuelLaps} tour{(plan.FuelLaps > 1 ? "s" : string.Empty)} de plus"
+                    : autoFuel ?? "carburant jusqu'à la fin");
             }
 
             string list = parts.Count == 0 ? string.Empty : " " + RadioFormat.Cap(string.Join(", ", parts)) + ".";

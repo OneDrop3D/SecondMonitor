@@ -95,6 +95,33 @@ public class RetoursCourseTests
         Assert.That(PitOrders.Parse("est-ce qu'il faut que je change de pneus?"), Is.Null);
     }
 
+    [TestCase("J'ai réglé. J'ai baissé de un point la brake balance.")]
+    [TestCase("Ok, tu peux me parler de la répartition des freins depuis le début ?")]
+    [TestCase("la répartition est à combien")]
+    public void RepartitionNEstPasUneReparation(string phrase)
+    {
+        // Course de 15:16 : « répar(tition) » passait pour « réparation » et réglait de nouveau le menu des stands.
+        Assert.That(PitOrders.Parse(phrase)?.Repair ?? false, Is.False, phrase);
+    }
+
+    [Test]
+    public void ReparationToujoursComprise()
+    {
+        Assert.That(PitOrders.Parse("au prochain arrêt je veux la réparation")?.Repair, Is.True);
+        Assert.That(PitOrders.Parse("box box, répare la voiture aussi")?.Repair, Is.True);
+    }
+
+    [Test]
+    public void ToursDeCarburantEnPlus()
+    {
+        PitOrder order = PitOrders.Parse("En arrêt, en rajoutant deux tours de carburant");
+        Assert.That(order?.Fuel, Is.EqualTo("tours"));
+        Assert.That(order.FuelLaps, Is.EqualTo(2));
+        var memory = new RaceMemory();
+        Assert.That(PitOrders.Confirm(order, memory, Snap(), 9), Does.Contain("arburant pour 2 tours de plus"));
+        Assert.That(memory.PitPlan.FuelLaps, Is.EqualTo(2));
+    }
+
     [Test]
     public void EcartAnnonceAChaqueSeconde()
     {
