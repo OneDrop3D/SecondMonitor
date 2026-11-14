@@ -260,7 +260,8 @@ public sealed class EngineerService
         }
 
         // L'ingénieur vient de demander « Qu'est-ce qui s'est passé ? » après une usure anormale (plus récent que sa dernière proposition).
-        PendingQuestion? wearQuestion = memory.Pending() is { Topic: "usure" } pq && (memory.Thread.Open == null || pq.AskedAtUtc >= memory.Thread.Open.AtUtc) ? pq : null;
+        // Fenêtre courte (90 s) : au-delà, une remarque sans rapport (« la piste sèche ») n'est plus prise pour l'explication.
+        PendingQuestion? wearQuestion = memory.Pending(90) is { Topic: "usure" } pq && (memory.Thread.Open == null || pq.AskedAtUtc >= memory.Thread.Open.AtUtc) ? pq : null;
 
         // Suites de conversation (« oui », « non », « autre chose ? ») avant les politesses : « ok » répond à la proposition.
         DialogReply? dialog = wearQuestion != null ? null : RadioDialog.FollowUp(q, memory, car, prep.Lap);
