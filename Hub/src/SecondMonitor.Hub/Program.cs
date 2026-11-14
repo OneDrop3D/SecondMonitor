@@ -332,13 +332,22 @@ catch (Exception ex)
 
 Console.WriteLine($"SecondMonitor prêt : {localUrl}  (données : {dataDir})");
 HubJournal.Write(dataDir, "démarrage", $"SecondMonitor {typeof(Program).Assembly.GetName().Version} sur {Environment.OSVersion} : {localUrl}");
+var pairing = app.Services.GetRequiredService<SecondMonitor.Hub.Core.Compute.ComputePairing>();
 if (settings.Current.IsComputeServer)
 {
     var computeServer = app.Services.GetRequiredService<ComputeServerService>();
-    string code = SecondMonitor.Hub.Core.Compute.ComputePairing.FormatCode(app.Services.GetRequiredService<SecondMonitor.Hub.Core.Compute.ComputePairing>().Code);
-    Console.WriteLine($"Serveur de calcul « {computeServer.ServerName} » : code d'appairage {code} (à saisir sur l'autre ordinateur : Ingénieur IA › Machines IA › Relier).");
+    Console.WriteLine($"Serveur de calcul « {computeServer.ServerName} » : code d'appairage {SecondMonitor.Hub.Core.Compute.ComputePairing.FormatCode(pairing.Code)} (à saisir sur l'autre ordinateur : Ingénieur IA › Machines IA › Relier).");
     HubJournal.Write(dataDir, "serveur de calcul", $"Serveur de calcul « {computeServer.ServerName} » prêt (port {webPort})");
 }
+
+// Sans écran (Linux, --sans-fenetre) : le terminal est le seul endroit où lire le code ; on le redonne quand il change.
+pairing.CodeChanged += c =>
+{
+    if (settings.Current.IsComputeServer)
+    {
+        Console.WriteLine($"Serveur de calcul : nouveau code d'appairage {SecondMonitor.Hub.Core.Compute.ComputePairing.FormatCode(c)}");
+    }
+};
 
 if (httpsCertificate != null)
 {

@@ -214,7 +214,8 @@ public sealed class SettingsStore
 
     /// <summary>
     /// Réglages IA reçus de l'interface : elle ne connaît pas les jetons, on garde ceux déjà enregistrés (même nom de machine).
-    /// Une machine retirée dans l'interface perd son jeton avec elle.
+    /// Une machine retirée dans l'interface perd son jeton avec elle ; une machine ajoutée à la main sous le même nom,
+    /// mais ailleurs, n'en hérite pas (le jeton ne part que vers le serveur qui l'a donné).
     /// </summary>
     public static void KeepTokens(AiSettings incoming, AiSettings current)
     {
@@ -222,8 +223,14 @@ public sealed class SettingsStore
         foreach (AiNode node in incoming.Nodes)
         {
             AiNode? known = current.Nodes.FirstOrDefault(n => n.Name.Equals(node.Name, StringComparison.OrdinalIgnoreCase));
-            node.Token = known?.Token ?? "";
-            node.ServerId = known?.ServerId ?? "";
+            bool same = known != null
+                && ((!string.IsNullOrEmpty(known.ServerId) && known.ServerId == node.ServerId) || string.Equals(known.Url, node.Url, StringComparison.OrdinalIgnoreCase));
+            node.Token = same ? known!.Token : "";
+            node.ServerId = same ? known!.ServerId : "";
+            if (same)
+            {
+                node.Url = known!.Url; // adresse suivie par la découverte, pas celle (peut-être ancienne) de l'interface
+            }
         }
     }
 

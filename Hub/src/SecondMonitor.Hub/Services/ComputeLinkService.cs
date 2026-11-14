@@ -103,7 +103,7 @@ public sealed class ComputeLinkService : BackgroundService
             {
                 AiSettings ai = s.Ai;
                 AiNode? node = ai.Nodes.FirstOrDefault(n => n.ServerId == serverId)
-                    ?? ai.Nodes.FirstOrDefault(n => n.Url.TrimEnd('/').Equals(baseUrl, StringComparison.OrdinalIgnoreCase));
+                    ?? ai.Nodes.FirstOrDefault(n => (n.Url ?? "").TrimEnd('/').Equals(baseUrl, StringComparison.OrdinalIgnoreCase));
                 if (node == null)
                 {
                     node = new AiNode { Name = UniqueName(ai, serverName.Length > 0 ? serverName : "Calcul") };
