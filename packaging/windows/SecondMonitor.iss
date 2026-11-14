@@ -50,10 +50,11 @@ Name: "fr"; MessagesFile: "compiler:Languages\French.isl"
 Name: "complet"; Description: "Les deux applications"
 Name: "jeu"; Description: "PC de jeu seulement : le collecteur"
 Name: "ecran"; Description: "Ordinateur qui affiche seulement : SecondMonitor"
+Name: "calcul"; Description: "Serveur de calcul : prête l'IA (Ollama) de ce PC au SecondMonitor d'un autre ordinateur"
 Name: "perso"; Description: "Choisir"; Flags: iscustom
 
 [Components]
-Name: "visualiseur"; Description: "SecondMonitor : affiche le chronométrage, la stratégie, l'ingénieur IA"; Types: complet ecran perso
+Name: "visualiseur"; Description: "SecondMonitor : affiche le chronométrage, la stratégie, l'ingénieur IA"; Types: complet ecran calcul perso
 Name: "collecteur"; Description: "SecondMonitor Collecteur : lit le jeu et envoie les données (PC de jeu)"; Types: complet jeu perso
 
 [Tasks]
@@ -75,9 +76,23 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 
 [Run]
 Filename: "{app}\SecondMonitor-Collecteur.exe"; Description: "Ouvrir SecondMonitor Collecteur"; Components: collecteur; Flags: nowait postinstall skipifsilent
-Filename: "{app}\SecondMonitorHub.exe"; Description: "Ouvrir SecondMonitor"; Components: visualiseur; Flags: nowait postinstall skipifsilent unchecked
+Filename: "{app}\SecondMonitorHub.exe"; Description: "Ouvrir SecondMonitor"; Components: visualiseur; Flags: nowait postinstall skipifsilent unchecked; Check: not EstServeurCalcul
+; Serveur de calcul : premier lancement dans ce mode (retenu ensuite, modifiable dans Réglages).
+; Sans ce lancement, SecondMonitor pose la question à son premier démarrage.
+Filename: "{app}\SecondMonitorHub.exe"; Parameters: "--serveur-calcul"; Description: "Ouvrir SecondMonitor en serveur de calcul"; Components: visualiseur; Flags: nowait postinstall skipifsilent; Check: EstServeurCalcul
+; Installation « pour tous » : le pare-feu laisse entrer SecondMonitor sur les réseaux privés (sinon Windows le demande au premier lancement).
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""SecondMonitor (serveur de calcul)"" dir=in action=allow program=""{app}\SecondMonitorHub.exe"" enable=yes profile=private"; Flags: runhidden; Check: EstServeurCalcul and IsAdminInstallMode
+
+[UninstallRun]
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""SecondMonitor (serveur de calcul)"""; Flags: runhidden; RunOnceId: "PareFeuServeurCalcul"; Check: IsAdminInstallMode
 
 [Code]
+// Type d'installation « Serveur de calcul » (ordinateur 3 : prête son Ollama au SecondMonitor qui affiche la course).
+function EstServeurCalcul: Boolean;
+begin
+  Result := WizardSetupType(False) = 'calcul';
+end;
+
 // Le démarrage automatique peut aussi être activé depuis la fenêtre du collecteur : on l'enlève à la désinstallation.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
