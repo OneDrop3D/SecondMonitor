@@ -47,8 +47,14 @@ if (!portFree)
 {
     if (alreadyRunning && !headless)
     {
-        // SecondMonitor tourne déjà (autre fenêtre, ou lancé sans fenêtre) : on ouvre simplement son interface.
-        if (useBrowser || !AppWindow.Run(localUrl, "SecondMonitor", dataDir, noGpu))
+        // SecondMonitor tourne déjà avec sa fenêtre : il ouvre une fenêtre de plus (muette, sa propre page), pour un autre écran.
+        if (!useBrowser && AppWindow.AskRunningInstance(webPort))
+        {
+            return;
+        }
+
+        // Lancé sans fenêtre (ou ancienne version) : on ouvre simplement son interface ici.
+        if (useBrowser || !AppWindow.Run(localUrl, "SecondMonitor", dataDir, noGpu, remember: false))
         {
             AppWindow.OpenBrowser(localUrl);
         }
@@ -255,6 +261,15 @@ app.MapPost("/api/quit", (IHostApplicationLifetime life, HttpContext ctx) =>
     _ = Task.Run(async () => { await Task.Delay(300); life.StopApplication(); AppWindow.Close(); });
     return Results.Ok();
 });
+// ───── Fenêtres de l'application (une par écran : AppWindow.cs) ─────
+app.MapGet("/api/fenetres", () => Results.Json(AppWindow.Describe()));
+app.MapPost("/api/fenetres", (HttpContext ctx, NewWindowRequest? req) =>
+{
+    // Fenêtre native seulement à la demande de cet ordinateur : un iPad ou un téléphone ouvre plutôt une fenêtre de son navigateur.
+    // (Corps JSON obligatoire : une page d'un autre site ne peut pas l'envoyer sans autorisation CORS.)
+    bool local = ctx.Connection.RemoteIpAddress is { } ip && IPAddress.IsLoopback(ip);
+    return Results.Json(local ? AppWindow.OpenNew(req?.Onglet) : AppWindow.NotOpened("Fenêtre demandée depuis un autre appareil."));
+});
 app.MapPost("/api/client-log", (ClientLog entry) =>
 {
     // Erreurs de l'interface (écran noir, plantage d'un écran) : gardées dans journal.txt pour comprendre après coup.
@@ -336,3 +351,6 @@ public sealed record MemoryNote(string Text, string? Source = null);
 public sealed record ClientLog(string Message, string? Detail = null);
 
 public sealed record RadioState(string? Phase);
+
+/// <summary>« Nouvelle fenêtre » : page affichée au départ (onglet de la fenêtre d'où l'on vient).</summary>
+public sealed record NewWindowRequest(string? Onglet);
