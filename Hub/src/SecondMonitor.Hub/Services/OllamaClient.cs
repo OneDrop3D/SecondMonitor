@@ -162,8 +162,11 @@ public sealed class OllamaClient
         return content.Trim();
     }
 
-    /// <summary>Transcription d'un fichier audio (WAV conseillé) — route compatible OpenAI d'Ollama.</summary>
-    public async Task<string> TranscribeAsync(string spec, byte[] audio, string fileName, string language, CancellationToken ct)
+    /// <summary>
+    /// Transcription d'un fichier audio (WAV conseillé) — route compatible OpenAI d'Ollama. <paramref name="prompt"/> : mots à
+    /// reconnaître (vocabulaire de piste), pour les modèles qui l'acceptent.
+    /// </summary>
+    public async Task<string> TranscribeAsync(string spec, byte[] audio, string fileName, string language, CancellationToken ct, string? prompt = null)
     {
         var (url, model, _) = Resolve(spec);
         using var form = new MultipartFormDataContent();
@@ -172,6 +175,12 @@ public sealed class OllamaClient
         {
             form.Add(new StringContent(language), "language");
         }
+
+        if (!string.IsNullOrWhiteSpace(prompt))
+        {
+            form.Add(new StringContent(prompt), "prompt");
+        }
+
 
         var file = new ByteArrayContent(audio);
         file.Headers.ContentType = new MediaTypeHeaderValue(fileName.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) ? "audio/wav" : "application/octet-stream");

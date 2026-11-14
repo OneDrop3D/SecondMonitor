@@ -176,6 +176,21 @@ namespace SecondMonitor.Hub.Core.Ai
             return null;
         }
 
+        /// <summary>
+        /// « Quelle heure il est ? » : l'heure de l'ordinateur, jamais celle inventée par le modèle. Null si ce n'est pas la question.
+        /// La phrase peut contenir autre chose (« … Quelle heure il est ? … ») : seule la question de l'heure est reconnue.
+        /// </summary>
+        public static string TimeAnswer(string text, DateTime now)
+        {
+            string t = Normalize(text);
+            if (!Regex.IsMatch(t, @"\b(quelle heure|il est quelle heure|l heure qu il est|t as l heure|tu as l heure|vous avez l heure|donne moi l heure|c est quelle heure)\b"))
+            {
+                return null;
+            }
+
+            return now.Minute == 0 ? $"Il est {now.Hour} h." : $"Il est {now.Hour} h {now.Minute:00}.";
+        }
+
         /// <summary>Réponse oui / non du pilote à une question de l'IA : true, false ou null (ni l'un ni l'autre).</summary>
         public static bool? YesNo(string text)
         {

@@ -227,6 +227,98 @@ namespace SecondMonitor.Hub.Core.Ai
             return result;
         }
 
+        /// <summary>
+        /// Réponse du pilote à l'alerte d'usure anormale (« … Qu'est-ce qui s'est passé ? »). La phrase est découpée :
+        /// l'explication (« sortie au vibreur », « j'ai mis plus un sur la précharge ») reçoit une réponse qui s'y rattache
+        /// (roue, réglage proposé) et l'ingénieur s'engage à refaire le point deux tours plus tard ; la question éventuelle
+        /// qui suit (« je peux rester sur ces pneus ? ») est rendue pour être traitée normalement.
+        /// Reply est null si la phrase ne contient aucune explication (seulement des questions).
+        /// </summary>
+        public static WearAnswer AnswerWear(PendingQuestion q, string text, RaceMemory memory, CarContext ctx, RaceSnapshot snap, int? lap)
+        {
+            var result = new WearAnswer();
+            if (q == null || string.IsNullOrWhiteSpace(text))
+            {
+                return result;
+            }
+
+            var sentences = Regex.Split(text.Trim(), @"(?<=[.!?…])\s+").Where(x => x.Trim().Length > 0).ToList();
+            var questions = sentences.Where(x => x.Contains('?') || RadioCommands.IsQuestion(x)).ToList();
+            string explanation = string.Join(" ", sentences.Except(questions)).Trim();
+            result.Question = questions.Count == 0 ? null : string.Join(" ", questions);
+            if (explanation.Length == 0)
+            {
+                return result;
+            }
+
+            string t = RadioCommands.Normalize(explanation);
+            string wheel = q.Wheel == null ? "ce pneu" : "l'" + Wheel(q.Wheel);
+            string quote = Quote(explanation);
+            bool? yes = t.Split(' ', System.StringSplitOptions.RemoveEmptyEntries).Length <= 8 ? RadioCommands.YesNo(explanation) : null;
+            string reply;
+            bool settingWord = Regex.IsMatch(t, @"\b(differentiel|precharge|repartition|balance|frein|freins|bb|brake bias|tc|abs|carto|cartographie|antiroulis|anti roulis|barre|aileron|pression|pressions|carrossage|migration|regen|map)\b");
+            bool change = Regex.IsMatch(t, @"\b(j ajoute|j ai ajoute|je rajoute|j ai rajoute|j ai mis|je mets|j ai monte|je monte|j ai baisse|je baisse|je passe|j ai passe|je descends|j ai descendu|plus un|moins un|plus 1|moins 1|un cran)\b");
+            if (change && settingWord)
+            {
+                reply = $"Copy, noté : {quote}. Je regarde l'effet sur {wheel} et je te redis dans deux tours.";
+                memory?.Add("pilote", "réglage", $"réglage changé après une usure anormale : {quote}", lap);
+            }
+            else if (Regex.IsMatch(t, @"\b(contact|touche|accroche|accrochage|percute|tamponne|choc)\b"))
+            {
+                reply = $"Copy, le contact explique l'usure de {wheel}. Je regarde les dégâts et je te redis l'usure dans deux tours.";
+            }
+            else if (Regex.IsMatch(t, @"\b(bloque|bloquee|bloques|blocage|plat)\b") || Regex.IsMatch(t, @"\b(patine|patinage|patin\w*|decroche|survir\w*|sous vir\w*|sousvir\w*|glisse\w*)\b"))
+            {
+                SetupAdvisor.Advice advice = SetupAdvisor.Advise(explanation, ctx, memory?.Thread);
+                if (advice != null)
+                {
+                    Remember(memory, advice, explanation, lap);
+                    reply = "Copy. " + advice.Text;
+                }
+                else
+                {
+                    reply = q.Proposal != null ? $"Copy. Essaie {q.Proposal}, je te redis l'usure de {wheel} dans deux tours." : $"Copy. Je te redis l'usure de {wheel} dans deux tours.";
+                }
+            }
+            else if (Regex.IsMatch(t, @"\b(vibreurs?|hors piste|sortie de piste|suis sorti\w*|est sorti\w*|tout droit|large|gravier|herbe|bac a sable|tete a queue|spin|toupie|erreur|faute|trop loin|rate|loupe|mordu)\b"))
+            {
+                string what = Regex.IsMatch(t, @"\bvibreurs?\b") ? "le vibreur"
+                    : Regex.IsMatch(t, @"\b(tete a queue|spin|toupie)\b") ? "le tête-à-queue"
+                    : Regex.IsMatch(t, @"\b(sortie de piste|suis sorti\w*|est sorti\w*|hors piste|tout droit|gravier|herbe|bac a sable)\b") ? "la sortie de piste"
+                    : Regex.IsMatch(t, @"\blarge\b") ? "la trajectoire trop large"
+                    : "l'erreur";
+                reply = $"Copy, c'est {what} qui a usé {wheel}, pas la voiture : on ne change rien. Je te redis l'usure dans deux tours.";
+            }
+            else if (Regex.IsMatch(t, @"\b(attaqu\w*|push|optimiste|trop vite|trop de vitesse|tard au freinage|freine tard|trop tard|trop fort|trop d elan)\b"))
+            {
+                string where = q.Phase is null or "ligne droite" ? string.Empty : q.Phase == "freinage" ? " au freinage" : q.Phase == "milieu" ? " en milieu de virage" : $" en {q.Phase} de virage";
+                reply = $"Copy, attaque un peu optimiste : ça explique {wheel}. Garde de la marge{where}, je te redis l'usure dans deux tours.";
+            }
+            else if (yes == true)
+            {
+                reply = q.Proposal != null ? $"Copy, {q.Proposal}. Je te dis dans deux tours si l'usure de {wheel} se calme." : $"Copy. Je te redis l'usure de {wheel} dans deux tours.";
+            }
+            else if (yes == false)
+            {
+                reply = $"Copy, on ne touche à rien. Je te redis l'usure de {wheel} dans deux tours.";
+            }
+            else
+            {
+                reply = $"Copy, noté. Je te redis l'usure de {wheel} dans deux tours.";
+            }
+
+            memory?.ClearPending();
+            memory?.Add("pilote", "usure", q.Wheel == null ? $"usure anormale, explication du pilote : {quote}" : $"usure anormale {Wheel(q.Wheel)}, explication du pilote : {quote}", lap);
+            WheelStatus w = q.Wheel == null ? null : snap?.Player?.Wheels?.FirstOrDefault(x => x.Position == q.Wheel);
+            if (w != null && lap.HasValue)
+            {
+                memory?.WatchWear(new WearWatch { Wheel = q.Wheel, Lap = lap.Value, StartWearPct = w.WearPct, BaselinePerLap = w.WearPerLapPct, Proposal = q.Proposal });
+            }
+
+            result.Reply = new DialogReply(reply, "suite", ExchangeCategorizer.RaceSettings);
+            return result;
+        }
+
         /// <summary>Une réponse calculée vient de proposer quelque chose (ex. un cran d'aileron en moins) : on ouvre le fil.</summary>
         public static void Offered(RaceMemory memory, Proposal proposal, string symptom, string label, string category)
         {
@@ -269,5 +361,13 @@ namespace SecondMonitor.Hub.Core.Ai
         };
 
         private static string Quote(string text) => $"« {text.Trim().TrimEnd('.', '!')} »";
+    }
+
+    /// <summary>Réponse à l'alerte d'usure : ce que dit l'ingénieur, et la question du pilote qui reste à traiter.</summary>
+    public sealed class WearAnswer
+    {
+        public DialogReply Reply { get; set; }
+
+        public string Question { get; set; }
     }
 }

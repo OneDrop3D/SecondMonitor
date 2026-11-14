@@ -39,6 +39,7 @@ public sealed class ProactiveService : BackgroundService
         // Toutes les 3 s : le reste (pluie, relais, arrêt, duels, surchauffe), avec un intervalle minimal entre deux messages.
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(250));
         DateTime nextRules = DateTime.MinValue;
+        DateTime nextWearPoint = DateTime.MinValue;
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             AiSettings ai = _settings.Current.Ai;
@@ -56,6 +57,23 @@ public sealed class ProactiveService : BackgroundService
             if (driving.Count > 0 && ai.DrivingAlerts)
             {
                 await SayDrivingAsync(driving, stoppingToken);
+            }
+
+            // « Je te redis l'usure dans deux tours » : promesse faite après une usure anormale, tenue ici.
+            if (ai.DrivingAlerts && DateTime.UtcNow >= nextWearPoint)
+            {
+                nextWearPoint = DateTime.UtcNow.AddSeconds(3);
+                try
+                {
+                    if (WearFollowUp.Check(_engine.BuildSnapshot(), _engineer.Memory, DateTime.UtcNow) is string point)
+                    {
+                        await _engineer.SayAsync(point, "ingénieur IA", stoppingToken, proactive: true, category: ExchangeCategorizer.RaceSettings);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogWarning(ex, "Point d'usure impossible");
+                }
             }
 
             if (!ai.ProactiveRadio || DateTime.UtcNow < nextRules)
@@ -135,6 +153,11 @@ public sealed class ProactiveService : BackgroundService
                         Topic = line.Topic,
                         Text = line.Text,
                         Lap = snap.Drivers.FirstOrDefault(d => d.IsPlayer)?.Laps ?? 0,
+                        Wheel = line.Spike?.Wheel,
+                        Phase = line.Spike?.Phase,
+                        Corner = line.Spike?.Corner,
+                        Cause = line.Cause,
+                        Proposal = line.Proposal,
                     });
                 }
 

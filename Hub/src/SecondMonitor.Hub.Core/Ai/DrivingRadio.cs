@@ -46,7 +46,8 @@ namespace SecondMonitor.Hub.Core.Ai
 
             foreach (DrivingEvent e in events.Where(e => e.Type == "usure" && e.Spike != null))
             {
-                lines.Add(new RadioLine(Wear(e.Spike, snap), "usure", true));
+                var (cause, proposal) = CarKnowledge.AnalyseWear(e.Spike, snap?.Player?.Controls, CarContext.From(snap));
+                lines.Add(new RadioLine(Wear(e.Spike, snap), "usure", true, e.Spike, cause, proposal));
             }
 
             return lines;
@@ -92,6 +93,9 @@ namespace SecondMonitor.Hub.Core.Ai
         private static string At(string corner) => corner == null ? string.Empty : $", {corner.ToLowerInvariant()}";
     }
 
-    /// <summary>Une phrase radio : texte, sujet, et si elle attend une réponse du pilote.</summary>
-    public sealed record RadioLine(string Text, string Topic, bool IsQuestion);
+    /// <summary>
+    /// Une phrase radio : texte, sujet, et si elle attend une réponse du pilote. Pour une usure anormale : la mesure,
+    /// la cause supposée et le réglage proposé (gardés avec la question pour comprendre la réponse du pilote).
+    /// </summary>
+    public sealed record RadioLine(string Text, string Topic, bool IsQuestion, WearSpike Spike = null, string Cause = null, string Proposal = null);
 }

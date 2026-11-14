@@ -15,7 +15,8 @@ public sealed class EngineerService
         "Tu es l'ingénieur de course du pilote et tu lui parles à la radio pendant la course. " +
         "Réponds TOUJOURS en français, en une ou deux phrases courtes, faciles à entendre en pilotant, en TUTOYANT le pilote comme un vrai ingénieur à la radio (« tu », « ton », « ta »). " +
         "Réponds SEULEMENT à ce qui est demandé : pas de récapitulatif de la course, pas de météo ni de position si on ne te les demande pas. " +
-        "Si le pilote fait une remarque sans poser de question, accuse réception en commençant par « Copy » et ajoute au plus un conseil utile. " +
+        "Si le pilote fait une remarque sans poser de question, accuse réception en commençant par « Copy » et ajoute, seulement si c'est utile, un conseil court (sans écrire le mot « conseil »). " +
+        "Si sa phrase répond à une question que tu viens de lui poser, relie ta réponse à cette question. " +
         "Utilise UNIQUEMENT les chiffres des informations ci-dessous, recopiés tels quels ; ne fais aucun calcul. " +
         "Ne parle jamais de « document », de « texte » ni de « fiche » : le pilote ne les voit pas. " +
         "Si une information manque vraiment, dis en une phrase laquelle et pourquoi (le jeu ne l'envoie pas, ou il faut encore un tour). " +
@@ -47,6 +48,7 @@ public sealed class EngineerService
     private readonly ILogger<EngineerService> _logger;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<(string Domain, string Role, string Text)> _history = new();
+    private readonly List<(DateTime At, string Who, string Text)> _radioLog = new();
     private readonly SemaphoreSlim _thinkQueue = new(1, 1);
     private int _thinking;
     private (DateTime At, List<OllamaModel> Models) _modelCache = (DateTime.MinValue, new());
@@ -78,6 +80,7 @@ public sealed class EngineerService
             lock (_history)
             {
                 _history.Clear();
+                _radioLog.Clear();
             }
 
             memory.Clear();
@@ -112,6 +115,8 @@ public sealed class EngineerService
     {
         AiSettings ai = _settings.Current.Ai;
         var started = DateTime.UtcNow;
+        // Lexique de piste : erreurs connues de la dictée (« books » → « box ») et corrections du pilote.
+        question = RadioLexicon.Correct(question, ai.Lexicon) ?? question;
         Prepared prep;
         await _gate.WaitAsync(ct); // court : état de la conversation et réponses calculées, jamais pendant la réflexion du modèle
         try
@@ -125,7 +130,7 @@ public sealed class EngineerService
 
         if (prep.Answer != null)
         {
-            return await FinishAsync(prep, prep.Answer, prep.Kind, speak, from, started, ct);
+            return await FinishAsync(prep, Join(prep.Prefix, prep.Answer), prep.Kind, speak, from, started, ct);
         }
 
         if (string.IsNullOrWhiteSpace(ModelFor(prep.Domain)))
@@ -138,18 +143,22 @@ public sealed class EngineerService
         if (test)
         {
             string answer = await thinking;
-            return await FinishAsync(prep, answer, answer == prep.Brief.Suggestion ? "calculée" : "modèle", speak, from, started, ct);
+            return await FinishAsync(prep, Join(prep.Prefix, answer), answer == prep.Brief.Suggestion ? "calculée" : "modèle", speak, from, started, ct);
         }
 
         Task delay = Task.Delay(TimeSpan.FromSeconds(Math.Clamp(ai.AckAfterSeconds, 0.5, 15)), ct);
         if (!queued && await Task.WhenAny(thinking, delay) == thinking)
         {
             string answer = await thinking;
-            return await FinishAsync(prep, answer, answer == prep.Brief.Suggestion ? "calculée" : "modèle", speak, from, started, ct);
+            return await FinishAsync(prep, Join(prep.Prefix, answer), answer == prep.Brief.Suggestion ? "calculée" : "modèle", speak, from, started, ct);
         }
 
         // Réflexion longue : accusé de réception tout de suite, réponse plus tard. Le pilote n'est pas bloqué.
-        EngineerReply ack = await FinishAsync(prep, RadioStyle.Thinking(queued, ai.EnglishCalls), "accusé", speak, from, started, ct, remember: false);
+        // Si sa phrase répondait aussi à l'ingénieur (« sortie au vibreur, je peux rester sur ces pneus ? »), cette partie est dite d'abord.
+        string ackText = prep.Prefix == null
+            ? RadioStyle.Thinking(queued, ai.EnglishCalls)
+            : prep.Prefix + (queued ? " Pour ta question, je finis celle d'avant et je reviens vers toi." : " Pour ta question, je regarde et je reviens vers toi.");
+        EngineerReply ack = await FinishAsync(prep, ackText, "accusé", speak, from, started, ct, remember: false);
         _ = Task.Run(async () =>
         {
             string later;
@@ -168,8 +177,9 @@ public sealed class EngineerService
 
             try
             {
-                string intro = $"Pour {Specialists.Label(prep.Domain)} : ";
-                await FinishAsync(prep, intro + RadioFormat.Cap(later.TrimStart()), kind, speak, from, started, CancellationToken.None, followUp: true);
+                // « Pour les pneus : … » seulement si la question avait un sujet reconnu (sinon « Pour la voiture » sur l'heure…).
+                string intro = prep.Brief.Topics.Count > 0 ? $"Pour {Specialists.Label(prep.Domain)} : " : "Je reviens vers toi : ";
+                await FinishAsync(prep, intro + RadioFormat.Cap(WithoutAck(later)), kind, speak, from, started, CancellationToken.None, followUp: true);
             }
             catch (Exception ex)
             {
@@ -195,6 +205,15 @@ public sealed class EngineerService
         public string? Facts;
         public BriefingResult Brief = new();
         public string Domain = Specialists.Car;
+
+        /// <summary>Réponse déjà faite à une partie de la phrase (explication d'une usure), dite avant le reste.</summary>
+        public string? Prefix;
+
+        /// <summary>Ce qui part au modèle : la phrase (ou la question qui reste), avec les équivalents français des mots de piste.</summary>
+        public string ModelInput = "";
+
+        /// <summary>Question que l'ingénieur venait de poser au pilote (contexte pour le modèle).</summary>
+        public string? PendingText;
     }
 
     private async Task<Prepared> PrepareAsync(string question, bool test, CancellationToken ct)
@@ -213,9 +232,13 @@ public sealed class EngineerService
         prep.Memory = test ? _testMemory : Memory;
         RaceMemory memory = prep.Memory;
         CarContext car = CarContext.From(snapshot, ai.WetThresholdPct);
+        // Mots de piste anglais (« brake bias », « stint », « delta ») traduits pour les règles du hub, qui raisonnent en français.
+        string q = RadioLexicon.Understand(question) ?? question;
+        prep.ModelInput = q;
+        prep.PendingText = memory.Pending()?.Text;
 
         // Réponse à « Je peux remplir le menu des stands moi-même. Je l'active ? »
-        if (!test && memory.Pending()?.Topic == "stand-auto" && RadioCommands.YesNo(question) is bool accept && RadioCommands.Normalize(question).Split(' ').Length <= 10)
+        if (!test && memory.Pending()?.Topic == "stand-auto" && RadioCommands.YesNo(q) is bool accept && RadioCommands.Normalize(q).Split(' ').Length <= 10)
         {
             memory.ClearPending();
             prep.Kind = "commande";
@@ -236,10 +259,13 @@ public sealed class EngineerService
             return prep;
         }
 
+        // L'ingénieur vient de demander « Qu'est-ce qui s'est passé ? » après une usure anormale (plus récent que sa dernière proposition).
+        PendingQuestion? wearQuestion = memory.Pending() is { Topic: "usure" } pq && (memory.Thread.Open == null || pq.AskedAtUtc >= memory.Thread.Open.AtUtc) ? pq : null;
+
         // Suites de conversation (« oui », « non », « autre chose ? ») avant les politesses : « ok » répond à la proposition.
-        DialogReply? dialog = RadioDialog.FollowUp(question, memory, car, prep.Lap);
-        string? answer = dialog?.Text ?? await HandleCommandAsync(question, test, prep.Lap, ct);
-        if (dialog == null && answer == null && PitOrders.Parse(question) is PitOrder order)
+        DialogReply? dialog = wearQuestion != null ? null : RadioDialog.FollowUp(q, memory, car, prep.Lap);
+        string? answer = dialog?.Text ?? await HandleCommandAsync(q, test, prep.Lap, ct);
+        if (dialog == null && answer == null && PitOrders.Parse(q) is PitOrder order)
         {
             // « Je boxe », « je veux des softs neufs », « la réparation aussi » : confirmé tout de suite et gardé pour l'arrêt.
             prep.Answer = PitOrders.Confirm(order, memory, snapshot, prep.Lap);
@@ -267,15 +293,37 @@ public sealed class EngineerService
             return prep;
         }
 
-        if (dialog == null && answer == null && !RaceBriefing.IsShortRequest(question))
+        // Réponse à cette question : l'explication reçoit sa réponse (et l'ingénieur refera le point dans deux tours),
+        // une demande d'arrêt ou une commande passe avant ; une question qui suit l'explication est traitée ensuite.
+        if (wearQuestion != null && dialog == null && (answer == null || RadioCommands.SmallTalk(q) != null))
+        {
+            WearAnswer wear = RadioDialog.AnswerWear(wearQuestion, question, memory, car, snapshot, prep.Lap);
+            if (wear.Reply != null)
+            {
+                if (wear.Question == null)
+                {
+                    prep.Answer = wear.Reply.Text;
+                    prep.Kind = wear.Reply.Kind;
+                    prep.Category = wear.Reply.Category;
+                    return prep;
+                }
+
+                prep.Prefix = wear.Reply.Text;
+                q = RadioLexicon.Understand(wear.Question) ?? wear.Question;
+                prep.ModelInput = q;
+                answer = null;
+            }
+        }
+
+        if (dialog == null && answer == null && !RaceBriefing.IsShortRequest(q))
         {
             // Retour du pilote sur la voiture : base de réglages, réponse immédiate (jamais un simple « reçu »).
-            dialog = RadioDialog.Feedback(question, memory, car, snapshot, prep.Lap);
+            dialog = RadioDialog.Feedback(q, memory, car, snapshot, prep.Lap);
         }
 
         if (dialog != null)
         {
-            prep.Answer = ai.EnglishCalls && dialog.Kind is "retour" or "suite" ? RadioStyle.WithCopy(dialog.Text) : dialog.Text;
+            prep.Answer = ai.EnglishCalls && dialog.Kind is "retour" or "suite" && prep.Prefix == null ? RadioStyle.WithCopy(dialog.Text) : dialog.Text;
             prep.Kind = dialog.Kind;
             prep.Category = dialog.Category;
             return prep;
@@ -285,7 +333,7 @@ public sealed class EngineerService
         {
             prep.Answer = answer;
             prep.Kind = "commande";
-            prep.Category = ExchangeCategorizer.FromText(question) ?? ExchangeCategorizer.RaceInfo;
+            prep.Category = ExchangeCategorizer.FromText(q) ?? ExchangeCategorizer.RaceInfo;
             return prep;
         }
 
@@ -301,11 +349,11 @@ public sealed class EngineerService
             Memory = memory,
             WetThresholdPct = ai.WetThresholdPct,
         };
-        BriefingResult brief = RaceBriefing.Prepare(snapshot, question, extras);
+        BriefingResult brief = RaceBriefing.Prepare(snapshot, q, extras);
         prep.Brief = brief;
         prep.Facts = brief.Facts;
         prep.Domain = Specialists.For(brief.Topics);
-        prep.Category = ExchangeCategorizer.Categorize(question, brief.Topics);
+        prep.Category = ExchangeCategorizer.Categorize(q, brief.Topics);
         if (prep.Category == null)
         {
             prep.Category = ExchangeCategorizer.RaceInfo;
@@ -341,6 +389,11 @@ public sealed class EngineerService
                     _history.RemoveRange(0, 2);
                 }
             }
+        }
+
+        if (!prep.Test)
+        {
+            LogRadio(followUp ? null : prep.Question, answer);
         }
 
         DateTime voiceStart = DateTime.UtcNow;
@@ -384,6 +437,12 @@ public sealed class EngineerService
     /// <summary>Phrases qui ne demandent pas de réflexion : politesses, changement de modèle, réponse à une question de l'IA, remarque à mémoriser.</summary>
     private async Task<string?> HandleCommandAsync(string text, bool test, int? lap, CancellationToken ct)
     {
+        // « Quelle heure il est ? » : l'heure de l'ordinateur (le modèle l'inventait).
+        if (RadioCommands.TimeAnswer(text, DateTime.Now) is string time)
+        {
+            return time;
+        }
+
         string? small = RadioCommands.SmallTalk(text);
         if (small != null)
         {
@@ -583,7 +642,8 @@ public sealed class EngineerService
         Interlocked.Increment(ref _thinking);
         try
         {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+            // Au-delà, la réponse calculée part quand même : l'ingénieur revient toujours vers le pilote.
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(75));
             await _thinkQueue.WaitAsync(timeout.Token);
             try
             {
@@ -607,7 +667,17 @@ public sealed class EngineerService
     private async Task<string> ThinkAsync(Prepared prep, CancellationToken ct)
     {
         BriefingResult brief = prep.Brief;
-        string system = SystemPrompt + "\n\n" + Specialists.Role(prep.Domain) + "\n\n" + SessionFocus(prep.Snapshot.SessionType) + "\n\n" + Specialists.Facts(prep.Domain, brief);
+        string system = SystemPrompt + "\n\n" + RadioLexicon.ModelGlossary() + "\n\n" + Specialists.Role(prep.Domain) + "\n\n" + SessionFocus(prep.Snapshot.SessionType) + "\n\n" + Specialists.Facts(prep.Domain, brief)
+            + $"\n\nHEURE À L'ORDINATEUR : {DateTime.Now:HH:mm}.";
+        if (!prep.Test && RecentRadio(prep.Question) is string recent)
+        {
+            system += "\n\n" + recent;
+        }
+
+        if (prep.PendingText != null)
+        {
+            system += $"\n\nQUESTION QUE TU VIENS DE POSER AU PILOTE : « {prep.PendingText} ». Sa phrase y répond peut-être.";
+        }
         if (brief.Suggestion != null)
         {
             system += "\n\nRÉPONSE PRÉPARÉE POUR CETTE QUESTION (à dire au pilote, presque mot pour mot) :\n" + brief.Suggestion;
@@ -625,7 +695,7 @@ public sealed class EngineerService
             }
         }
 
-        messages.Add(new { role = "user", content = prep.Question });
+        messages.Add(new { role = "user", content = string.IsNullOrWhiteSpace(prep.ModelInput) ? prep.Question : prep.ModelInput });
         string answer = Shorten(Clean(await _ollama.ChatAsync(ModelFor(prep.Domain), messages, ct, think: _settings.Current.Ai.ThinkingMode)));
 
         // Garde-fous : chiffre inventé, réponse en anglais ou qui parle du « document » → réponse du hub.
@@ -636,6 +706,12 @@ public sealed class EngineerService
             return brief.Suggestion ?? RaceBriefing.Missing(prep.Question, prep.Snapshot);
         }
 
+        // Le modèle répète la phrase du pilote (« 10 heures. » → « 10 heures. ») : la radio n'était pas claire.
+        if (RadioCommands.Normalize(answer).Trim() == RadioCommands.Normalize(prep.Question).Trim())
+        {
+            return brief.Suggestion ?? "Radio pas claire, tu peux répéter ?";
+        }
+
         // « Je n'ai pas cette information » : on dit plutôt quelle donnée manque et pourquoi.
         if (RadioCommands.Normalize(answer).Contains("pas cette information"))
         {
@@ -644,6 +720,48 @@ public sealed class EngineerService
 
         return answer;
     }
+
+    /// <summary>Garde l'échange dans le journal radio (contexte des prochaines réponses du modèle).</summary>
+    private void LogRadio(string? driver, string engineer)
+    {
+        lock (_history)
+        {
+            if (!string.IsNullOrWhiteSpace(driver))
+            {
+                _radioLog.Add((DateTime.Now, "pilote", driver));
+            }
+
+            _radioLog.Add((DateTime.Now, "ingénieur", engineer));
+            if (_radioLog.Count > 24)
+            {
+                _radioLog.RemoveRange(0, _radioLog.Count - 24);
+            }
+        }
+    }
+
+    /// <summary>Les derniers échanges radio (dix minutes au plus), y compris les alertes : le modèle sait ce qui vient d'être dit.</summary>
+    private string? RecentRadio(string currentQuestion)
+    {
+        List<(DateTime At, string Who, string Text)> lines;
+        lock (_history)
+        {
+            lines = _radioLog.Where(l => (DateTime.Now - l.At).TotalMinutes <= 10).TakeLast(7).ToList();
+        }
+
+        // La question en cours est déjà le message du pilote.
+        if (lines.Count > 0 && lines[^1].Who == "pilote" && lines[^1].Text == currentQuestion)
+        {
+            lines.RemoveAt(lines.Count - 1);
+        }
+
+        return lines.Count == 0 ? null : "DERNIERS ÉCHANGES RADIO (du plus ancien au plus récent) :\n" + string.Join("\n", lines.Select(l => $"- {l.At:HH:mm} {l.Who} : {l.Text}"));
+    }
+
+    /// <summary>« Copy, … » en tête d'une réponse différée : déjà dit dans l'accusé de réception.</summary>
+    private static string WithoutAck(string text) =>
+        System.Text.RegularExpressions.Regex.Replace(text.TrimStart(), @"^(copy( that)?|bien reçu|reçu|compris)\s*[,.:!]\s*", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase) is { Length: > 0 } rest ? rest : text.Trim();
+
+    private static string Join(string? prefix, string answer) => string.IsNullOrWhiteSpace(prefix) ? answer : $"{prefix} {answer}";
 
     /// <summary>Radio : deux phrases au plus. Le modèle a tendance à tout réciter.</summary>
     private static string Shorten(string text)
@@ -690,7 +808,7 @@ public sealed class EngineerService
         }
 
         var sw = Stopwatch.StartNew();
-        string transcript = await _ollama.TranscribeAsync(listenModel, audio, fileName, ai.Language, ct);
+        string transcript = await TranscribeAllAsync(listenModel, audio, fileName, ct);
         int listenMs = (int)sw.ElapsedMilliseconds;
         if (string.IsNullOrWhiteSpace(transcript) || transcript.Trim().Trim('.', '…', ' ').Length < 2)
         {
@@ -702,6 +820,61 @@ public sealed class EngineerService
         reply.Transcript = transcript;
         reply.ListenMilliseconds = listenMs;
         return reply;
+    }
+
+    /// <summary>
+    /// Transcription robuste : l'audio est converti en WAV 16 kHz mono (format accepté par tous les modèles), débarrassé des
+    /// silences et découpé en morceaux d'au plus <see cref="AiSettings.ListenChunkSeconds"/> secondes, transcrits l'un après
+    /// l'autre. Si le modèle refuse un morceau, on réessaie sans l'indice de vocabulaire, puis en morceaux de 10 secondes.
+    /// </summary>
+    private async Task<string> TranscribeAllAsync(string model, byte[] audio, string fileName, CancellationToken ct)
+    {
+        AiSettings ai = _settings.Current.Ai;
+        string hint = RadioLexicon.TranscriptionHint(ai.Lexicon);
+        byte[] wav = await AudioConverter.ToWavAsync(audio, fileName, ct) ?? audio;
+        List<byte[]>? chunks = WavAudio.ForTranscription(wav, Math.Clamp(ai.ListenChunkSeconds, 5, 120));
+        if (chunks == null)
+        {
+            // Format inconnu et aucun outil pour le convertir : envoyé tel quel.
+            return await _ollama.TranscribeAsync(model, audio, fileName, ai.Language, ct, hint);
+        }
+
+        var parts = new List<string>();
+        foreach (byte[] chunk in chunks)
+        {
+            parts.Add(await TranscribeChunkAsync(model, chunk, hint, ct));
+        }
+
+        return string.Join(" ", parts.Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p.Trim())).Trim();
+    }
+
+    private async Task<string> TranscribeChunkAsync(string model, byte[] wav, string hint, CancellationToken ct)
+    {
+        string language = _settings.Current.Ai.Language;
+        try
+        {
+            return await _ollama.TranscribeAsync(model, wav, "question.wav", language, ct, hint);
+        }
+        catch (InvalidOperationException first) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogInformation("Transcription refusée ({Error}) : nouvel essai", first.Message);
+            try
+            {
+                return await _ollama.TranscribeAsync(model, wav, "question.wav", language, ct);
+            }
+            catch (InvalidOperationException) when (!ct.IsCancellationRequested && WavAudio.Duration(wav) > 11)
+            {
+                // Morceau sans doute trop long pour ce modèle : en morceaux de 10 s.
+                var smaller = WavAudio.ForTranscription(wav, 10) ?? new List<byte[]>();
+                var parts = new List<string>();
+                foreach (byte[] piece in smaller)
+                {
+                    parts.Add(await _ollama.TranscribeAsync(model, piece, "question.wav", language, ct));
+                }
+
+                return string.Join(" ", parts.Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p.Trim()));
+            }
+        }
     }
 
     /// <summary>Transcription seule (test du micro et du modèle « écoute »).</summary>
@@ -717,8 +890,11 @@ public sealed class EngineerService
         var sw = Stopwatch.StartNew();
         try
         {
-            string text = await _ollama.TranscribeAsync(listenModel, audio, fileName, ai.Language, ct);
-            return new DiagnosticResult { Step = "listen", Ok = !string.IsNullOrWhiteSpace(text), Milliseconds = (int)sw.ElapsedMilliseconds, Detail = string.IsNullOrWhiteSpace(text) ? "Rien entendu (micro coupé ou trop loin ?)" : $"« {text.Trim()} »", Model = listenModel };
+            string text = await TranscribeAllAsync(listenModel, audio, fileName, ct);
+            string corrected = RadioLexicon.Correct(text, ai.Lexicon) ?? text;
+            string detail = string.IsNullOrWhiteSpace(text) ? "Rien entendu (micro coupé ou trop loin ?)"
+                : corrected != text ? $"« {text.Trim()} » → corrigé par le lexique : « {corrected.Trim()} »" : $"« {text.Trim()} »";
+            return new DiagnosticResult { Step = "listen", Ok = !string.IsNullOrWhiteSpace(text), Milliseconds = (int)sw.ElapsedMilliseconds, Detail = detail, Model = listenModel };
         }
         catch (Exception ex)
         {
@@ -786,6 +962,7 @@ public sealed class EngineerService
         var started = DateTime.UtcNow;
         string? audio = await TrySpeakAsync(text, ct);
         var reply = new EngineerReply { Answer = text, From = from, AudioBase64 = _stopRequestedUtc > started ? null : audio, Proactive = proactive, AwaitingAnswer = awaitingAnswer, Urgent = urgent, Kind = proactive ? (urgent ? "alerte" : "spontanée") : "message", Category = category ?? ExchangeCategorizer.FromText(text) ?? ExchangeCategorizer.RaceInfo };
+        LogRadio(null, text);
         await _hub.BroadcastAsync("radio", reply);
         Replied?.Invoke(reply);
         return reply;

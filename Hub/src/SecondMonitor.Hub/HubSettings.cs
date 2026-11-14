@@ -111,6 +111,15 @@ public sealed class AiSettings
 
     /// <summary>Temps (s) au-delà duquel l'ingénieur répond « Copy, je regarde et je reviens vers vous » et laisse le pilote poser une autre question.</summary>
     public double AckAfterSeconds { get; set; } = 2.5;
+
+    /// <summary>Lexique de piste : corrections ajoutées par le pilote pour la dictée (« ce qu'elle entend » → « ce que j'ai dit »).</summary>
+    public List<SecondMonitor.Hub.Core.Ai.LexiconEntry> Lexicon { get; set; } = new();
+
+    /// <summary>
+    /// Durée maximale (s) d'un morceau d'audio envoyé au modèle « écoute ». Au-delà, l'enregistrement est découpé sur un silence
+    /// et chaque morceau est transcrit à part (certains modèles refusent plus de 30 ou 60 secondes).
+    /// </summary>
+    public int ListenChunkSeconds { get; set; } = 28;
 }
 
 public sealed class SettingsStore
