@@ -53,7 +53,9 @@ public class UpdateTests
             "",
             "http://github.com/OneDrop3D/SecondMonitor/releases/download/v0.6.0/a.dmg",
             "https://github.com/Autre/SecondMonitor/releases/download/v0.6.0/a.dmg",
-            "https://github.com/OneDrop3D/mises-a-jour/releases/download/v0.6.0/a.dmg",
+            "https://github.com/OneDrop3D/multibook/releases/download/v0.6.0/a.dmg",
+            "https://github.com/OneDrop3D/mises-a-jour/a.dmg",
+            "https://raw.githubusercontent.com/OneDrop3D/mises-a-jour/main/a.dmg",
             "https://github.com.evil.example/OneDrop3D/SecondMonitor/releases/download/v0.6.0/a.dmg",
             "https://github.com@evil.example/OneDrop3D/SecondMonitor/releases/download/v0.6.0/a.dmg",
             "https://x@github.com/OneDrop3D/SecondMonitor/releases/download/v0.6.0/a.dmg",
@@ -359,6 +361,177 @@ public class UpdateTests
         alive.Kill();
         Assert.That(b.VersionIn(b.Target), Is.EqualTo("0.5.0"));
         Assert.That(Directory.Exists(b.Fresh), Is.False);
+    }
+
+    // ───── Même système que Multibook et ClickDeck : dépôt commun, site, plusieurs sources, fichier resté en arrière ─────
+
+    private const string Common = "https://github.com/OneDrop3D/mises-a-jour/releases/download/secondmonitor-v0.7.2/";
+
+    [Test]
+    public void DepotCommunEtSiteAcceptes()
+    {
+        Assert.That(UpdateSource.IsAllowedFileUrl(Common + "SecondMonitor-0.7.2-mac-arm64.dmg"), Is.True, "dépôt commun des produits OneDrop3D");
+        Assert.That(UpdateSource.IsAllowedFileUrl(Base + "SecondMonitor-0.6.0-mac-arm64.dmg"), Is.True, "ancien dépôt, pour la transition");
+        // Fichier servi par le site : seulement si c'est le site qui a donné le manifeste, en https, sur /api/telechargements/<id>.
+        Assert.That(UpdateSource.IsAllowedFileUrl("https://onedrop3d.example/api/telechargements/42", siteOrigin: "https://onedrop3d.example"), Is.True);
+        Assert.That(UpdateSource.IsAllowedFileUrl("https://onedrop3d.example/api/telechargements/42"), Is.False);
+        Assert.That(UpdateSource.IsAllowedFileUrl("https://autre.example/api/telechargements/42", siteOrigin: "https://onedrop3d.example"), Is.False);
+        Assert.That(UpdateSource.IsAllowedFileUrl("https://onedrop3d.example/api/telechargements/../x", siteOrigin: "https://onedrop3d.example"), Is.False);
+        Assert.That(UpdateSource.IsAllowedFileUrl("https://onedrop3d.example/admin/42", siteOrigin: "https://onedrop3d.example"), Is.False);
+        Assert.That(UpdateSource.NormalizeSite("http://onedrop3d.example"), Is.Null, "le site seulement en https");
+        Assert.That(UpdateSource.NormalizeSite("https://onedrop3d.example/"), Is.EqualTo("https://onedrop3d.example"));
+        Assert.That(UpdateSource.NormalizeSite("https://onedrop3d.example/chemin"), Is.Null);
+    }
+
+    [TestCase("https://github.com/OneDrop3D/SecondMonitor/releases/download/v0.6.0/a.exe", "0.6.0")]
+    [TestCase("https://github.com/OneDrop3D/mises-a-jour/releases/download/secondmonitor-v0.7.2/a.dmg", "0.7.2")]
+    [TestCase("https://github.com/OneDrop3D/mises-a-jour/releases/download/secondmonitor-v0.8.0-beta.1/a.dmg", "0.8.0-beta.1")]
+    [TestCase("https://onedrop3d.example/api/telechargements/42", null)]
+    public void VersionDeLEtiquette(string url, string version)
+    {
+        Assert.That(UpdateSource.TagVersion(url), Is.EqualTo(version));
+    }
+
+    [Test]
+    public void FichierResteEnArrierePasDeBoucle()
+    {
+        // Manifeste 0.7.1, mais le fichier Windows est resté en 0.6.0 (pas reconstruit) : un PC en 0.6.0 n'a rien à installer.
+        string json = Manifest("0.7.1", string.Join(",",
+            File("macos-arm64", "SecondMonitor-0.7.1-mac-arm64.dmg").Replace("/v0.6.0/", "/v0.7.1/"),
+            File("windows-x64", "SecondMonitor-0.6.0-windows-x64-installation.exe")));
+        Assert.That(UpdateManifest.Parse(json, "0.6.0", UpdatePlatform.Keys("windows", "x64", true)), Is.Null);
+        // Un PC plus ancien reçoit la 0.6.0, annoncée comme telle.
+        UpdateOffer old = UpdateManifest.Parse(json, "0.5.0", UpdatePlatform.Keys("windows", "x64", true));
+        Assert.That(old.Version, Is.EqualTo("0.6.0"));
+        Assert.That(old.Notes, Does.Contain("0.7.1"));
+        // Le Mac, lui, a bien la 0.7.1.
+        Assert.That(UpdateManifest.Parse(json, "0.6.0", UpdatePlatform.Keys("mac", "arm64", false)).Version, Is.EqualTo("0.7.1"));
+    }
+
+    [Test]
+    public void AdresseRelativeDuSite()
+    {
+        string json = Manifest("0.7.2", """ "macos-arm64": { "url": "/api/telechargements/42", "name": "SecondMonitor-0.7.2-mac-arm64.dmg", "size": 10, "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" } """);
+        UpdateOffer offer = UpdateManifest.Parse(json, "0.7.1", new[] { "macos-arm64" }, siteOrigin: "https://onedrop3d.example");
+        Assert.That(offer.File.Url, Is.EqualTo("https://onedrop3d.example/api/telechargements/42"));
+        Assert.That(offer.File.Site, Is.EqualTo("https://onedrop3d.example"));
+        Assert.That(UpdateManifest.Parse(json, "0.7.1", new[] { "macos-arm64" }).File, Is.Null, "sans le site, l'adresse relative ne vaut rien");
+    }
+
+    /// <summary>Petit serveur local : chemin → (statut, corps) ; « plages » : répond 206 aux en-têtes Range.</summary>
+    private static (HttpListener Listener, string Base) Serve(Func<string, (int Status, byte[] Body)> route, bool ranges = false)
+    {
+        int port = FreePort();
+        var listener = new HttpListener();
+        listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+        listener.Start();
+        _ = Task.Run(async () =>
+        {
+            while (listener.IsListening)
+            {
+                HttpListenerContext ctx;
+                try
+                {
+                    ctx = await listener.GetContextAsync();
+                }
+                catch (Exception)
+                {
+                    return;
+                }
+
+                _ = Task.Run(() =>
+                {
+                    try
+                    {
+                        var (status, body) = route(ctx.Request.Url!.AbsolutePath);
+                        string? range = ctx.Request.Headers["Range"];
+                        if (ranges && status == 200 && range != null && range.StartsWith("bytes="))
+                        {
+                            string[] se = range[6..].Split('-');
+                            long a = long.Parse(se[0]), b = long.Parse(se[1]);
+                            ctx.Response.StatusCode = 206;
+                            ctx.Response.ContentLength64 = b - a + 1;
+                            ctx.Response.OutputStream.Write(body, (int)a, (int)(b - a + 1));
+                        }
+                        else
+                        {
+                            ctx.Response.StatusCode = status;
+                            ctx.Response.ContentLength64 = body.Length;
+                            ctx.Response.OutputStream.Write(body);
+                        }
+
+                        ctx.Response.Close();
+                    }
+                    catch (Exception)
+                    {
+                        // client parti
+                    }
+                });
+            }
+        });
+        return (listener, $"http://127.0.0.1:{port}");
+    }
+
+    [Test]
+    public async Task PlusieursSourcesLaPlusHauteLEmporte()
+    {
+        string site = Manifest("0.7.3", File("macos-arm64", "SecondMonitor-0.7.3-mac-arm64.dmg").Replace(Base, Common.Replace("0.7.2", "0.7.3")));
+        string github = Manifest("0.7.2", File("macos-arm64", "SecondMonitor-0.7.2-mac-arm64.dmg").Replace(Base, Common));
+        var (listener, root) = Serve(path => path switch
+        {
+            "/site.json" => (200, Encoding.UTF8.GetBytes(site)),
+            "/github.json" => (200, Encoding.UTF8.GetBytes(github)),
+            _ => (404, Array.Empty<byte>()),
+        });
+        using (listener)
+        {
+            using var http = UpdateManifest.CreateClient("0.7.1");
+            var keys = new[] { "macos-arm64" };
+            UpdateOffer best = await UpdateManifest.CheckAsync(http, "0.7.1", keys, new[] { root + "/site.json", root + "/github.json" }, CancellationToken.None);
+            Assert.That(best.Version, Is.EqualTo("0.7.3"));
+            // Une source injoignable est ignorée sans message.
+            UpdateOffer one = await UpdateManifest.CheckAsync(http, "0.7.1", keys, new[] { root + "/absent.json", root + "/github.json" }, CancellationToken.None);
+            Assert.That(one.Version, Is.EqualTo("0.7.2"));
+            // À jour partout : rien.
+            Assert.That(await UpdateManifest.CheckAsync(http, "0.7.3", keys, new[] { root + "/site.json", root + "/github.json" }, CancellationToken.None), Is.Null);
+            // Aucune source : l'erreur remonte.
+            Assert.ThrowsAsync<HttpRequestException>(() => UpdateManifest.CheckAsync(http, "0.7.1", keys, new[] { root + "/absent.json" }, CancellationToken.None));
+        }
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task TelechargementEnQuatreFlux(bool serverRanges)
+    {
+        byte[] payload = new byte[9 * 1024 * 1024 + 123];
+        new Random(5).NextBytes(payload);
+        var (listener, root) = Serve(path => path == "/gros.dmg" ? (200, payload) : (404, Array.Empty<byte>()), ranges: serverRanges);
+        string dir = Path.Combine(Path.GetTempPath(), "sm-maj-flux-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            using (listener)
+            {
+                using var http = UpdateManifest.CreateClient("0.7.1");
+                string partial = Path.Combine(dir, "gros.dmg.part");
+                long last = 0;
+                bool ok = await UpdateManifest.TryParallelAsync(http, root + "/gros.dmg", partial, payload.Length, (d, _) => last = d, CancellationToken.None);
+                Assert.That(ok, Is.EqualTo(serverRanges), "sans plages, repli sur une seule connexion");
+                if (serverRanges)
+                {
+                    Assert.That(System.IO.File.ReadAllBytes(partial), Is.EqualTo(payload));
+                    Assert.That(last, Is.EqualTo(payload.Length));
+                }
+                else
+                {
+                    Assert.That(System.IO.File.Exists(partial), Is.False, "fichier partiel effacé");
+                }
+            }
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
     }
 
     private static int FreePort()

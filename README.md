@@ -95,9 +95,14 @@ Sur le PC de jeu, la fenêtre du **collecteur** a le même bouton (jamais de vé
   la version sans installation (.zip) remplace son dossier.
 - **Linux** : l'archive remplace `~/.local/share/secondmonitor` puis `installer.sh --silencieux` rafraîchit les raccourcis.
 
-Les versions sont annoncées par le manifeste `secondmonitor.json` du dépôt [OneDrop3D/mises-a-jour](https://github.com/OneDrop3D/mises-a-jour)
-(même format que Multibook et ClickDeck), écrit par OneDrop3D à chaque publication. Seuls les fichiers des releases de
-OneDrop3D/SecondMonitor, en https et avec leur SHA-256, sont acceptés.
+Même système de mise à jour que Multibook et l'application ClickDeck : le manifeste `secondmonitor.json` est lu sur le site
+OneDrop3D (`/api/mises-a-jour/secondmonitor`, dès que son adresse est connue : `SECONDMONITOR_SITE_MAJ`) et sur le dépôt
+[OneDrop3D/mises-a-jour](https://github.com/OneDrop3D/mises-a-jour) ; la version la plus haute l'emporte, une source injoignable
+est ignorée. Seuls sont acceptés, en https et avec leur SHA-256, les fichiers des releases de OneDrop3D/mises-a-jour
+(étiquettes `secondmonitor-v<version>`, comme les autres produits), ceux des releases de OneDrop3D/SecondMonitor (versions
+publiées jusqu'ici) et ceux du site qui a donné le manifeste. Un système dont le fichier n'a pas encore été reconstruit pour la
+dernière version se voit proposer la version de son fichier, jamais une version qu'il ne peut pas installer. Les gros fichiers
+se téléchargent sur quatre connexions en parallèle.
 
 ## Démarrer
 
