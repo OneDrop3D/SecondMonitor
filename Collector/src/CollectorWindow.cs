@@ -153,6 +153,7 @@ namespace SecondMonitor.Collector
                     },
                     diagnostic = s.Diagnostic,
                     menuStands = s.MenuStandsLmu,
+                    musique = new { active = s.MusiqueDeezer, possible = runtime.Engineer?.MusicAvailable ?? false },
                     menuStandsDernier = runtime.Engineer?.LastPitMenu,
                     mesures = s.Diagnostic ? runtime.Diagnostics.Sample()?.Text : null,
                 });
@@ -267,6 +268,16 @@ namespace SecondMonitor.Collector
                             runtime.Settings.Save();
                             engineer?.SettingsChanged();
                             SendState();
+                            break;
+                        case "musique-deezer":
+                            runtime.Settings.MusiqueDeezer = root.GetProperty("valeur").GetBoolean();
+                            runtime.Settings.Save();
+                            engineer?.SettingsChanged();
+                            SendState();
+                            break;
+                        case "voix-joue":
+                            // La page joue (ou a fini) la voix de l'ingénieur : SecondMonitor efface la musique pendant ce temps.
+                            _ = engineer?.ReportVoiceAsync(root.GetProperty("valeur").GetBoolean());
                             break;
                         case "stand-tester":
                             if (engineer != null)

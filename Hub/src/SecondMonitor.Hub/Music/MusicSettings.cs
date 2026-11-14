@@ -29,6 +29,30 @@ public sealed class MusicSettings
 
     /// <summary>Mac : l'autorisation Accessibilité a déjà été demandée une fois (on ne la redemande pas tout seul).</summary>
     public bool AccessibilityAsked { get; set; }
+
+    /// <summary>
+    /// Où joue la musique : « ordinateur » (Deezer de l'ordinateur de SecondMonitor) ou « pc » (Deezer du PC de jeu, par le
+    /// collecteur : la musique arrive dans le casque du pilote ; la recherche et les commandes restent ici).
+    /// </summary>
+    public string Output { get; set; } = "ordinateur";
+
+    /// <summary>Playlist (ou album, artiste) préférée : lancée par « Lecture » quand rien n'est en cours, et à la voix (« mets ma playlist »).</summary>
+    public MusicFavorite? Favorite { get; set; }
+
+    /// <summary>Lancer la playlist préférée toute seule au début de chaque session où la musique est permise.</summary>
+    public bool FavoriteAutoPlay { get; set; }
+}
+
+/// <summary>Élément Deezer choisi comme préféré.</summary>
+public sealed class MusicFavorite
+{
+    public string Kind { get; set; } = "playlist";
+
+    public long Id { get; set; }
+
+    public string Title { get; set; } = "";
+
+    public string? Picture { get; set; }
 }
 
 public sealed class MusicSettingsStore
@@ -82,5 +106,10 @@ public sealed class MusicSettingsStore
         s.DuckMode = s.DuckMode is "volume" or "aucun" ? s.DuckMode : "pause";
         s.DuckVolumePct = Math.Clamp(s.DuckVolumePct, 0, 90);
         s.VolumeStepPct = Math.Clamp(s.VolumeStepPct, 5, 50);
+        s.Output = s.Output == "pc" ? "pc" : "ordinateur";
+        if (s.Favorite != null && (s.Favorite.Id <= 0 || !DeezerCatalog.TryParseKind(s.Favorite.Kind, out MusicKind k) || k == MusicKind.Any))
+        {
+            s.Favorite = null; // préféré illisible : oublié
+        }
     }
 }

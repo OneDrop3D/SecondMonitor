@@ -3,6 +3,7 @@ namespace SecondMonitor.Hub.Tests;
 using System.Text;
 using NUnit.Framework;
 using SecondMonitor.Hub.Core.Ai;
+using SecondMonitor.Hub.Core.Music;
 using SecondMonitor.Hub.Core.Race;
 
 /// <summary>
@@ -75,6 +76,32 @@ public class RetoursPiloteTests
         {
             Assert.That(hint, Does.Contain(w));
         }
+    }
+
+    // ───── Musique : playlist préférée, « 10 heures » ─────
+
+    [TestCase("mets ma playlist")]
+    [TestCase("lance ma playlist préférée s'il te plaît")]
+    [TestCase("playlist préférée")]
+    public void MaPlaylistLanceLaPreferee(string phrase)
+    {
+        Assert.That(MusicCommands.Parse(phrase)?.Action, Is.EqualTo(MusicAction.Favorite), phrase);
+    }
+
+    [Test]
+    public void LaPlaylistRockResteUneRecherche()
+    {
+        MusicIntent intent = MusicCommands.Parse("mets la playlist rock");
+        Assert.That(intent?.Action, Is.EqualTo(MusicAction.Open));
+    }
+
+    [Test]
+    public void DixHeuresEstDeezerQuandOnLeLance()
+    {
+        string corrected = RadioLexicon.Correct("lance 10 heures");
+        Assert.That(corrected, Is.EqualTo("lance Deezer"));
+        Assert.That(MusicCommands.Parse(corrected)?.Action, Is.EqualTo(MusicAction.Play));
+        Assert.That(RadioLexicon.Correct("il est 10 heures"), Is.EqualTo("il est 10 heures"));
     }
 
     // ───── Heure ─────

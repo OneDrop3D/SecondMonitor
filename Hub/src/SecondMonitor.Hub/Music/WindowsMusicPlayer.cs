@@ -1,5 +1,12 @@
+// Partagé avec le collecteur du PC de jeu (sans usings implicites ni annotations par défaut).
+#nullable enable
 namespace SecondMonitor.Hub.Music;
 
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -38,11 +45,12 @@ public sealed class WindowsMusicPlayer : IMusicPlayer
         """;
 
     private readonly string _script;
-    private readonly Func<MusicSettings> _settings;
+    private readonly Func<bool> _webMode;
 
-    public WindowsMusicPlayer(string dataDir, Func<MusicSettings> settings)
+    /// <param name="webMode">Vrai : lecteur web Deezer dans le navigateur (n'importe quelle session multimédia), sinon l'application Deezer.</param>
+    public WindowsMusicPlayer(string dataDir, Func<bool> webMode)
     {
-        _settings = settings;
+        _webMode = webMode;
         string dir = Path.Combine(dataDir, "musique");
         Directory.CreateDirectory(dir);
         _script = Path.Combine(dir, "smtc.ps1");
@@ -81,7 +89,7 @@ public sealed class WindowsMusicPlayer : IMusicPlayer
     {
         var (code, output) = await ProcessRunner.RunAsync(
             "powershell.exe",
-            new[] { "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", _script, "-Action", action, "-Web", _settings().Player == "web" ? "1" : "0" },
+            new[] { "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", _script, "-Action", action, "-Web", _webMode() ? "1" : "0" },
             ct,
             6000);
         if (code != 0 || !output.StartsWith('{'))

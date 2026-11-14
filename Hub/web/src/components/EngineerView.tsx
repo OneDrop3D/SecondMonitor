@@ -169,6 +169,7 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
       <div className="stack">
         <TestCard />
         <BehaviourCard settings={settings} save={save} />
+        <LexiconCard settings={settings} save={save} />
         <AudioDevicesCard />
         <WheelBindingCard />
         <ModelsCard settings={settings} save={save} models={models} reload={loadModels} />
@@ -374,6 +375,74 @@ function BehaviourCard({ settings, save }: { settings: HubSettings | null; save:
         <div className="secondary small">
           Recommandé : pour les questions reconnues (stand, essence, écarts, pneus, vitesses, pluie…), le hub répond directement avec ses calculs,
           plus vite et sans erreur. L'IA ne formule que les questions libres.
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Lexique de piste : le vocabulaire que l'ingénieur comprend (box box, delta, stint, brake bias…), les erreurs de dictée corrigées
+ * d'office, et les corrections du pilote (« ce que la dictée entend » → « ce que j'ai dit »). Aussi la longueur des morceaux d'audio.
+ */
+function LexiconCard({ settings, save }: { settings: HubSettings | null; save: (p: (s: HubSettings) => HubSettings) => void }) {
+  const { data } = usePoll<{ vocabulary: { word: string; meaning: string }[]; builtin: string[] }>('/api/ai/lexique', 3_600_000);
+  const [heard, setHeard] = useState('');
+  const [meant, setMeant] = useState('');
+  if (!settings) return null;
+  const mine = settings.ai.lexicon ?? [];
+  const setMine = (list: { heard: string; meant: string }[]) => save((s) => ({ ...s, ai: { ...s.ai, lexicon: list } }));
+  const add = () => {
+    const h = heard.trim(), m = meant.trim();
+    if (!h || !m) return;
+    setMine([...mine.filter((e) => e.heard.toLowerCase() !== h.toLowerCase()), { heard: h, meant: m }]);
+    setHeard('');
+    setMeant('');
+  };
+  return (
+    <section className="card">
+      <div className="card-head"><span className="card-title">Lexique de piste</span><span className="muted">vocabulaire et dictée</span></div>
+      <div className="card-body stack-sm">
+        <div className="secondary small">L'ingénieur comprend et emploie ces mots :</div>
+        <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+          {(data?.vocabulary ?? []).map((v) => <span key={v.word} className="chip" title={v.meaning}>{v.word}</span>)}
+        </div>
+        {data?.builtin && data.builtin.length > 0 && (
+          <div className="secondary small">Erreurs de dictée corrigées d'office : {data.builtin.join(' · ')}.</div>
+        )}
+        <div className="secondary small" style={{ marginTop: 4 }}>
+          <b>Vos corrections</b> : quand la dictée entend toujours le même mot de travers, ajoutez-le ici (majuscules et accents ne comptent pas).
+          Le test « Écoute » ci-dessus montre la phrase avant et après correction.
+        </div>
+        {mine.length > 0 && (
+          <div className="stack-sm">
+            {mine.map((e) => (
+              <div key={e.heard} className="row">
+                <span className="code">{e.heard}</span>
+                <span className="muted">→</span>
+                <span className="code">{e.meant}</span>
+                <span className="spacer" />
+                <button className="close" aria-label={`Retirer ${e.heard}`} onClick={() => setMine(mine.filter((x) => x.heard !== e.heard))}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="row">
+          <input className="input compact-input" placeholder="entendu (ex. vexe)" value={heard} onChange={(e) => setHeard(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+          <span className="muted">→</span>
+          <input className="input compact-input" placeholder="voulu (ex. BB)" value={meant} onChange={(e) => setMeant(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+          <button className="btn" onClick={add} disabled={!heard.trim() || !meant.trim()}>Ajouter</button>
+        </div>
+        <div className="row" style={{ marginTop: 6 }}>
+          <span className="secondary">Audio envoyé au modèle « écoute » par morceaux d'au plus</span>
+          <select className="select compact" value={settings.ai.listenChunkSeconds ?? 28} onChange={(e) => save((s) => ({ ...s, ai: { ...s.ai, listenChunkSeconds: Number(e.target.value) } }))}>
+            {[10, 20, 28, 45, 55, 90].map((v) => <option key={v} value={v}>{v} s</option>)}
+          </select>
+        </div>
+        <div className="secondary small">
+          La voix est toujours envoyée en WAV 16 kHz mono (le format que tous les modèles acceptent), sans les silences.
+          Un message plus long est coupé sur un silence ; si le modèle refuse un morceau, il est renvoyé en morceaux de 10 s.
+          Pour un modèle limité à 30 s, gardez 28 s ; à 60 s, 55 s.
         </div>
       </div>
     </section>

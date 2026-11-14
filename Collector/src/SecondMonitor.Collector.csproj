@@ -39,6 +39,8 @@
     <Compile Include="..\..\Hub\src\SecondMonitor.Hub.Core\Update\*.cs" LinkBase="Linked\Update" />
     <!-- Rejeu d'un enregistrement du hub (diagnostic : mesurer le collecteur sur une vraie course sans le jeu). -->
     <Compile Include="..\..\Hub\src\SecondMonitor.Hub.Core\Network\CaptureFile.cs" LinkBase="Linked\Diagnostic" />
+    <!-- Musique Deezer du PC de jeu, commandée par SecondMonitor : même lecteur Windows que SecondMonitor (contrôles multimédia, volume de Deezer seul). -->
+    <Compile Include="..\..\Hub\src\SecondMonitor.Hub\Music\IMusicPlayer.cs;..\..\Hub\src\SecondMonitor.Hub\Music\WindowsMusicPlayer.cs" LinkBase="Linked\Music" />
     <Compile Include="..\..\Remote\SecondMonitor.Remote\PacketCompressionLayer.cs;..\..\Remote\SecondMonitor.Remote\Adapter\*.cs;..\..\Remote\SecondMonitor.Remote\Comparators\*.cs" LinkBase="Linked\Remote" />
   </ItemGroup>
 

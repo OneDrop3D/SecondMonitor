@@ -49,3 +49,11 @@
 .music-set-row > .secondary { min-width: 170px; }
 .music-callout { align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .music-guide { border-top: 1px solid var(--border); padding-top: 12px; }
+
+/* Playlist préférée : étoile des résultats, encadré de la préférée. */
+.music-result-row { display: flex; align-items: stretch; gap: 4px; }
+.music-result-row .music-result { flex: 1; min-width: 0; }
+.music-star { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-muted); font-size: 18px; width: 38px; cursor: pointer; }
+.music-star:hover, .music-star.on { color: #f5b400; }
+.music-fav { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; }
+.music-fav-img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }

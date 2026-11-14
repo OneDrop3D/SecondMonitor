@@ -3,7 +3,7 @@ import { api } from '../live';
 import type { HubSettings, HubStatus, RaceSnapshot } from '../types';
 import { ThermalProfiles } from './ThermalProfiles';
 import { WheelBindingCard } from './EngineerView';
-import { isRadioStation, setRadioStation } from '../radio';
+import { isRadioStation, setRadioStation, useRadio } from '../radio';
 import { MusicCard } from '../music/MusicCard';
 import { UpdateCard } from './UpdateBanner';
 import { useStations, type VoiceOutput } from '../stations';
@@ -105,7 +105,17 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
 /** Voix de l'ingénieur : sur le PC de jeu (collecteur, casque du pilote), sur les écrans de SecondMonitor, ou les deux. */
 function VoiceOutputCard({ value, saving, onChange }: { value: VoiceOutput; saving: boolean; onChange: (v: VoiceOutput) => void }) {
   const { stations } = useStations();
+  const r = useRadio();
   const pc = stations.find((s) => s.voice || s.mic);
+  const pcPlays = value !== 'ecrans' && stations.some((s) => s.voice);
+  // Ce que fait CET écran, et pourquoi (même règle que la lecture : App.tsx, screensPlayVoice).
+  const here = !r.speakHere
+    ? 'Ici : voix coupée (case décochée).'
+    : value === 'pc' && pcPlays
+      ? 'Ici : silencieux, la voix passe par le casque du PC de jeu.'
+      : value === 'pc'
+        ? 'Ici : la voix sort, car aucun PC de jeu ne la joue pour l\'instant (collecteur fermé, ou « Entendre l\'ingénieur sur ce PC » décoché). Décochez la case pour la couper ici.'
+        : value === 'deux' && pcPlays ? 'Ici : la voix sort aussi (choix « Les deux »).' : 'Ici : la voix sort.';
   return (
     <div className="card">
       <div className="card-head"><span className="card-title">Voix de l'ingénieur</span><span className="muted">{pc ? `${pc.name}${pc.voice ? ' : voix' : ''}${pc.voice && pc.mic ? ' et' : pc.mic ? ' :' : ''}${pc.mic ? ' micro' : ''}` : 'PC de jeu non déclaré'}</span></div>
@@ -118,6 +128,11 @@ function VoiceOutputCard({ value, saving, onChange }: { value: VoiceOutput; savi
             ))}
           </div>
         </div>
+        <label className="switch">
+          <input type="checkbox" checked={r.speakHere} onChange={(e) => r.setSpeakHere(e.target.checked)} />
+          <span>Cet écran peut faire entendre la voix (réglage propre à cet écran, comme « Écouter ici »)</span>
+        </label>
+        <div className={`status ${r.speakHere && !(value === 'pc' && pcPlays) ? 'short' : ''}`}><span className="ico">{r.speakHere && !(value === 'pc' && pcPlays) ? '🔊' : '🔇'}</span>{here}</div>
         <p className="secondary small" style={{ margin: 0 }}>
           Le PC de jeu fait entendre la voix (casque du pilote) quand « Entendre l'ingénieur sur ce PC » est coché dans la fenêtre du <b>collecteur</b>,
           carte « Radio de l'ingénieur ». Il peut aussi enregistrer son propre micro avec le bouton radio du PC de jeu.

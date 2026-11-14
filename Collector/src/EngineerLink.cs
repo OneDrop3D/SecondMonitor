@@ -25,6 +25,7 @@ namespace SecondMonitor.Collector
         private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(90) }; // transcription + réflexion
 
         private readonly CollectorRuntime _runtime;
+        private readonly CollectorMusic _music;
         private readonly CancellationTokenSource _stop = new();
         private readonly SemaphoreSlim _wake = new(0);
         private volatile bool _dirty = true;
@@ -35,6 +36,7 @@ namespace SecondMonitor.Collector
         public EngineerLink(CollectorRuntime runtime)
         {
             _runtime = runtime;
+            _music = new CollectorMusic(runtime.DataDirectory);
             _ = Task.Run(LoopAsync);
         }
 
@@ -61,6 +63,17 @@ namespace SecondMonitor.Collector
 
         /// <summary>Le pilote laisse SecondMonitor régler le menu des stands de Le Mans Ultimate depuis ce PC (réglage du collecteur).</summary>
         private bool WantsPit => _runtime.Settings.MenuStandsLmu;
+
+        /// <summary>SecondMonitor peut faire jouer Deezer sur ce PC (case du collecteur, Windows seulement).</summary>
+        private bool WantsMusic => _runtime.Settings.MusiqueDeezer && _music.Available;
+
+        /// <summary>Deezer pilotable sur ce système.</summary>
+        public bool MusicAvailable => _music.Available;
+
+        /// <summary>
+        /// La voix de l'ingénieur commence ou s'arrête dans le casque : SecondMonitor met la musique en pause puis la relance.
+        /// </summary>
+        public Task ReportVoiceAsync(bool playing) => WantsMusic ? SendAsync(_socket, new { type = "voice", playing }, _stop.Token) : Task.CompletedTask;
 
         private ClientWebSocket _socket;
         private readonly SemaphoreSlim _sendLock = new(1, 1);
@@ -214,7 +227,7 @@ namespace SecondMonitor.Collector
             while (!stop.IsCancellationRequested)
             {
                 string host = FirstHub();
-                if (!WantsVoice && !WantsMic && !WantsPit)
+                if (!WantsVoice && !WantsMic && !WantsPit && !WantsMusic)
                 {
                     Status = _pageAttached && Settings.Parler && !_micAvailable
                         ? "Micro indisponible dans cette fenêtre : la radio reste sur l'ordinateur de SecondMonitor."
@@ -279,7 +292,7 @@ namespace SecondMonitor.Collector
             Task receive = ReceiveAsync(socket, stop);
             while (socket.State == WebSocketState.Open && !stop.IsCancellationRequested)
             {
-                if (!WantsVoice && !WantsMic && !WantsPit || FirstHub() != host)
+                if (!WantsVoice && !WantsMic && !WantsPit && !WantsMusic || FirstHub() != host)
                 {
                     // Plus rien à faire sur ce PC (ou autre SecondMonitor) : on se retire proprement.
                     leaving = true;
@@ -311,7 +324,7 @@ namespace SecondMonitor.Collector
         private Task SendStationAsync(ClientWebSocket socket, CancellationToken stop)
         {
             string name = $"PC de jeu ({Environment.MachineName})";
-            return SendAsync(socket, new { type = "station", voice = WantsVoice, mic = WantsMic, pit = WantsPit, name }, stop);
+            return SendAsync(socket, new { type = "station", voice = WantsVoice, mic = WantsMic, pit = WantsPit, music = WantsMusic, name }, stop);
         }
 
         /// <summary>Un seul envoi à la fois sur la liaison (le WebSocket ne supporte pas deux envois simultanés).</summary>
@@ -360,6 +373,32 @@ namespace SecondMonitor.Collector
                 catch (Exception)
                 {
                     // Liaison coupée entre-temps : le résultat reste dans le journal du collecteur.
+                }
+            });
+        }
+
+        /// <summary>Commande musique de SecondMonitor (Deezer de ce PC) : exécutée à part, la réponse repart sur la liaison.</summary>
+        private void HandleMusic(JsonElement data)
+        {
+            if (data.ValueKind != JsonValueKind.Object)
+            {
+                return;
+            }
+
+            JsonElement order = data.Clone();
+            ClientWebSocket socket = _socket;
+            _ = Task.Run(async () =>
+            {
+                object result = WantsMusic
+                    ? await _music.HandleAsync(order, _stop.Token).ConfigureAwait(false)
+                    : new { type = "musicResult", id = order.TryGetProperty("id", out JsonElement i) ? i.ToString() : string.Empty, ok = false, error = "musique non autorisée sur ce PC" };
+                try
+                {
+                    await SendAsync(socket, result, _stop.Token).ConfigureAwait(false);
+                }
+                catch (Exception)
+                {
+                    // Liaison coupée entre-temps.
                 }
             });
         }
@@ -447,6 +486,9 @@ namespace SecondMonitor.Collector
                         break;
                     case "pitMenuTest":
                         HandlePitMenu(data, test: true);
+                        break;
+                    case "music":
+                        HandleMusic(data);
                         break;
                     case "stations":
                         if (data.ValueKind == JsonValueKind.Object && data.TryGetProperty("voiceOutput", out JsonElement v) && v.ValueKind == JsonValueKind.String)

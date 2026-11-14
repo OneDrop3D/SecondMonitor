@@ -164,6 +164,8 @@
       </div>
       <div class="hint" id="stand-aide">Quand l'ingénieur l'a activé et que vous demandez « softs neufs » ou « la réparation », il règle le menu des stands du jeu (API locale de LMU, port 6397). Le test lit seulement le menu, sans rien changer.</div>
       <div class="hint" id="stand-resultat"></div>
+      <label class="switch" style="margin-top:8px"><input type="checkbox" id="musique-deezer"><span>Musique Deezer de SecondMonitor sur ce PC (dans le casque)</span></label>
+      <div class="hint" id="musique-aide">SecondMonitor cherche et commande ; la playlist joue dans l'application Deezer de ce PC, et se met en pause quand l'ingénieur parle. Dans SecondMonitor : Réglages › Musique › « Musique sur : le PC de jeu ».</div>
     </div>
   </details>
 
@@ -265,6 +267,11 @@
     $('demo').checked = e.demo;
     $('diagnostic').checked = e.diagnostic;
     $('stand-autoriser').checked = !!e.menuStands;
+    if (e.musique) {
+      $('musique-deezer').checked = !!e.musique.active;
+      $('musique-deezer').disabled = !e.musique.possible;
+      if (!e.musique.possible) $('musique-aide').textContent = 'Musique Deezer pilotable seulement sous Windows pour l\'instant.';
+    }
     if (e.menuStandsDernier && !$('stand-resultat').textContent) $('stand-resultat').textContent = e.menuStandsDernier;
     $('mesures').classList.toggle('show', !!e.mesures);
     $('mesures').textContent = e.mesures || '';
@@ -342,6 +349,7 @@
   $('demo').addEventListener('change', (e) => send('demo', e.target.checked));
   $('diagnostic').addEventListener('change', (e) => send('diagnostic', e.target.checked));
   $('stand-autoriser').addEventListener('change', (e) => send('stand-autoriser', e.target.checked));
+  $('musique-deezer').addEventListener('change', (e) => send('musique-deezer', e.target.checked));
   $('stand-tester').addEventListener('click', () => { $('stand-resultat').textContent = 'Lecture du menu des stands…'; send('stand-tester'); });
   $('btn-relancer').addEventListener('click', () => send('relancer'));
   $('btn-dossier').addEventListener('click', () => send('dossier'));
@@ -491,6 +499,9 @@
     arreterVoix();
     const a = new Audio('data:audio/wav;base64,' + b64);
     ri.courant = a;
+    // Musique Deezer sur ce PC : SecondMonitor la met en pause pendant la voix, puis la relance.
+    a.addEventListener('playing', () => send('voix-joue', true));
+    for (const ev of ['ended', 'pause', 'error']) a.addEventListener(ev, () => send('voix-joue', false));
     await versSortie(a);
     if (ri.courant !== a) return;
     try { await a.play(); } catch (err) { riErreur('lecture de la voix impossible (' + err.message + ').'); }

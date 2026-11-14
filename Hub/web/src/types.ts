@@ -345,6 +345,10 @@ export interface HubSettings {
     specialists?: Record<string, string>;
     /** Au-delà (s), « Copy, je regarde ça et je reviens vers vous » et la réponse arrive ensuite. */
     ackAfterSeconds?: number;
+    /** Lexique de piste : corrections du pilote pour la dictée (« ce qu'elle entend » → « ce que j'ai dit »). */
+    lexicon?: { heard: string; meant: string }[];
+    /** Durée maximale (s) d'un morceau d'audio envoyé au modèle « écoute » (découpé sur un silence au-delà). */
+    listenChunkSeconds?: number;
     proactiveMinIntervalSec: number;
     strictAnswers: boolean;
     wetThresholdPct: number;

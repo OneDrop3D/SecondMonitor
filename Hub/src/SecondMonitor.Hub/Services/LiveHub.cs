@@ -28,6 +28,7 @@ public sealed class LiveHub : BackgroundService
     private readonly ConcurrentDictionary<Guid, WebSocket> _clients = new();
     private readonly ConcurrentDictionary<Guid, AudioStation> _stations = new();
     private readonly ConcurrentDictionary<Guid, bool> _noSnapshots = new();
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<JsonElement>> _musicWaits = new();
     private readonly RaceEngine _engine;
     private readonly List<object> _radioHistory = new();
     private long _lastSequence = -1;
@@ -203,6 +204,25 @@ public sealed class LiveHub : BackgroundService
                 return;
             }
 
+            if (type.GetString() == "musicResult" && _stations.ContainsKey(id))
+            {
+                // Réponse du collecteur à une commande musique (Deezer du PC de jeu).
+                string reqId = root.TryGetProperty("id", out JsonElement mid) ? mid.ToString() : string.Empty;
+                if (_musicWaits.TryRemove(reqId, out TaskCompletionSource<JsonElement>? wait))
+                {
+                    wait.TrySetResult(root.Clone());
+                }
+
+                return;
+            }
+
+            if (type.GetString() == "voice" && _stations.ContainsKey(id))
+            {
+                // La voix de l'ingénieur commence / s'arrête dans le casque du PC de jeu : la musique s'efface puis revient.
+                StationVoice?.Invoke(root.TryGetProperty("playing", out JsonElement pl) && pl.ValueKind == JsonValueKind.True);
+                return;
+            }
+
             if (type.GetString() != "station")
             {
                 return;
@@ -211,13 +231,14 @@ public sealed class LiveHub : BackgroundService
             bool voice = root.TryGetProperty("voice", out JsonElement v) && v.ValueKind == JsonValueKind.True;
             bool mic = root.TryGetProperty("mic", out JsonElement m) && m.ValueKind == JsonValueKind.True;
             bool pit = root.TryGetProperty("pit", out JsonElement p) && p.ValueKind == JsonValueKind.True;
+            bool music = root.TryGetProperty("music", out JsonElement mu) && mu.ValueKind == JsonValueKind.True;
             string name = root.TryGetProperty("name", out JsonElement n) && n.ValueKind == JsonValueKind.String ? n.GetString()! : "PC de jeu";
             if (name.Length > 80)
             {
                 name = name[..80];
             }
 
-            if (!voice && !mic && !pit)
+            if (!voice && !mic && !pit && !music)
             {
                 if (_stations.TryRemove(id, out _))
                 {
@@ -228,7 +249,7 @@ public sealed class LiveHub : BackgroundService
             }
 
             DateTime since = _stations.TryGetValue(id, out AudioStation? before) ? before.Since : DateTime.Now;
-            var station = new AudioStation(name, voice, mic, address, since, pit);
+            var station = new AudioStation(name, voice, mic, address, since, pit, music);
             if (before != station)
             {
                 _stations[id] = station;
@@ -243,6 +264,51 @@ public sealed class LiveHub : BackgroundService
 
     /// <summary>Résultat du menu des stands de Le Mans Ultimate renvoyé par le collecteur.</summary>
     public event Action<PitMenuReply>? PitMenuResult;
+
+    /// <summary>La voix de l'ingénieur joue (vrai) ou s'arrête (faux) sur le PC de jeu.</summary>
+    public event Action<bool>? StationVoice;
+
+    /// <summary>Un collecteur fait jouer la musique Deezer sur le PC de jeu.</summary>
+    public bool HasMusicStation => _stations.Values.Any(s => s.Music);
+
+    /// <summary>
+    /// Commande musique envoyée au collecteur du PC de jeu (« state », « play », « pause », « next », « previous », « open », « volume ») ;
+    /// sa réponse (état de Deezer) ou null si aucun collecteur ne répond à temps.
+    /// </summary>
+    public async Task<JsonElement?> RequestMusicAsync(string action, string? link, int? volume, bool web, CancellationToken ct, int timeoutMs = 8000)
+    {
+        foreach (var (id, station) in _stations.Where(x => x.Value.Music).OrderBy(x => x.Value.Since))
+        {
+            if (!_clients.TryGetValue(id, out WebSocket? socket) || socket.State != WebSocketState.Open)
+            {
+                continue;
+            }
+
+            string reqId = Guid.NewGuid().ToString("N");
+            var wait = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _musicWaits[reqId] = wait;
+            try
+            {
+                await SendAsync(socket, Serialize("music", new { id = reqId, action, link, volume, web }), ct);
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                timeout.CancelAfter(timeoutMs);
+                using (timeout.Token.Register(() => wait.TrySetCanceled()))
+                {
+                    return await wait.Task;
+                }
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                return null; // pas de réponse à temps
+            }
+            finally
+            {
+                _musicWaits.TryRemove(reqId, out _);
+            }
+        }
+
+        return null;
+    }
 
     /// <summary>Un collecteur peut régler le menu des stands de Le Mans Ultimate.</summary>
     public bool HasPitStation => _stations.Values.Any(s => s.Pit);
@@ -315,10 +381,10 @@ public sealed class LiveHub : BackgroundService
 }
 
 /// <summary>
-/// Poste audio : un collecteur qui joue la voix de l'ingénieur (<paramref name="Voice"/>) et/ou enregistre le micro
-/// (<paramref name="Mic"/>) sur le PC de jeu.
+/// Poste audio : un collecteur qui joue la voix de l'ingénieur (<paramref name="Voice"/>), enregistre le micro
+/// (<paramref name="Mic"/>), règle le menu des stands (<paramref name="Pit"/>) et/ou fait jouer Deezer (<paramref name="Music"/>) sur le PC de jeu.
 /// </summary>
-public sealed record AudioStation(string Name, bool Voice, bool Mic, string? Address, DateTime Since, bool Pit = false);
+public sealed record AudioStation(string Name, bool Voice, bool Mic, string? Address, DateTime Since, bool Pit = false, bool Music = false);
 
 /// <summary>Réponse du collecteur pour le menu des stands de Le Mans Ultimate.</summary>
 public sealed record PitMenuReply(string Id, bool Ok, bool Test, string Text);

@@ -5,6 +5,8 @@ export interface AudioStation {
   name: string;
   voice: boolean;
   mic: boolean;
+  /** Le collecteur fait jouer la musique Deezer sur le PC de jeu. */
+  music?: boolean;
   address?: string | null;
   since: string;
 }

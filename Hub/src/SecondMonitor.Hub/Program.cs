@@ -149,6 +149,10 @@ app.MapPut("/api/settings", (SettingsStore store, HubSettings incoming) =>
         s.DemoMode = incoming.DemoMode;
         s.DemoSpeed = incoming.DemoSpeed;
         s.Ai = incoming.Ai ?? new AiSettings();
+        // Lexique du pilote : seulement des corrections complètes et courtes ; morceaux d'audio entre 5 s et 2 min.
+        s.Ai.Lexicon = (s.Ai.Lexicon ?? new()).Where(SecondMonitor.Hub.Core.Ai.RadioLexicon.IsValid)
+            .Select(e => new SecondMonitor.Hub.Core.Ai.LexiconEntry { Heard = e.Heard.Trim(), Meant = e.Meant.Trim() }).Take(200).ToList();
+        s.Ai.ListenChunkSeconds = Math.Clamp(s.Ai.ListenChunkSeconds <= 0 ? 28 : s.Ai.ListenChunkSeconds, 5, 120);
         s.ThermalProfiles = incoming.ThermalProfiles ?? new List<SecondMonitor.Hub.Core.Race.ThermalProfile>();
         s.VoiceOutput = incoming.VoiceOutput is "pc" or "ecrans" or "deux" ? incoming.VoiceOutput : s.VoiceOutput;
     });
@@ -156,6 +160,12 @@ app.MapPut("/api/settings", (SettingsStore store, HubSettings incoming) =>
 });
 
 // ───── Ingénieur IA (Ollama, sur cet ordinateur uniquement) ─────
+// Lexique de piste : vocabulaire compris et corrections d'office de la dictée (les corrections du pilote sont dans les réglages).
+app.MapGet("/api/ai/lexique", () => Results.Json(new
+{
+    vocabulary = SecondMonitor.Hub.Core.Ai.RadioLexicon.Vocabulary.Select(v => new { word = v.Word, meaning = v.Meaning }),
+    builtin = SecondMonitor.Hub.Core.Ai.RadioLexicon.BuiltinExamples,
+}));
 app.MapGet("/api/ai/models", async (OllamaClient ollama, CancellationToken ct) =>
 {
     try

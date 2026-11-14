@@ -57,6 +57,12 @@ namespace SecondMonitor.Collector
         /// </summary>
         public bool MenuStandsLmu { get; set; } = true;
 
+        /// <summary>
+        /// SecondMonitor fait jouer sa musique Deezer sur ce PC (application Deezer de Windows), donc dans le casque du pilote :
+        /// recherche et commandes restent sur l'ordinateur de SecondMonitor (réglage « Musique sur : le PC de jeu »).
+        /// </summary>
+        public bool MusiqueDeezer { get; set; }
+
         [JsonIgnore]
         public string FilePath { get; private set; }
 
