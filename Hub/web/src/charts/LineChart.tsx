@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import { niceTicks, useWidth } from './useSize';
 
 export interface Point { x: number; y: number | null }
@@ -15,6 +15,8 @@ export interface Series {
   markers?: { x: number; y: number; title?: string }[];
   /** Série d'accompagnement (projection d'une autre série) : absente de la légende et de l'infobulle. */
   companion?: boolean;
+  /** Valeurs en paliers (rapport engagé) : pas de pente entre deux points. */
+  step?: boolean;
 }
 
 interface Props {
@@ -34,6 +36,16 @@ interface Props {
   legend?: boolean;
   ariaLabel: string;
   footer?: ReactNode;
+  /** Légende des séries en pointillés (par défaut « projection » ; null : rien). */
+  dashedLabel?: string | null;
+  /**
+   * Survol partagé entre plusieurs graphiques (même axe X) : position survolée et rappel quand elle change.
+   * Le réticule suit partout ; l'infobulle ne s'affiche que sur le graphique sous le pointeur.
+   */
+  hoverX?: number | null;
+  onHoverX?: (x: number | null) => void;
+  /** Graduations imposées sur l'axe Y (ex. rapports 1 à 7). */
+  yTicks?: number[];
 }
 
 const M = { l: 54, r: 14, t: 10, b: 26 };
@@ -42,14 +54,21 @@ const M = { l: 54, r: 14, t: 10, b: 26 };
  * Graphique en courbes : un seul axe Y, réticule + infobulle au survol, légende dès 2 séries,
  * pointillés pour les projections. Dessiné à la largeur réelle du conteneur.
  */
-export function LineChart({ series, height = 240, xFormat = (x) => String(x), yFormat = (y) => String(y), valueFormat, xTitle, yDomain, xDomain, band, refLines, emptyText = 'Pas encore de données.', legend, ariaLabel, footer }: Props) {
+export function LineChart({ series, height = 240, xFormat = (x) => String(x), yFormat = (y) => String(y), valueFormat, xTitle, yDomain, xDomain, band, refLines, emptyText = 'Pas encore de données.', legend, ariaLabel, footer, dashedLabel = 'projection', hoverX: sharedHoverX, onHoverX, yTicks }: Props) {
   const { ref, width } = useWidth<HTMLDivElement>();
-  const [hoverX, setHoverX] = useState<number | null>(null);
+  const [localHoverX, setLocalHoverX] = useState<number | null>(null);
+  const [pointerInside, setPointerInside] = useState(false);
+  const shared = onHoverX !== undefined;
+  const hoverX = shared ? sharedHoverX ?? null : localHoverX;
+  const setHoverX = (x: number | null) => (shared ? onHoverX!(x) : setLocalHoverX(x));
+  const clipId = `clip${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const H = Math.max(140, Math.min(height, Math.round(width * 0.75)));
   const fmtValue = valueFormat ?? yFormat;
 
   const scale = useMemo(() => {
-    const pts = series.flatMap((s) => s.points.filter((p) => p.y != null && isFinite(p.y)));
+    // Avec une fenêtre en X (zoom sur une zone), l'échelle verticale ne tient compte que des points visibles.
+    const inX = (x: number) => !xDomain || (x >= xDomain[0] && x <= xDomain[1]);
+    const pts = series.flatMap((s) => s.points.filter((p) => p.y != null && isFinite(p.y) && inX(p.x)));
     if (pts.length < 2) return null;
     const xs = pts.map((p) => p.x);
     const ys = pts.map((p) => p.y as number);
@@ -67,40 +86,44 @@ export function LineChart({ series, height = 240, xFormat = (x) => String(x), yF
     const sx = (x: number) => M.l + ((x - x0) / (x1 - x0)) * plotW;
     const sy = (y: number) => M.t + (1 - (Math.min(Math.max(y, y0), y1) - y0) / (y1 - y0)) * plotH;
     const xt = niceTicks(x0, x1, Math.max(2, Math.floor(plotW / 90)));
-    const yt = niceTicks(y0, y1, Math.max(2, Math.floor(plotH / 40)));
+    const yt = yTicks ? yTicks.filter((t) => t >= y0 && t <= y1) : niceTicks(y0, y1, Math.max(2, Math.floor(plotH / 40)));
     const allX = [...new Set(series.filter((s) => !s.companion).flatMap((s) => s.points.filter((p) => p.y != null).map((p) => p.x)))].sort((a, b) => a - b);
     return { x0, x1, y0, y1, sx, sy, xt, yt, plotW, plotH, allX };
-  }, [series, width, H, yDomain, xDomain, band, refLines]);
+  }, [series, width, H, yDomain, xDomain, band, refLines, yTicks]);
 
   const paths = useMemo(() => {
     if (!scale) return [];
     return series.map((s) => {
-      // Décimation : au plus ~2 points par pixel.
-      const stride = Math.max(1, Math.floor(s.points.length / (scale.plotW * 2)));
+      // Décimation : au plus ~2 points par pixel visible (rien de sauté pour les paliers, chaque changement compte).
+      const span = (s.points.at(-1)?.x ?? 1) - (s.points[0]?.x ?? 0);
+      const visible = xDomain && span > 0 ? Math.min(1, (scale.x1 - scale.x0) / span) : 1;
+      const stride = s.step ? 1 : Math.max(1, Math.floor((s.points.length * visible) / (scale.plotW * 2)));
       let d = '';
       let pen = false;
       s.points.forEach((p, i) => {
         if (p.y == null || !isFinite(p.y)) { pen = false; return; }
         if (stride > 1 && i % stride !== 0 && i !== s.points.length - 1) return;
-        d += `${pen ? 'L' : 'M'}${scale.sx(p.x).toFixed(1)},${scale.sy(p.y).toFixed(1)}`;
+        const x = scale.sx(p.x).toFixed(1), y = scale.sy(p.y).toFixed(1);
+        d += !pen ? `M${x},${y}` : s.step ? `H${x}V${y}` : `L${x},${y}`;
         pen = true;
       });
       return { s, d };
     });
-  }, [series, scale]);
+  }, [series, scale, xDomain]);
 
   const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
     if (!scale || scale.allX.length === 0) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const px = e.clientX - rect.left;
     const xVal = scale.x0 + ((px - M.l) / scale.plotW) * (scale.x1 - scale.x0);
+    setPointerInside(true);
     let lo = 0, hi = scale.allX.length - 1;
     while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (scale.allX[mid] < xVal) lo = mid; else hi = mid; }
     setHoverX(Math.abs(scale.allX[lo] - xVal) < Math.abs(scale.allX[hi] - xVal) ? scale.allX[lo] : scale.allX[hi]);
   };
 
   const hover = useMemo(() => {
-    if (hoverX == null || !scale) return null;
+    if (hoverX == null || !scale || hoverX < scale.x0 || hoverX > scale.x1) return null;
     const tol = (scale.x1 - scale.x0) / Math.max(20, scale.plotW / 3);
     const rows = series.filter((s) => !s.companion).map((s) => {
       let best: Point | null = null, bd = Infinity;
@@ -122,8 +145,8 @@ export function LineChart({ series, height = 240, xFormat = (x) => String(x), yF
               {s.label}
             </span>
           ))}
-          {series.some((s) => s.companion || s.dashed) && !series.every((s) => s.dashed) && (
-            <span className="legend-item muted"><span className="legend-line dashed" style={{ borderColor: 'var(--text-muted)' }} />projection</span>
+          {dashedLabel && series.some((s) => s.companion || s.dashed) && !series.every((s) => s.dashed) && (
+            <span className="legend-item muted"><span className="legend-line dashed" style={{ borderColor: 'var(--text-muted)' }} />{dashedLabel}</span>
           )}
           {band && <span className="legend-item muted"><span className="legend-band" />{band.label}</span>}
         </div>
@@ -132,7 +155,10 @@ export function LineChart({ series, height = 240, xFormat = (x) => String(x), yF
         {!scale ? (
           <div className="chart-empty" style={{ height: Math.min(H, 160) }}>{emptyText}</div>
         ) : (
-          <svg width={width} height={H} role="img" aria-label={ariaLabel} onPointerMove={onMove} onPointerLeave={() => setHoverX(null)} style={{ touchAction: 'pan-y' }}>
+          <svg width={width} height={H} role="img" aria-label={ariaLabel} onPointerMove={onMove} onPointerLeave={() => { setPointerInside(false); setHoverX(null); }} style={{ touchAction: 'pan-y' }}>
+            <defs>
+              <clipPath id={clipId}><rect x={M.l} y={0} width={scale.plotW} height={H - M.b} /></clipPath>
+            </defs>
             {band && (
               <rect x={M.l} width={scale.plotW} y={scale.sy(band.y1)} height={Math.max(0, scale.sy(band.y0) - scale.sy(band.y1))} fill="var(--band)" />
             )}
@@ -157,12 +183,14 @@ export function LineChart({ series, height = 240, xFormat = (x) => String(x), yF
                 {r.label && <text x={M.l + scale.plotW - 4} y={scale.sy(r.y) - 4} textAnchor="end" className="axis-text">{r.label}</text>}
               </g>
             ) : null)}
-            {paths.map(({ s, d }) => (
-              <path key={s.id} d={d} fill="none" stroke={s.color} strokeWidth={s.width ?? 2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray={s.dashed ? '5 4' : undefined} opacity={s.companion ? 0.85 : 1} />
-            ))}
-            {series.flatMap((s) => (s.markers ?? []).filter((m) => isFinite(m.y) && isFinite(m.x)).map((m, i) => (
-              <circle key={`${s.id}m${i}`} cx={scale.sx(m.x)} cy={scale.sy(m.y)} r={4.5} fill={s.color} stroke="var(--surface-1)" strokeWidth={2}><title>{m.title}</title></circle>
-            )))}
+            <g clipPath={`url(#${clipId})`}>
+              {paths.map(({ s, d }) => (
+                <path key={s.id} d={d} fill="none" stroke={s.color} strokeWidth={s.width ?? 2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray={s.dashed ? '5 4' : undefined} opacity={s.companion ? 0.85 : 1} />
+              ))}
+              {series.flatMap((s) => (s.markers ?? []).filter((m) => isFinite(m.y) && isFinite(m.x)).map((m, i) => (
+                <circle key={`${s.id}m${i}`} cx={scale.sx(m.x)} cy={scale.sy(m.y)} r={4.5} fill={s.color} stroke="var(--surface-1)" strokeWidth={2}><title>{m.title}</title></circle>
+              )))}
+            </g>
             {hover && (
               <g pointerEvents="none">
                 <line x1={scale.sx(hover.x)} x2={scale.sx(hover.x)} y1={M.t} y2={M.t + scale.plotH} stroke="var(--text-muted)" />
@@ -173,7 +201,7 @@ export function LineChart({ series, height = 240, xFormat = (x) => String(x), yF
             )}
           </svg>
         )}
-        {hover && scale && (
+        {hover && scale && (!shared || pointerInside) && (
           <div className="tooltip chart-tip" style={scale.sx(hover.x) > width * 0.6 ? { right: width - scale.sx(hover.x) + 12 } : { left: scale.sx(hover.x) + 12 }}>
             <div className="secondary">{xTitle ? xTitle(hover.x) : xFormat(hover.x)}</div>
             {hover.rows.map(({ s, p }) => (

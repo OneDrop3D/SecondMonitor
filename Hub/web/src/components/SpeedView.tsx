@@ -1,12 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { usePoll } from '../live';
 import { kph, lapTime } from '../format';
 import type { DriverRow, RaceSnapshot, SpeedAnalysis, SpeedTraces, Trajectories, TrackSegment } from '../types';
 import type { Selection } from '../selection';
 import { LineChart, type Series } from '../charts/LineChart';
-import { useWidth } from '../charts/useSize';
+import { useViewportHeight, useWidth } from '../charts/useSize';
+import { niceScale, useZoomPan } from '../charts/useZoomPan';
+import { useStoredChoice } from '../prefs';
 import { DriverPicker } from './DriverPicker';
 import { ClassSwatch } from './Common';
+import { LapCompare } from './LapCompare';
+import { inZone } from '../track';
 
 interface Props {
   snapshot: RaceSnapshot;
@@ -14,17 +18,31 @@ interface Props {
   classColor: (classId: string) => string;
 }
 
-/** Vmax en ligne droite, Vmin en virage, profils de vitesse et trajectoires de tous les pilotes. */
+type SpeedTab = 'zones' | 'traj' | 'mylaps';
+const TABS: readonly SpeedTab[] = ['zones', 'traj', 'mylaps'];
+
+/** Vmax en ligne droite, Vmin en virage, profils de vitesse, trajectoires de tous les pilotes et comparaison de vos tours. */
 export function SpeedView({ snapshot, selection, classColor }: Props) {
-  const [kind, setKind] = useState<'best' | 'last'>('best');
-  const { data } = usePoll<SpeedAnalysis>('/api/analysis/speeds', 3000);
+  const [view, setView] = useStoredChoice<SpeedTab>('smhub-vitesses-vue', 'zones', TABS);
+  const [kind, setKind] = useStoredChoice<'best' | 'last'>('smhub-vitesses-tour', 'best', ['best', 'last']);
+  const { data } = usePoll<SpeedAnalysis>('/api/analysis/speeds', view === 'mylaps' ? 10000 : 3000);
   const idsKey = selection.ids.join(',');
-  const { data: traces } = usePoll<SpeedTraces>(idsKey ? `/api/analysis/speedtrace?ids=${encodeURIComponent(idsKey)}&kind=${kind}` : null, 4000);
+  const { data: traces } = usePoll<SpeedTraces>(view === 'zones' && idsKey ? `/api/analysis/speedtrace?ids=${encodeURIComponent(idsKey)}&kind=${kind}` : null, 4000);
   const lowRate = snapshot.capabilities.includes('lowRateOpponents');
 
   return (
     <div className="stack">
-      {lowRate && (
+      <div className="row view-tabs-row">
+        <div className="seg view-tabs" role="tablist" aria-label="Affichage">
+          <button role="tab" aria-selected={view === 'zones'} className={view === 'zones' ? 'on' : ''} onClick={() => setView('zones')}>Zones et profils</button>
+          <button role="tab" aria-selected={view === 'traj'} className={view === 'traj' ? 'on' : ''} onClick={() => setView('traj')}>Trajectoires</button>
+          <button role="tab" aria-selected={view === 'mylaps'} className={view === 'mylaps' ? 'on' : ''} onClick={() => setView('mylaps')}>Mes tours comparés</button>
+        </div>
+        <span className="spacer" />
+        {view !== 'mylaps' && <KindSwitch kind={kind} setKind={setKind} />}
+      </div>
+
+      {lowRate && view !== 'mylaps' && (
         <div className="callout warn">
           <span aria-hidden>ℹ️</span>
           <div>
@@ -35,40 +53,46 @@ export function SpeedView({ snapshot, selection, classColor }: Props) {
         </div>
       )}
 
-      <section className="card">
-        <div className="card-head">
-          <span className="card-title">Vitesses par zone</span>
-          <span className="muted hide-xs">Vmax en ligne droite · Vmin (vitesse de passage) en virage</span>
-          <span className="spacer" />
-          <KindSwitch kind={kind} setKind={setKind} />
-        </div>
-        <SpeedTable snapshot={snapshot} data={data} kind={kind} classColor={classColor} selection={selection} />
-      </section>
+      {view === 'zones' && (
+        <>
+          <section className="card">
+            <div className="card-head">
+              <span className="card-title">Vitesses par zone</span>
+              <span className="muted hide-xs">Vmax en ligne droite · Vmin (vitesse de passage) en virage</span>
+            </div>
+            <SpeedTable snapshot={snapshot} data={data} kind={kind} classColor={classColor} selection={selection} />
+          </section>
 
-      <section className="card">
-        <div className="card-head">
-          <span className="card-title">Profil de vitesse</span>
-          <span className="muted hide-xs">{kind === 'best' ? 'meilleur tour' : 'dernier tour'} de chaque pilote, sur un tour</span>
-        </div>
-        <div className="card-body stack-sm">
-          <DriverPicker snapshot={snapshot} selection={selection} />
-          <SpeedTraceChart traces={traces} selection={selection} snapshot={snapshot} />
-        </div>
-      </section>
+          <section className="card">
+            <div className="card-head">
+              <span className="card-title">Profil de vitesse</span>
+              <span className="muted hide-xs">{kind === 'best' ? 'meilleur tour' : 'dernier tour'} de chaque pilote, sur un tour</span>
+            </div>
+            <div className="card-body stack-sm">
+              <DriverPicker snapshot={snapshot} selection={selection} />
+              <SpeedTraceChart traces={traces} selection={selection} snapshot={snapshot} />
+            </div>
+          </section>
+        </>
+      )}
 
-      <section className="card">
-        <div className="card-head">
-          <span className="card-title">Trajectoires</span>
-          <span className="muted hide-xs">positions réelles transmises par le jeu</span>
-        </div>
-        <div className="card-body">
-          {snapshot.track.worldPositionsValid ? (
-            <TrajectoryPanel segments={data?.segments ?? []} selection={selection} snapshot={snapshot} kind={kind} />
-          ) : (
-            <div className="muted">Ce jeu ne transmet pas la position des voitures : trajectoires indisponibles.</div>
-          )}
-        </div>
-      </section>
+      {view === 'traj' && (
+        <section className="card">
+          <div className="card-head">
+            <span className="card-title">Trajectoires</span>
+            <span className="muted hide-xs">positions réelles transmises par le jeu · {kind === 'best' ? 'meilleur tour' : 'dernier tour'} de chaque pilote</span>
+          </div>
+          <div className="card-body">
+            {snapshot.track.worldPositionsValid ? (
+              <TrajectoryPanel segments={data?.segments ?? []} selection={selection} snapshot={snapshot} kind={kind} />
+            ) : (
+              <div className="muted">Ce jeu ne transmet pas la position des voitures : trajectoires indisponibles.</div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {view === 'mylaps' && <LapCompare snapshot={snapshot} segments={data?.segments ?? []} />}
     </div>
   );
 }
@@ -205,111 +229,281 @@ function SpeedTraceChart({ traces, selection, snapshot }: { traces: SpeedTraces 
 }
 
 function TrajectoryPanel({ segments, selection, snapshot, kind }: { segments: TrackSegment[]; selection: Selection; snapshot: RaceSnapshot; kind: 'best' | 'last' }) {
-  const [segId, setSegId] = useState<string | null>(null);
-  const current = segId ?? segments.find((s) => s.kind === 'corner')?.id ?? null;
+  // Chaque choix de zone recadre, même s'il s'agit de la même (après un déplacement à la main).
+  const [focusState, setFocusState] = useState<{ id: string; n: number }>({ id: '__lap', n: 0 });
+  const setFocus = (id: string) => setFocusState((f) => ({ id, n: f.n + 1 }));
+  const focus = focusState.id;
   const idsKey = selection.ids.join(',');
-  const { data } = usePoll<Trajectories>(idsKey ? `/api/analysis/trajectories?ids=${encodeURIComponent(idsKey)}&kind=${kind}${current && current !== '__lap' ? `&seg=${current}` : ''}` : null, 4000);
+  // Tour complet à pleine résolution : le zoom se fait ici, sans redemander de données.
+  const { data } = usePoll<Trajectories>(idsKey ? `/api/analysis/trajectories?ids=${encodeURIComponent(idsKey)}&kind=${kind}` : null, 5000);
   const corners = segments.filter((s) => s.kind === 'corner');
   const straights = segments.filter((s) => s.kind === 'straight');
+  const current = focus === '__lap' || segments.some((s) => s.id === focus) ? focus : '__lap';
+  // « Grand écran » : la carte prend toute la fenêtre (Échap pour revenir).
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setExpanded(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [expanded]);
   return (
-    <div className="stack-sm">
-      <div className="row" role="group" aria-label="Zone affichée">
-        <button className={`chip ${current === '__lap' ? 'on' : ''}`} onClick={() => setSegId('__lap')}>Tour complet</button>
-        {corners.map((s) => <button key={s.id} className={`chip ${current === s.id ? 'on' : ''}`} onClick={() => setSegId(s.id)} title={s.name}>{s.id}</button>)}
-        {straights.map((s) => <button key={s.id} className={`chip ${current === s.id ? 'on' : ''}`} onClick={() => setSegId(s.id)} title={s.name}>{s.id}</button>)}
+    <div className={`stack-sm ${expanded ? 'traj-expanded' : ''}`}>
+      <div className="row" role="group" aria-label="Zoomer sur une zone">
+        <button className={`chip ${current === '__lap' ? 'on' : ''}`} onClick={() => setFocus('__lap')} title="Vue entière du circuit">Tour complet</button>
+        {corners.map((s) => <button key={s.id} className={`chip ${current === s.id ? 'on' : ''}`} onClick={() => setFocus(s.id)} title={`Zoomer sur le ${s.name.toLowerCase()}`}>{s.id}</button>)}
+        {straights.length > 0 && (
+          <select className={`select compact ${straights.some((s) => s.id === current) ? 'on' : ''}`} value={straights.some((s) => s.id === current) ? current : ''} aria-label="Zoomer sur une ligne droite"
+            onChange={(e) => e.target.value && setFocus(e.target.value)}>
+            <option value="">Lignes droites…</option>
+            {straights.map((s) => <option key={s.id} value={s.id}>{s.id} · {s.name}{s.description ? ` (${s.description})` : ''}</option>)}
+          </select>
+        )}
       </div>
       <DriverPicker snapshot={snapshot} selection={selection} />
-      <TrajectoryPlot data={data} selection={selection} snapshot={snapshot} full={current === '__lap'} />
+      <TrajectoryPlot data={data} selection={selection} snapshot={snapshot} segments={segments} focus={current} focusRequest={focusState.n} onFocus={setFocus} expanded={expanded} onExpand={setExpanded} />
     </div>
   );
 }
 
-function TrajectoryPlot({ data, selection, snapshot, full }: { data: Trajectories | null; selection: Selection; snapshot: RaceSnapshot; full: boolean }) {
+function TrajectoryPlot({ data, selection, snapshot, segments, focus, focusRequest, onFocus, expanded, onExpand }: {
+  data: Trajectories | null;
+  selection: Selection;
+  snapshot: RaceSnapshot;
+  segments: TrackSegment[];
+  focus: string;
+  focusRequest: number;
+  onFocus: (id: string) => void;
+  expanded: boolean;
+  onExpand: (v: boolean) => void;
+}) {
   const { ref, width } = useWidth<HTMLDivElement>();
+  const viewport = useViewportHeight();
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const byId = new Map(snapshot.drivers.map((d) => [d.id, d]));
-  const drivers = (data?.drivers ?? []).filter((d) => selection.ids.includes(d.id) && d.points.length > 1);
-  const H = Math.max(260, Math.min(520, Math.round(width * 0.62)));
+  const idsKey = selection.ids.join(',');
+  const drivers = useMemo(() => (data?.drivers ?? []).filter((d) => selection.ids.includes(d.id) && d.points.length > 1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    .sort((a, b) => selection.ids.indexOf(a.id) - selection.ids.indexOf(b.id)), [data, idsKey]);
+  // Le dessin prend toute la hauteur qui reste sous les choix (sans faire défiler la page) ; en grand écran, toute la fenêtre.
+  const [top, setTop] = useState(320);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const scroller = el.closest('.content, .traj-expanded');
+    setTop(el.getBoundingClientRect().top + (scroller?.scrollTop ?? 0));
+  }, [viewport, width, expanded, ref]);
+  const H = Math.round(Math.max(380, Math.min(viewport - top - (expanded ? 56 : 84), width * 1.2, 1600)));
+  const lapLength = snapshot.track.length;
+  const seg = focus === '__lap' ? null : segments.find((s) => s.id === focus) ?? null;
 
-  const frame = useMemo(() => {
+  // Cadre stable (bornes arrondies à 50 m) : une nouvelle donnée ne fait pas sauter la vue zoomée.
+  const bounds = useMemo(() => {
     const pts = drivers.flatMap((d) => d.points);
     if (pts.length < 2) return null;
-    const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
-    const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs);
-    const pad = 24;
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const p of pts) {
+      if (p[0] < minX) minX = p[0];
+      if (p[0] > maxX) maxX = p[0];
+      if (p[1] < minZ) minZ = p[1];
+      if (p[1] > maxZ) maxZ = p[1];
+    }
+    const r = (v: number, up: boolean) => (up ? Math.ceil(v / 50) : Math.floor(v / 50)) * 50;
+    return { minX: r(minX, false), maxX: r(maxX, true), minZ: r(minZ, false), maxZ: r(maxZ, true) };
+  }, [drivers]);
+  const boundsKey = bounds ? `${bounds.minX},${bounds.maxX},${bounds.minZ},${bounds.maxZ}` : '';
+
+  const frame = useMemo(() => {
+    if (!bounds) return null;
+    const { minX, maxX, minZ, maxZ } = bounds;
+    const pad = 16;
     const scale = Math.min((width - pad * 2) / Math.max(1, maxX - minX), (H - pad * 2) / Math.max(1, maxZ - minZ));
     const ox = (width - (maxX - minX) * scale) / 2;
     const oz = (H - (maxZ - minZ) * scale) / 2;
     return { scale, tx: (x: number) => ox + (x - minX) * scale, ty: (z: number) => oz + (z - minZ) * scale, metersPerPx: 1 / scale };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, width, H, selection.ids.join(',')]);
+  }, [boundsKey, width, H]);
+
+  const zp = useZoomPan<SVGSVGElement>({ width, height: H, maxK: 80 });
+  const v = zp.view;
+
+  const paths = useMemo(() => {
+    if (!frame) return [];
+    return drivers.map((d) => ({
+      id: d.id,
+      d: d.points.map((p, i) => `${i ? 'L' : 'M'}${frame.tx(p[0]).toFixed(2)},${frame.ty(p[1]).toFixed(2)}`).join(''),
+    }));
+  }, [drivers, frame]);
+
+  // Zoom sur la zone choisie (puce ou étiquette de virage) ; « Tour complet » = vue entière.
+  // Une fois par choix (et quand la carte change de taille : grand écran, fenêtre) : de nouvelles données
+  // ne recadrent pas une vue que l'utilisateur a pu déplacer.
+  const fitted = useRef<string | null>(null);
+  useEffect(() => {
+    if (!frame) return;
+    const key = `${focus}#${focusRequest}#${Math.round(width)}x${H}`;
+    if (fitted.current === key) return;
+    fitted.current = key;
+    if (!seg) { zp.reset(); return; }
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const d of drivers) for (const p of d.points) {
+      if (!inZone(seg, p[3], lapLength, 70)) continue;
+      const x = frame.tx(p[0]), y = frame.ty(p[1]);
+      x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+    }
+    if (isFinite(x0)) zp.fitBox(x0, y0, x1, y1, 56);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus, focusRequest, frame]);
+
+  const toScreen = (bx: number, by: number) => ({ x: bx * v.k + v.x, y: by * v.k + v.y });
+
+  // Point de vitesse minimale (virage) ou maximale (ligne droite) de chaque pilote dans la zone choisie.
+  const picks = useMemo(() => {
+    if (!seg) return new Map<string, [number, number, number, number]>();
+    const m = new Map<string, [number, number, number, number]>();
+    for (const d of drivers) {
+      const inside = d.points.filter((p) => inZone(seg, p[3], lapLength, 0));
+      if (inside.length === 0) continue;
+      m.set(d.id, inside.reduce((a, b) => (seg.kind === 'straight' ? (b[2] > a[2] ? b : a) : (b[2] < a[2] ? b : a))));
+    }
+    return m;
+  }, [drivers, seg, lapLength]);
+
+  // Étiquettes des virages (au point de corde du premier pilote comparé) : un clic zoome dessus.
+  const reference = drivers[0];
+  const cornerTags = useMemo(() => {
+    if (!frame || !reference) return [];
+    return segments.filter((s) => s.kind === 'corner').map((s) => {
+      let best = reference.points[0], bd = Infinity;
+      for (const p of reference.points) {
+        const dd = Math.abs(p[3] - s.apex);
+        const wrapped = lapLength > 0 ? Math.min(dd, lapLength - dd) : dd;
+        if (wrapped < bd) { bd = wrapped; best = p; }
+      }
+      return { seg: s, bx: frame.tx(best[0]), by: frame.ty(best[1]), ok: bd < 40 };
+    }).filter((t) => t.ok);
+  }, [frame, reference, segments, lapLength]);
 
   // Au survol : la vitesse de chaque pilote au point le plus proche.
   const readout = useMemo(() => {
-    if (!hover || !frame) return null;
+    if (!hover || !frame || zp.dragging) return null;
+    const bx = (hover.x - v.x) / v.k, by = (hover.y - v.y) / v.k;
+    const limit = 36 / v.k;
     return drivers.map((d) => {
       let best = d.points[0], bd = Infinity;
-      for (const p of d.points) { const dd = (frame.tx(p[0]) - hover.x) ** 2 + (frame.ty(p[1]) - hover.y) ** 2; if (dd < bd) { bd = dd; best = p; } }
-      return { d, p: best, close: Math.sqrt(bd) < 40 };
+      for (const p of d.points) { const dd = (frame.tx(p[0]) - bx) ** 2 + (frame.ty(p[1]) - by) ** 2; if (dd < bd) { bd = dd; best = p; } }
+      return { d, p: best, close: Math.sqrt(bd) < limit };
     }).filter((r) => r.close);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hover, frame, data]);
+  }, [hover, frame, data, v.k, v.x, v.y, zp.dragging]);
 
-  const seg = data?.segment;
+  // Échelle : distance ronde à la taille actuelle.
+  const mpp = frame ? frame.metersPerPx / v.k : 1;
+  const scaleMeters = niceScale(mpp, 90);
+  const start = reference && frame ? toScreen(frame.tx(reference.points[0][0]), frame.ty(reference.points[0][1])) : null;
+
   return (
-    <div ref={ref} className="chart-area">
-      {!frame ? (
-        <div className="chart-empty" style={{ height: 200 }}>Les trajectoires apparaissent après un tour complet des pilotes sélectionnés.</div>
-      ) : (
-        <>
-          <svg width={width} height={H} className="traj" role="img" aria-label="Trajectoires des pilotes"
-            onPointerMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); setHover({ x: e.clientX - r.left, y: e.clientY - r.top }); }}
-            onPointerLeave={() => setHover(null)}>
-            {drivers.map((d) => {
-              const path = d.points.map((p, i) => `${i ? 'L' : 'M'}${frame.tx(p[0]).toFixed(1)},${frame.ty(p[1]).toFixed(1)}`).join(' ');
-              return <path key={`bg${d.id}`} d={path} fill="none" stroke="var(--track)" strokeWidth={Math.max(6, Math.min(26, 12 / frame.metersPerPx))} strokeLinecap="round" strokeLinejoin="round" />;
-            })}
-            {drivers.map((d) => {
-              const path = d.points.map((p, i) => `${i ? 'L' : 'M'}${frame.tx(p[0]).toFixed(1)},${frame.ty(p[1]).toFixed(1)}`).join(' ');
-              return <path key={d.id} d={path} fill="none" stroke={selection.colorOf(d.id)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />;
-            })}
-            {!full && drivers.map((d) => {
-              // Point de vitesse minimale (virage) ou maximale (ligne droite) de chaque pilote.
-              const pick = d.points.reduce((a, b) => (seg?.kind === 'straight' ? (b[2] > a[2] ? b : a) : (b[2] < a[2] ? b : a)));
-              return <circle key={`m${d.id}`} cx={frame.tx(pick[0])} cy={frame.ty(pick[1])} r={5} fill={selection.colorOf(d.id)} stroke="var(--surface-1)" strokeWidth={2}><title>{`${byId.get(d.id)?.shortName ?? ''} ${seg?.kind === 'straight' ? 'Vmax' : 'Vmin'} ${kph(pick[2])}`}</title></circle>;
-            })}
-            {readout?.map((r) => <circle key={`h${r.d.id}`} cx={frame.tx(r.p[0])} cy={frame.ty(r.p[1])} r={4} fill="none" stroke={selection.colorOf(r.d.id)} strokeWidth={2} />)}
-            <g className="axis-text">
-              <line x1={12} x2={12 + 50 / frame.metersPerPx} y1={H - 14} y2={H - 14} stroke="var(--text-muted)" strokeWidth={2} />
-              <text x={12} y={H - 20}>50 m</text>
-            </g>
-          </svg>
-          {readout && readout.length > 0 && hover && (
-            <div className="tooltip chart-tip" style={hover.x > width * 0.6 ? { right: width - hover.x + 12, top: hover.y } : { left: hover.x + 12, top: hover.y }}>
-              {readout.map((r) => {
-                const d = byId.get(r.d.id);
+    <div className="stack-sm">
+      <div ref={ref} className="chart-area traj-area">
+        {!frame ? (
+          <div className="chart-empty" style={{ height: 200 }}>Les trajectoires apparaissent après un tour complet des pilotes sélectionnés.</div>
+        ) : (
+          <>
+            <svg
+              ref={zp.ref}
+              width={width}
+              height={H}
+              className={`traj ${zp.isZoomed ? 'zoomed' : ''} ${zp.dragging ? 'dragging' : ''}`}
+              style={{ touchAction: zp.isZoomed ? 'none' : 'pan-y' }}
+              role="img"
+              aria-label="Trajectoires des pilotes (molette ou pincement pour zoomer, glisser pour se déplacer)"
+              {...zp.bind}
+              onPointerMove={(e) => {
+                zp.bind.onPointerMove(e);
+                const r = e.currentTarget.getBoundingClientRect();
+                setHover({ x: e.clientX - r.left, y: e.clientY - r.top });
+              }}
+              onPointerLeave={() => setHover(null)}
+            >
+              <rect width={width} height={H} fill="transparent" />
+              <g transform={`translate(${v.x.toFixed(2)},${v.y.toFixed(2)}) scale(${v.k.toFixed(4)})`}>
+                {/* Largeur de piste approximative (12 m) : à l'échelle, et au moins quelques pixels quand on voit tout le tour. */}
+                {paths.map((p) => (
+                  <path key={`bg${p.id}`} d={p.d} fill="none" stroke="var(--track)" strokeWidth={Math.max(6 / v.k, 12 * frame.scale)} strokeLinecap="round" strokeLinejoin="round" />
+                ))}
+                {paths.map((p) => (
+                  <path key={p.id} d={p.d} fill="none" stroke={selection.colorOf(p.id)} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+                ))}
+              </g>
+              {start && (
+                <g className="axis-text" pointerEvents="none">
+                  <rect x={start.x - 2} y={start.y - 9} width={4} height={18} fill="var(--text-primary)" rx={1} />
+                </g>
+              )}
+              {cornerTags.map((t) => {
+                const s = toScreen(t.bx, t.by);
+                const on = focus === t.seg.id;
+                if (s.x < -20 || s.y < -20 || s.x > width + 20 || s.y > H + 20) return null;
+                const ty = s.y - 16 < 12 ? s.y + 18 : s.y - 16; // tout en haut : étiquette sous le virage
                 return (
-                  <div key={r.d.id} className="tip-row">
-                    <span className="legend-line" style={{ borderColor: selection.colorOf(r.d.id) }} />
-                    <span className="tip-label">{d ? driverLabel(d) : r.d.id}</span>
-                    <b className="tnum">{kph(r.p[2])}</b>
-                  </div>
+                  <g key={t.seg.id} className={`corner-tag ${on ? 'on' : ''}`} transform={`translate(${s.x.toFixed(1)},${ty.toFixed(1)})`}
+                    onClick={() => { if (!zp.justDragged()) onFocus(on ? '__lap' : t.seg.id); }}>
+                    <title>{on ? 'Revenir au tour complet' : `Zoomer sur le ${t.seg.name.toLowerCase()} (Vmin de référence ${kph(t.seg.referenceSpeed)})`}</title>
+                    <rect x={-15} y={-10} width={30} height={18} rx={4} />
+                    <text x={0} y={3} textAnchor="middle">{t.seg.id}</text>
+                  </g>
                 );
               })}
+              {[...picks.entries()].map(([id, p]) => {
+                const s = toScreen(frame.tx(p[0]), frame.ty(p[1]));
+                return <circle key={`m${id}`} cx={s.x} cy={s.y} r={5} fill={selection.colorOf(id)} stroke="var(--surface-1)" strokeWidth={2} pointerEvents="none" />;
+              })}
+              {readout?.map((r) => {
+                const s = toScreen(frame.tx(r.p[0]), frame.ty(r.p[1]));
+                return <circle key={`h${r.d.id}`} cx={s.x} cy={s.y} r={4} fill="none" stroke={selection.colorOf(r.d.id)} strokeWidth={2} pointerEvents="none" />;
+              })}
+              {/* Échelle en haut à gauche (en bas à gauche, le bouton de la radio la cache). */}
+              <g className="axis-text" pointerEvents="none">
+                <line x1={12} x2={12 + scaleMeters / mpp} y1={24} y2={24} stroke="var(--text-muted)" strokeWidth={2} />
+                <text x={12} y={18}>{scaleMeters >= 1000 ? `${scaleMeters / 1000} km` : `${scaleMeters} m`}</text>
+              </g>
+            </svg>
+            <div className="zoom-ctl" role="group" aria-label="Zoom">
+              <button className="btn" onClick={() => zp.zoomBy(1.6)} title="Zoomer" aria-label="Zoomer">+</button>
+              <button className="btn" onClick={() => zp.zoomBy(1 / 1.6)} title="Dézoomer" aria-label="Dézoomer" disabled={!zp.isZoomed}>−</button>
+              <button className="btn" onClick={() => { onFocus('__lap'); zp.reset(); }} title="Vue entière (double-clic sur la carte)" disabled={!zp.isZoomed && focus === '__lap'}>Vue entière</button>
+              <button className="btn" onClick={() => onExpand(!expanded)} title={expanded ? 'Revenir à la page (Échap)' : 'La carte prend toute la fenêtre'} aria-pressed={expanded}>{expanded ? 'Réduire' : 'Grand écran'}</button>
+              {zp.isZoomed && <span className="zoom-level tnum">×{v.k < 10 ? v.k.toFixed(1) : Math.round(v.k)}</span>}
             </div>
-          )}
-        </>
-      )}
+            <div className="zoom-hint muted">Molette ou pincement : zoom · glisser : se déplacer · double-clic : vue entière · clic sur un virage : zoom dessus</div>
+            {readout && readout.length > 0 && hover && (
+              <div className="tooltip chart-tip" style={hover.x > width * 0.6 ? { right: width - hover.x + 12, top: hover.y } : { left: hover.x + 12, top: hover.y }}>
+                <div className="secondary">{Math.round(readout[0].p[3])} m depuis la ligne</div>
+                {readout.map((r) => {
+                  const d = byId.get(r.d.id);
+                  return (
+                    <div key={r.d.id} className="tip-row">
+                      <span className="legend-line" style={{ borderColor: selection.colorOf(r.d.id) }} />
+                      <span className="tip-label">{d ? driverLabel(d) : r.d.id}</span>
+                      <b className="tnum">{kph(r.p[2])}</b>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+      </div>
       {frame && (
-        <div className="legend chart-legend" style={{ marginTop: 8 }}>
+        <div className="legend chart-legend">
           {drivers.map((d) => {
             const dr = byId.get(d.id);
-            const pick = d.points.reduce((a, b) => (seg?.kind === 'straight' ? (b[2] > a[2] ? b : a) : (b[2] < a[2] ? b : a)));
+            const pick = picks.get(d.id);
             return (
               <span key={d.id} className="legend-item">
                 <span className="legend-line" style={{ borderColor: selection.colorOf(d.id) }} />
-                {dr ? driverLabel(dr) : d.id} · T{d.lap}
-                {!full && <b className="tnum">&nbsp;{seg?.kind === 'straight' ? 'Vmax' : 'Vmin'} {kph(pick[2])}</b>}
+                {dr ? driverLabel(dr) : d.id} · T{d.lap}{d.time ? ` ${lapTime(d.time)}` : ''}
+                {seg && pick && <b className="tnum">&nbsp;{seg.id} {seg.kind === 'straight' ? 'Vmax' : 'Vmin'} {kph(pick[2])}</b>}
                 {d.sampleHz > 0 && d.sampleHz < 3 && <span className="muted" title="Données peu fréquentes : trajectoire lissée">&nbsp;≈</span>}
               </span>
             );

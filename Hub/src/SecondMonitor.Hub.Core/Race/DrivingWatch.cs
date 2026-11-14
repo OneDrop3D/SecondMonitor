@@ -12,7 +12,8 @@ namespace SecondMonitor.Hub.Core.Race
     /// - usure brutale d'un pneu (plusieurs points en quelques secondes) avec la phase où elle arrive (freinage, entrée, milieu, sortie) ;
     /// - limites de piste (points ajoutés, trop large ou coupé), tour annulé, nouvelle pénalité ;
     /// - début de session moteur coupé ou au point mort ;
-    /// - traces pédales et volant par tour (tour en cours, dernier, meilleur), pour l'analyse du pilotage.
+    /// - traces pédales et volant par tour (tour en cours, dernier, meilleur), pour l'analyse du pilotage,
+    ///   avec le rapport engagé, le régime, le temps écoulé depuis la ligne, les passages de rapports et les réglages en roulant changés.
     /// Les événements urgents sont lus par le service radio (Drain) et dits tout de suite, en une phrase.
     /// </summary>
     public sealed class DrivingWatch
@@ -20,15 +21,35 @@ namespace SecondMonitor.Hub.Core.Race
         /// <summary>Pas des traces de pilotage (mètres).</summary>
         public const double BinMeters = 10;
 
+        /// <summary>Tours gardés en mémoire pour l'analyse du pilotage et la comparaison des tours.</summary>
+        public const int MaxStoredLaps = 40;
+
         private const double SpikeWindowSeconds = 4;
         private const double SpikeThresholdPct = 1.5;
         private static readonly string[] WheelKeys = { "FL", "FR", "RL", "RR" };
+
+        /// <summary>Réglages en roulant suivis tour par tour (clé courte de l'interface → lecture dans les données du jeu).</summary>
+        private static readonly (string Key, Func<CarControls, double?> Read)[] ControlKeys =
+        {
+            ("bias", c => c.FrontBrakeBiasPct.HasValue ? Math.Round(c.FrontBrakeBiasPct.Value, 1) : null),
+            ("tc", c => c.Tc),
+            ("tcCut", c => c.TcCut),
+            ("tcSlip", c => c.TcSlip),
+            ("abs", c => c.Abs),
+            ("map", c => c.MotorMap),
+            ("migration", c => c.Migration),
+            ("arbFront", c => c.FrontAntiRoll),
+            ("arbRear", c => c.RearAntiRoll),
+        };
 
         private readonly Queue<Sample> _recent = new();
         private readonly List<DrivingEvent> _events = new();
         private readonly List<WearSpike> _spikes = new();
         private readonly Dictionary<int, InputLap> _laps = new();
+        private readonly Dictionary<string, double> _controlValues = new();
         private InputLap _current;
+        private Sample _previousTraced;
+        private Sample _lastInGear;
         private double _lastSpikeAt = double.NegativeInfinity;
         private double? _trackLimitPoints;
         private int? _penalties;
@@ -53,7 +74,10 @@ namespace SecondMonitor.Hub.Core.Race
             _events.Clear();
             _spikes.Clear();
             _laps.Clear();
+            _controlValues.Clear();
             _current = null;
+            _previousTraced = null;
+            _lastInGear = null;
             _lastSpikeAt = double.NegativeInfinity;
             _trackLimitPoints = null;
             _penalties = null;
@@ -111,6 +135,8 @@ namespace SecondMonitor.Hub.Core.Race
                 Wear = Wear(car.WheelsInfo),
                 Detached = Detached(car.WheelsInfo),
                 InPits = player.InPits,
+                Gear = GearNumber(car.CurrentGear),
+                Rpm = car.EngineRpm,
             };
 
             if (_recent.Count > 0 && now < _recent.Peek().T - 1)
@@ -118,7 +144,7 @@ namespace SecondMonitor.Hub.Core.Race
                 _recent.Clear(); // temps qui recule (retour au stand, rembobinage)
             }
 
-            RecordTrace(sample, lapLength);
+            RecordTrace(sample, lapLength, car.Controls);
             _recent.Enqueue(sample);
             while (_recent.Count > 0 && now - _recent.Peek().T > SpikeWindowSeconds)
             {
@@ -185,14 +211,67 @@ namespace SecondMonitor.Hub.Core.Race
                 (overlap >= 1 ? $", frein et accélérateur ensemble {overlap} %." : ".");
         }
 
-        private void RecordTrace(Sample s, double lapLength)
+        /// <summary>Numéros des tours gardés (1 = premier tour), du plus ancien au plus récent, tour en cours compris.</summary>
+        public List<(int Lap, bool Complete, bool Current)> RecordedLaps()
+        {
+            var list = _laps.Values.OrderBy(l => l.Lap).Select(l => (l.Lap + 1, l.Complete, false)).ToList();
+            if (_current != null && !_laps.ContainsKey(_current.Lap))
+            {
+                list.Add((_current.Lap + 1, false, true));
+            }
+
+            return list;
+        }
+
+        /// <summary>
+        /// Détail d'un tour pour la comparaison (1 = premier tour) : vitesse, pédales, volant, rapport, régime et temps écoulé
+        /// tous les <see cref="BinMeters"/> m, passages de rapports et réglages en roulant. Null si le tour n'est plus en mémoire.
+        /// </summary>
+        public LapDetailDto LapDetail(int lapNumber)
+        {
+            InputLap l = _current?.Lap == lapNumber - 1 ? _current : _laps.TryGetValue(lapNumber - 1, out InputLap stored) ? stored : null;
+            if (l == null)
+            {
+                return null;
+            }
+
+            static List<double?> Rounded(double?[] values, int digits) => values.Select(v => v.HasValue ? Math.Round(v.Value, digits) : (double?)null).ToList();
+            static double? Max(double?[] values) => values.Any(v => v.HasValue) ? values.Max() : null;
+            var elapsed = l.StartTime is double start
+                ? l.Time.Select(t => t.HasValue ? Math.Round(t.Value - start, 3) : (double?)null).ToList()
+                : l.Time.Select(_ => (double?)null).ToList();
+            return new LapDetailDto
+            {
+                Lap = l.Lap + 1,
+                Complete = l.Complete,
+                Current = l == _current,
+                Speed = Rounded(l.Speed, 0),
+                Throttle = Rounded(l.Throttle, 0),
+                Brake = Rounded(l.Brake, 0),
+                Steering = Rounded(l.Steer, 0),
+                Gear = Rounded(l.Gear, 0),
+                Rpm = Rounded(l.Rpm, 0),
+                Elapsed = elapsed,
+                TopSpeed = Max(l.Speed),
+                MaxRpm = Max(l.Rpm) is double rpm ? (int)rpm : null,
+                Shifts = l.Shifts.ToList(),
+                Controls = new Dictionary<string, double>(l.StartControls),
+                ControlChanges = l.Changes.Select(c => new ControlChangeDto { Key = c.Key, Distance = c.Distance, From = c.From, To = c.To }).ToList(),
+            };
+        }
+
+        private void RecordTrace(Sample s, double lapLength, CarControls controls)
         {
             if (lapLength <= 100 || s.InPits)
             {
+                _previousTraced = null;
+                _lastInGear = null;
                 return;
             }
 
             int bins = (int)Math.Ceiling(lapLength / BinMeters);
+            // Le temps de session peut rester le même sur deux mesures (le jeu ne l'avance pas à chaque envoi) : mesure d'avant quand même.
+            Sample previous = _previousTraced is Sample p && s.T >= p.T && s.T - p.T < 2 ? p : null;
             if (_current == null || _current.Lap != s.Lap)
             {
                 if (_current != null)
@@ -201,9 +280,28 @@ namespace SecondMonitor.Hub.Core.Race
                     _laps[_current.Lap] = _current;
                 }
 
-                _current = new InputLap(s.Lap, bins);
-                // On garde les 40 derniers tours (quelques centaines de valeurs par tour).
-                foreach (int old in _laps.Keys.OrderBy(k => k).Take(Math.Max(0, _laps.Count - 40)).ToList())
+                _current = new InputLap(s.Lap, bins) { StartTime = LineCrossing(previous, s, lapLength) };
+                // Réglages au départ du tour : ceux lus maintenant (changés au stand compris), sinon les derniers connus.
+                foreach (var (key, read) in ControlKeys)
+                {
+                    double? value = controls?.Available == true ? read(controls) : null;
+                    if (value.HasValue)
+                    {
+                        _controlValues[key] = value.Value;
+                    }
+                    else if (_controlValues.TryGetValue(key, out double known))
+                    {
+                        value = known;
+                    }
+
+                    if (value.HasValue)
+                    {
+                        _current.StartControls[key] = value.Value;
+                    }
+                }
+
+                // On garde les derniers tours (quelques milliers de valeurs par tour).
+                foreach (int old in _laps.Keys.OrderBy(k => k).Take(Math.Max(0, _laps.Count - MaxStoredLaps)).ToList())
                 {
                     _laps.Remove(old);
                 }
@@ -214,9 +312,12 @@ namespace SecondMonitor.Hub.Core.Race
             double brk = Math.Round(Math.Clamp(s.Brake, 0, 1) * 100);
             double str = Math.Round(Math.Clamp(s.Steer, -1, 1) * 100);
             double spd = Math.Round(s.Speed);
+            // Point mort vu un instant pendant un passage de rapport : on garde le rapport d'avant (pas de trou dans la trace).
+            double? gear = s.Gear == 0 && s.Speed > 30 && _lastInGear is Sample engaged && s.T - engaged.T < 1.5 ? engaged.Gear : s.Gear;
 
             // Données espacées (jeu à 5-10 Hz, 300 km/h = 8 à 17 m entre deux mesures) : on relie les deux mesures en ligne droite
             // pour que la trace du tour soit continue (jusqu'à 250 m de trou, démonstration accélérée comprise ; au-delà, pas de données inventées).
+            // Le rapport ne se relie pas : l'ancien jusqu'à mi-chemin, le nouveau ensuite.
             InputLap l = _current;
             if (l.LastBin >= 0 && bin > l.LastBin + 1 && bin - l.LastBin <= 25)
             {
@@ -228,6 +329,8 @@ namespace SecondMonitor.Hub.Core.Race
                     l.Brake[i] = Math.Round(l.Brake[from].Value + ((brk - l.Brake[from].Value) * f));
                     l.Steer[i] = Math.Round(l.Steer[from].Value + ((str - l.Steer[from].Value) * f));
                     l.Speed[i] = Math.Round(l.Speed[from].Value + ((spd - l.Speed[from].Value) * f));
+                    l.Rpm[i] = l.Rpm[from].HasValue ? Math.Round(l.Rpm[from].Value + ((s.Rpm - l.Rpm[from].Value) * f)) : s.Rpm;
+                    l.Gear[i] = f < 0.5 ? l.Gear[from] : gear;
                 }
             }
 
@@ -235,7 +338,152 @@ namespace SecondMonitor.Hub.Core.Race
             l.Brake[bin] = brk;
             l.Steer[bin] = str;
             l.Speed[bin] = spd;
+            l.Rpm[bin] = s.Rpm;
+            l.Gear[bin] = gear;
             l.LastBin = bin;
+            RecordPassingTimes(previous, s, l);
+
+            RecordShift(s, l);
+            RecordControls(s, l, controls);
+            _previousTraced = s;
+        }
+
+        /// <summary>
+        /// Heure de passage au centre de chaque case, interpolée entre deux mesures dont la position a changé.
+        /// Le Mans Ultimate avance le temps de session un envoi avant la position : une mesure « temps neuf, position ancienne »
+        /// fausserait l'écart entre deux tours (dents de scie de ±0,2 s) ; elle ne sert pas de repère.
+        /// </summary>
+        private static void RecordPassingTimes(Sample previous, Sample s, InputLap l)
+        {
+            bool freshPosition = previous == null || previous.Lap != s.Lap || Math.Abs(s.Dist - previous.Dist) > 0.01;
+            if (!freshPosition)
+            {
+                return;
+            }
+
+            (double T, double Dist)? anchor = l.TimeAnchor ?? (l.StartTime is double start ? (start, 0.0) : null);
+            if (anchor is (double t0, double d0) && s.Dist > d0 && s.T >= t0 && s.Dist - d0 <= 250)
+            {
+                for (int i = Math.Max(0, (int)Math.Ceiling((d0 / BinMeters) - 0.5)); i < l.Time.Length && (i + 0.5) * BinMeters <= s.Dist; i++)
+                {
+                    double c = (i + 0.5) * BinMeters;
+                    l.Time[i] = t0 + ((s.T - t0) * (c - d0) / (s.Dist - d0));
+                }
+            }
+
+            l.TimeAnchor = (s.T, s.Dist);
+        }
+
+        /// <summary>Heure du passage sur la ligne, interpolée entre la dernière mesure du tour précédent et la première de celui-ci.</summary>
+        private static double? LineCrossing(Sample previous, Sample s, double lapLength)
+        {
+            if (previous != null && previous.Lap == s.Lap - 1)
+            {
+                double before = Math.Max(0, lapLength - previous.Dist);
+                double total = before + Math.Max(0, s.Dist);
+                return total > 0 ? previous.T + ((s.T - previous.T) * before / total) : s.T;
+            }
+
+            // Début de tour sans la mesure d'avant (sortie des stands, données reprises) : estimé seulement tout près de la ligne.
+            return s.Dist < 60 && s.Speed > 20 ? s.T - (Math.Max(0, s.Dist) / (s.Speed / 3.6)) : null;
+        }
+
+        /// <summary>
+        /// Passage de rapport entre deux mesures : situé à mi-chemin (distance, vitesse), régime juste avant et juste après.
+        /// Le point mort vu pendant le passage (Le Mans Ultimate l'envoie souvent) est ignoré : on compare au dernier rapport engagé.
+        /// Un saut de plusieurs rapports entre deux mesures (données espacées) compte pour chacun, au même endroit, pour comparer les tours.
+        /// </summary>
+        private void RecordShift(Sample s, InputLap l)
+        {
+            if (s.Gear is not int to || to < 1)
+            {
+                return; // point mort, marche arrière : on garde le dernier rapport engagé
+            }
+
+            Sample previous = _lastInGear;
+            _lastInGear = s;
+            if (previous == null || previous.Gear is not int from || from == to || s.T < previous.T || s.T - previous.T > 1.5 || l.Shifts.Count >= 300)
+            {
+                return;
+            }
+
+            double distance = previous.Lap == s.Lap ? (previous.Dist + s.Dist) / 2 : s.Dist / 2;
+            int step = to > from ? 1 : -1;
+            for (int g = from; g != to; g += step)
+            {
+                l.Shifts.Add(new ShiftPointDto
+                {
+                    Distance = Math.Round(distance, 1),
+                    Speed = Math.Round((previous.Speed + s.Speed) / 2, 1),
+                    RpmBefore = previous.Rpm,
+                    RpmAfter = s.Rpm,
+                    From = g,
+                    To = g + step,
+                });
+            }
+        }
+
+        /// <summary>Réglage en roulant changé pendant le tour (plusieurs crans d'affilée en moins de 3 s = un seul changement).</summary>
+        private void RecordControls(Sample s, InputLap l, CarControls controls)
+        {
+            if (controls?.Available != true)
+            {
+                return;
+            }
+
+            foreach (var (key, read) in ControlKeys)
+            {
+                if (read(controls) is not double value)
+                {
+                    continue;
+                }
+
+                if (!_controlValues.TryGetValue(key, out double before))
+                {
+                    _controlValues[key] = value;
+                    l.StartControls.TryAdd(key, value);
+                    continue;
+                }
+
+                if (Math.Abs(value - before) < 1e-6)
+                {
+                    continue;
+                }
+
+                _controlValues[key] = value;
+                ControlChangeDto last = l.Changes.LastOrDefault(c => c.Key == key);
+                if (last != null && s.T - last.Time < 3)
+                {
+                    last.To = value;
+                    last.Time = s.T;
+                }
+                else if (l.Changes.Count < 100)
+                {
+                    l.Changes.Add(new ControlChangeDto { Key = key, Distance = Math.Round(s.Dist), From = before, To = value, Time = s.T });
+                }
+            }
+        }
+
+        /// <summary>« 1 » à « 9 » → rapport ; « N » → 0 ; « R » → -1 ; rien → null.</summary>
+        private static int? GearNumber(string gear)
+        {
+            if (string.IsNullOrWhiteSpace(gear))
+            {
+                return null;
+            }
+
+            string g = gear.Trim();
+            if (g.Equals("N", StringComparison.OrdinalIgnoreCase))
+            {
+                return 0;
+            }
+
+            if (g.Equals("R", StringComparison.OrdinalIgnoreCase))
+            {
+                return -1;
+            }
+
+            return int.TryParse(g, out int n) ? n : null;
         }
 
         private void DetectWearSpike(Sample s, IReadOnlyList<TrackSegment> corners, double lapLength)
@@ -477,6 +725,8 @@ namespace SecondMonitor.Hub.Core.Race
             public double[] Wear;
             public bool Detached;
             public bool InPits;
+            public int? Gear;
+            public int Rpm;
         }
 
         private sealed class InputLap
@@ -488,6 +738,9 @@ namespace SecondMonitor.Hub.Core.Race
                 Brake = new double?[bins];
                 Steer = new double?[bins];
                 Speed = new double?[bins];
+                Gear = new double?[bins];
+                Rpm = new double?[bins];
+                Time = new double?[bins];
             }
 
             public int Lap { get; }
@@ -504,7 +757,111 @@ namespace SecondMonitor.Hub.Core.Race
             public double?[] Steer { get; }
 
             public double?[] Speed { get; }
+
+            /// <summary>Rapport engagé (0 = point mort, -1 = marche arrière).</summary>
+            public double?[] Gear { get; }
+
+            public double?[] Rpm { get; }
+
+            /// <summary>Heure de session au passage de chaque case (s).</summary>
+            public double?[] Time { get; }
+
+            /// <summary>Heure de session au passage de la ligne (null si inconnue : tour commencé ailleurs).</summary>
+            public double? StartTime { get; set; }
+
+            /// <summary>Dernière mesure (heure, position) qui sert de repère pour les heures de passage.</summary>
+            public (double T, double Dist)? TimeAnchor { get; set; }
+
+            public List<ShiftPointDto> Shifts { get; } = new();
+
+            public Dictionary<string, double> StartControls { get; } = new();
+
+            public List<ControlChangeDto> Changes { get; } = new();
         }
+    }
+
+    /// <summary>Passage de rapport : où (m depuis la ligne), à quelle vitesse et à quel régime.</summary>
+    public sealed class ShiftPointDto
+    {
+        public double Distance { get; set; }
+
+        public double Speed { get; set; }
+
+        /// <summary>Régime à la dernière mesure avant le passage (montée : régime de passage).</summary>
+        public int RpmBefore { get; set; }
+
+        /// <summary>Régime à la première mesure après le passage (descente : régime atteint).</summary>
+        public int RpmAfter { get; set; }
+
+        public int From { get; set; }
+
+        public int To { get; set; }
+    }
+
+    /// <summary>Réglage en roulant changé pendant un tour (« bias », « tc », « tcCut », « tcSlip », « abs », « map », « migration », « arbFront », « arbRear »).</summary>
+    public sealed class ControlChangeDto
+    {
+        public string Key { get; set; }
+
+        public double Distance { get; set; }
+
+        public double From { get; set; }
+
+        public double To { get; set; }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double Time { get; set; }
+    }
+
+    /// <summary>Un tour du joueur pour la comparaison, tous les <see cref="DrivingWatch.BinMeters"/> m.</summary>
+    public sealed class LapDetailDto
+    {
+        public int Lap { get; set; }
+
+        public double? Time { get; set; }
+
+        public bool Complete { get; set; }
+
+        /// <summary>Tour en cours (encore incomplet).</summary>
+        public bool Current { get; set; }
+
+        public bool Valid { get; set; } = true;
+
+        public bool Pit { get; set; }
+
+        public bool OutLap { get; set; }
+
+        public string Compound { get; set; }
+
+        public int? TyreLaps { get; set; }
+
+        public double? Fuel { get; set; }
+
+        public double? TopSpeed { get; set; }
+
+        public int? MaxRpm { get; set; }
+
+        public List<double?> Speed { get; set; } = new();
+
+        public List<double?> Throttle { get; set; } = new();
+
+        public List<double?> Brake { get; set; } = new();
+
+        public List<double?> Steering { get; set; } = new();
+
+        public List<double?> Gear { get; set; } = new();
+
+        public List<double?> Rpm { get; set; } = new();
+
+        /// <summary>Temps écoulé depuis la ligne (s) : sert au delta cumulé entre deux tours.</summary>
+        public List<double?> Elapsed { get; set; } = new();
+
+        public List<ShiftPointDto> Shifts { get; set; } = new();
+
+        /// <summary>Réglages en roulant au départ du tour.</summary>
+        public Dictionary<string, double> Controls { get; set; } = new();
+
+        public List<ControlChangeDto> ControlChanges { get; set; } = new();
     }
 
     /// <summary>Événement de pilotage à annoncer tout de suite (usure brutale, limites de piste, tour annulé, pénalité, départ).</summary>

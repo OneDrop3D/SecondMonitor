@@ -132,6 +132,8 @@ app.MapGet("/api/status", (DataSourceService source, LiveHub hub) => Results.Jso
 static string[] Ids(string? ids) => (ids ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 app.MapGet("/api/analysis/laps", (RaceEngine engine) => Results.Json(engine.AllLaps(), LiveHub.Json));
 app.MapGet("/api/analysis/microsectors", (RaceEngine engine) => Results.Json(engine.BuildMicroSectors(), LiveHub.Json));
+app.MapGet("/api/analysis/microsectors/laps", (RaceEngine engine, string? ids) => Results.Json(engine.BuildMicroSectorLaps(Ids(ids)), LiveHub.Json));
+app.MapGet("/api/analysis/lapcompare", (RaceEngine engine, string? laps) => Results.Json(engine.BuildLapComparison(Ids(laps ?? "best,last")), LiveHub.Json));
 app.MapGet("/api/analysis/speeds", (RaceEngine engine) => Results.Json(engine.BuildSpeedAnalysis(), LiveHub.Json));
 app.MapGet("/api/analysis/speedtrace", (RaceEngine engine, string? ids, string? kind) => Results.Json(engine.BuildSpeedTraces(Ids(ids), kind != "last"), LiveHub.Json));
 app.MapGet("/api/analysis/trajectories", (RaceEngine engine, string? ids, string? seg, string? kind) => Results.Json(engine.BuildTrajectories(Ids(ids), seg, kind != "last"), LiveHub.Json));

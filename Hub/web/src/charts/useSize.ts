@@ -18,6 +18,17 @@ export function useWidth<T extends HTMLElement>(fallback = 600) {
   return { ref, width };
 }
 
+/** Hauteur de la fenêtre (suit les redimensionnements) : pour les dessins qui doivent tenir dans l'écran. */
+export function useViewportHeight() {
+  const [h, setH] = useState(() => (typeof window === 'undefined' ? 800 : window.innerHeight));
+  useEffect(() => {
+    const on = () => setH(window.innerHeight);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  return h;
+}
+
 /** Graduations « rondes » entre min et max. */
 export function niceTicks(min: number, max: number, count = 5): number[] {
   if (!isFinite(min) || !isFinite(max)) return [];
