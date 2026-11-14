@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { usePoll } from '../../live';
 import { clock, compass, delta, lapTime, num } from '../../format';
 import { playBase64Wav } from '../../audio';
+import { readPref, writePref } from '../../prefs';
 import type { MicroSectorReport, RaceEvent, WeatherReport } from '../../types';
 import type { RadioMessage } from '../../radio';
 import { TrackMap } from '../TrackMap';
@@ -16,12 +17,6 @@ import { registerBlock, type BlockProps } from './registry';
  * la taille par défaut est en colonnes (sur 12, ou 6 sur tablette) et en rangées de 36 px.
  */
 
-function readPref(key: string, fallback: string) {
-  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
-}
-function writePref(key: string, value: string) {
-  try { localStorage.setItem(key, value); } catch { /* stockage indisponible */ }
-}
 
 // ───────────────────────────── Classement ─────────────────────────────
 

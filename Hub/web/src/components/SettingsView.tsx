@@ -4,6 +4,7 @@ import type { HubSettings, HubStatus, RaceSnapshot } from '../types';
 import { ThermalProfiles } from './ThermalProfiles';
 import { WheelBindingCard } from './EngineerView';
 import { isRadioStation, setRadioStation, useRadio } from '../radio';
+import { isExtraWindow, windowNumber } from '../prefs';
 import { MusicCard } from '../music/MusicCard';
 import { UpdateCard } from './UpdateBanner';
 import { useStations, type VoiceOutput } from '../stations';
@@ -133,6 +134,12 @@ function VoiceOutputCard({ value, saving, onChange }: { value: VoiceOutput; savi
           <span>Cet écran peut faire entendre la voix (réglage propre à cet écran, comme « Écouter ici »)</span>
         </label>
         <div className={`status ${r.speakHere && !(value === 'pc' && pcPlays) ? 'short' : ''}`}><span className="ico">{r.speakHere && !(value === 'pc' && pcPlays) ? '🔊' : '🔇'}</span>{here}</div>
+        {isExtraWindow && (
+          <p className="secondary small" style={{ margin: 0 }}>
+            Fenêtre {windowNumber} (ajoutée pour un autre écran) : muette par défaut, pour ne pas entendre la voix deux fois.
+            La fenêtre principale la fait entendre ; cochez la case ci-dessus seulement si vous voulez l'entendre aussi depuis celle-ci.
+          </p>
+        )}
         <p className="secondary small" style={{ margin: 0 }}>
           Le PC de jeu fait entendre la voix (casque du pilote) quand « Entendre l'ingénieur sur ce PC » est coché dans la fenêtre du <b>collecteur</b>,
           carte « Radio de l'ingénieur ». Il peut aussi enregistrer son propre micro avec le bouton radio du PC de jeu.
@@ -159,6 +166,11 @@ function RadioSourcesCard() {
           <input type="checkbox" checked={station} onChange={(e) => { setRadioStation(e.target.checked); setStation(e.target.checked); }} />
           <span>Cet écran est le <b>poste radio</b> : il écoute le micro quand on appuie sur un bouton du PC de jeu ou de ClickDeck. Un seul écran devrait l'être (par défaut, la fenêtre de SecondMonitor).</span>
         </label>
+        {isExtraWindow && (
+          <p className="secondary small" style={{ margin: 0 }}>
+            Fenêtre {windowNumber} (ajoutée pour un autre écran) : pas poste radio par défaut et sans bouton de volant, la fenêtre principale s'en charge.
+          </p>
+        )}
       </div>
     </div>
   );

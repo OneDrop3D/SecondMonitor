@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, usePoll } from '../live';
+import { readPref, writePref } from '../prefs';
 import './carnet.css';
 
 // ───── Types du carnet (GET /api/carnets, /api/carnets/{id}) ─────
@@ -59,15 +60,12 @@ const sessionName = (t?: string | null) => (t && SESSION[t]) || 'Session';
 const dateTime = (s: string) => new Date(s).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const time = (s: string) => new Date(s).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
-function readPref(key: string) {
-  try { return localStorage.getItem(key); } catch { return null; }
-}
 
 export function CarnetView() {
   const { data: list, reload: reloadList } = usePoll<CarnetSummary[]>('/api/carnets', 10000);
-  const [selected, setSelected] = useState<string | null>(() => readPref('smhub-carnet'));
+  const [selected, setSelected] = useState<string | null>(() => readPref('smhub-carnet', '') || null);
   const id = selected && list?.some((s) => s.id === selected) ? selected : list?.[0]?.id ?? null;
-  useEffect(() => { if (id) try { localStorage.setItem('smhub-carnet', id); } catch { /* stockage indisponible */ } }, [id]);
+  useEffect(() => { if (id) writePref('smhub-carnet', id); }, [id]);
   const current = list?.find((s) => s.id === id)?.current ?? false;
 
   return (

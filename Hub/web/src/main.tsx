@@ -4,8 +4,10 @@ import App from './App';
 import { ErrorBoundary, installGlobalErrorReporting } from './components/ErrorBoundary';
 import './styles.css';
 import './music/music'; // musique Deezer : priorité à la radio
+import { announceWindow } from './windows';
 
 installGlobalErrorReporting();
+announceWindow(); // fenêtre ajoutée (« ?fenetre=2 ») : son numéro reste à elle tant qu'elle est ouverte
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

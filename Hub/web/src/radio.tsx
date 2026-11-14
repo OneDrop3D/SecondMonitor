@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Recorder, isPlaying, playBase64Wav, stopPlayback } from './audio';
+import { isExtraWindow, readDevicePref, readOwnPref, writeDevicePref, writePref } from './prefs';
 
 export interface RadioMessage {
   question?: string | null;
@@ -80,11 +81,12 @@ export function useRadio(): RadioApi {
   return ctx;
 }
 
-function readPref(key: string, fallback: string) {
-  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
-}
-function writePref(key: string, value: string | null) {
-  try { if (value == null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch { /* stockage indisponible */ }
+/**
+ * « Écouter ici » : cet écran fait-il entendre la voix de l'ingénieur ? Réglage propre à chaque fenêtre (prefs.ts) :
+ * une fenêtre ajoutée (« Nouvelle fenêtre ») est muette tant qu'on ne l'a pas cochée, pour ne pas entendre la voix deux fois.
+ */
+export function speaksHere(): boolean {
+  return readOwnPref('smhub-speak', isExtraWindow ? 'false' : 'true') === 'true';
 }
 
 let audioCtx: AudioContext | null = null;
@@ -116,12 +118,13 @@ function readPads(): Gamepad[] {
 export function RadioProvider({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [role, setRoleState] = useState(() => readPref('smhub-role', 'ingénieur'));
-  const [speakHere, setSpeakHereState] = useState(() => readPref('smhub-speak', 'true') === 'true');
-  const [testMode, setTestModeState] = useState(() => readPref('smhub-test', 'false') === 'true');
+  const [role, setRoleState] = useState(() => readDevicePref('smhub-role', 'ingénieur'));
+  const [speakHere, setSpeakHereState] = useState(speaksHere);
+  const [testMode, setTestModeState] = useState(() => readDevicePref('smhub-test', 'false') === 'true');
   const [testReplies, setTestReplies] = useState<RadioMessage[]>([]);
+  // Bouton du volant : propre à chaque fenêtre, sinon un appui ferait parler toutes les fenêtres à la fois.
   const [binding, setBindingState] = useState<WheelBinding | null>(() => {
-    try { return JSON.parse(readPref('smhub-wheel', 'null')); } catch { return null; }
+    try { return JSON.parse(readOwnPref('smhub-wheel', 'null')); } catch { return null; }
   });
   const [learning, setLearning] = useState(false);
   const [pads, setPads] = useState<PadInfo[]>([]);
@@ -134,9 +137,9 @@ export function RadioProvider({ children }: { children: ReactNode }) {
   state.current = { role, testMode, speakHere, binding, learning };
   phaseRef.current = phase;
 
-  const setRole = (r: string) => { setRoleState(r); writePref('smhub-role', r); };
+  const setRole = (r: string) => { setRoleState(r); writeDevicePref('smhub-role', r); };
   const setSpeakHere = (v: boolean) => { setSpeakHereState(v); writePref('smhub-speak', String(v)); };
-  const setTestMode = (v: boolean) => { setTestModeState(v); writePref('smhub-test', String(v)); };
+  const setTestMode = (v: boolean) => { setTestModeState(v); writeDevicePref('smhub-test', String(v)); };
   const setBinding = (b: WheelBinding | null) => { setBindingState(b); writePref('smhub-wheel', b ? JSON.stringify(b) : null); };
 
   const handleReply = useCallback((json: RadioMessage & { error?: string }) => {
@@ -350,19 +353,16 @@ export function RadioProvider({ children }: { children: ReactNode }) {
 
 /**
  * Poste radio : l'écran qui enregistre le micro quand un bouton du PC de jeu ou de ClickDeck est appuyé.
- * Par défaut la fenêtre de SecondMonitor (ouverte sur l'ordinateur lui-même) ; réglable par écran.
+ * Par défaut la fenêtre principale de SecondMonitor (ouverte sur l'ordinateur lui-même) ; réglable par écran.
+ * Une fenêtre ajoutée ne l'est pas, sauf si on le coche dans ses réglages (sinon le micro serait enregistré deux fois).
  */
 export function isRadioStation(): boolean {
-  try {
-    const v = localStorage.getItem('smhub-poste-radio');
-    if (v === 'oui') return true;
-    if (v === 'non') return false;
-  } catch {
-    /* stockage indisponible */
-  }
-  return ['localhost', '127.0.0.1'].includes(location.hostname);
+  const v = readOwnPref('smhub-poste-radio', '');
+  if (v === 'oui') return true;
+  if (v === 'non') return false;
+  return !isExtraWindow && ['localhost', '127.0.0.1'].includes(location.hostname);
 }
 
 export function setRadioStation(on: boolean) {
-  try { localStorage.setItem('smhub-poste-radio', on ? 'oui' : 'non'); } catch { /* stockage indisponible */ }
+  writePref('smhub-poste-radio', on ? 'oui' : 'non');
 }

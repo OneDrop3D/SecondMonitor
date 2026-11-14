@@ -435,8 +435,10 @@ export function MyCarPanel({ snapshot }: { snapshot: RaceSnapshot }) {
 
 // ───────────────────────────── Barre d'état (bas) ─────────────────────────────
 
-export function StatusBar({ snapshot, link, version, status, onConnection }: {
+export function StatusBar({ snapshot, link, version, status, onConnection, extra }: {
   snapshot: RaceSnapshot | null; link: string; version: string | null; status: HubStatus | null; onConnection: () => void;
+  /** Élément ajouté après le nom (fenêtre ajoutée : « Fenêtre 2 · muette »). */
+  extra?: ReactNode;
 }) {
   const s = snapshot?.hasData ? snapshot : null;
   const stage = linkStage(status, snapshot);
@@ -454,6 +456,7 @@ export function StatusBar({ snapshot, link, version, status, onConnection }: {
   return (
     <footer className="tm-status">
       <span className="tm-status-item"><b>SecondMonitor</b>{version ? <span className="muted"> {version}</span> : null}</span>
+      {extra}
       {s && <span className="tm-status-item">{s.source ?? 'Jeu'}</span>}
       {s && <span className="tm-status-item tnum">{clock(s.sessionTime)}</span>}
       <span className="tm-progress" aria-hidden><span style={{ width: `${progress * 100}%` }} /></span>
@@ -505,6 +508,7 @@ const PATHS: Record<string, string> = {
   stop: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 3',
   play: 'M7 5v14l11-7z',
   close: 'M6 6l12 12M18 6 6 18',
+  window: 'M8 8h12v11H8zM8 11h12M4 15V5h12',
 };
 
 export function Icon({ name, size = 16 }: { name: string; size?: number }) {

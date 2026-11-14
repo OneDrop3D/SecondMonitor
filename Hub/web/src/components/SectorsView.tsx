@@ -100,10 +100,11 @@ export function SectorsView({ snapshot, classColor, onSelect }: Props) {
 
 /** Configurations nommées : enregistrer la configuration actuelle, la rappeler, la supprimer. */
 function ConfigPresets({ config, apply }: { config: MsConfig; apply: (c: MsConfig) => void }) {
-  const [presets, setPresets] = useState(() => readJsonList<{ name: string; config: MsConfig }>(PRESETS_KEY));
+  // Configurations enregistrées : communes à toutes les fenêtres (la configuration affichée reste propre à chacune).
+  const [presets, setPresets] = useState(() => readJsonList<{ name: string; config: MsConfig }>(PRESETS_KEY, true));
   const [naming, setNaming] = useState<string | null>(null);
   const current = presets.find((p) => sameConfig(p.config, config));
-  const save = (list: { name: string; config: MsConfig }[]) => { setPresets(list); writeJsonPref(PRESETS_KEY, list); };
+  const save = (list: { name: string; config: MsConfig }[]) => { setPresets(list); writeJsonPref(PRESETS_KEY, list, true); };
   const commit = () => {
     const name = (naming ?? '').trim();
     if (!name) return;
