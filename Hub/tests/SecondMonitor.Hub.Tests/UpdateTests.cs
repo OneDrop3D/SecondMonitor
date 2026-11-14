@@ -299,20 +299,21 @@ public class UpdateTests
 
         public void Dispose()
         {
-            using (Process.Start("pkill", new[] { "-f", Root })) { }
-            // Le script de remplacement peut encore écrire son journal un instant (vu sur Linux, GitHub Actions) : on réessaie.
+            // Le script de remplacement (ou l'application qu'il relance) peut encore écrire un instant dans le banc
+            // (vu sous Linux, GitHub Actions) : on l'arrête de nouveau et on réessaie, jusqu'à 10 s.
             for (int i = 0; ; i++)
             {
+                using (Process p = Process.Start("pkill", new[] { "-f", Root })!)
+                {
+                    p.WaitForExit(2000);
+                }
+
                 try
                 {
                     Directory.Delete(Root, true);
                     return;
                 }
-                catch (IOException) when (i < 20)
-                {
-                    Thread.Sleep(250);
-                }
-                catch (UnauthorizedAccessException) when (i < 20)
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && i < 40)
                 {
                     Thread.Sleep(250);
                 }
