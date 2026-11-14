@@ -810,7 +810,10 @@ details.cx-log > summary { cursor: pointer; list-style: none; }
 .tm-status-link:hover { background: var(--surface-hover); }
 .sm-rail-guide { margin-top: auto; border-top: 1px solid var(--tm-line); }
 .sm-rail-q { width: 24px; height: 24px; border-radius: 50%; border: 1.8px solid currentColor; display: grid; place-items: center; font-weight: 800; font-size: 14px; }
-@media (max-width: 760px) { .sm-rail-guide { margin-top: 0; border-top: 0; } }
+/* « Nouvelle fenêtre » : en bas de la barre, juste au-dessus du guide. */
+.sm-rail-new { margin-top: auto; border-top: 1px solid var(--tm-line); }
+.sm-rail-new + .sm-rail-guide { margin-top: 0; }
+@media (max-width: 760px) { .sm-rail-guide, .sm-rail-new { margin-top: 0; border-top: 0; } }
 .sm-toast {
   position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 80; cursor: pointer;
   background: var(--surface-1); border: 1px solid color-mix(in oklab, var(--good) 60%, transparent); border-radius: var(--radius);
