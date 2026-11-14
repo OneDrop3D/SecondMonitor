@@ -241,6 +241,17 @@ namespace SecondMonitor.Hub.Core.Ai
             double loss = plan?.PitLoss ?? SecondMonitor.Hub.Core.Strategy.PitPlanner.DefaultPitLoss;
             string source = plan?.PitLossSource ?? "estimation, aucun arrêt vu pour l'instant";
             string text = $"Un arrêt te coûte environ {N(loss, 0)} secondes par rapport à un tour normal, entrée, arrêt et sortie des stands compris ({source}).";
+            if (plan is { PitLossMeasured: false, PitLaneLoss: double lane })
+            {
+                // Pas encore d'arrêt vu : le détail de l'estimation d'après le circuit (voie des stands + arrêt habituel de la catégorie).
+                string stop = plan.StopTimeEstimate is double s && s > 0
+                    ? $", et environ {N(s, 0)} secondes d'arrêt{(string.IsNullOrEmpty(plan.StopDetail) ? string.Empty : $", {plan.StopDetail}")}"
+                    : ", sans compter l'arrêt";
+                string guess = plan.PitLaneEstimated ? " La voie des stands est estimée d'après sa longueur." : string.Empty;
+                text = $"Un arrêt te coûte environ {N(loss, 0)} secondes par rapport à un tour normal : {N(lane, 0)} secondes de voie des stands sur ce circuit, de l'entrée à la sortie{stop}.{guess} "
+                    + "Je remplace cette estimation par la mesure dès qu'un arrêt est vu.";
+            }
+
             if (plan?.PlayerLastStopLoss is double mine && plan.PlayerLastStopLap is int lap)
             {
                 text += $" Ton dernier arrêt, au tour {lap - 1} : {N(mine, 0)} secondes.";

@@ -9,6 +9,7 @@ namespace SecondMonitor.Hub.Core.Strategy
     /// <summary>
     /// Simulations d'arrêt, avec des valeurs mesurées sur tout le plateau quand elles existent :
     /// - perte au stand : tour d'entrée + tour de sortie − deux tours normaux, médiane des arrêts observés ;
+    ///   avant le premier arrêt vu, voie des stands du circuit reconnu + arrêt habituel de la catégorie (PitLossEstimator) ;
     /// - gain des pneus neufs : rythme juste avant l'arrêt contre rythme juste après, médiane du plateau ;
     /// - position à la sortie si vous rentrez maintenant ;
     /// - undercut (s'arrêter avant la voiture devant), overcut (rester dehors quand elle s'arrête),
@@ -16,6 +17,7 @@ namespace SecondMonitor.Hub.Core.Strategy
     /// </summary>
     public static class PitPlanner
     {
+        /// <summary>Perte d'un arrêt quand ni arrêt vu ni circuit reconnu (circuit inconnu, ou sans valeur dans pitlane.json).</summary>
         public const double DefaultPitLoss = 22;
         public const double DefaultWarmup = 0.8;
         private const double PassMargin = 0.5; // marge pour ressortir vraiment devant
@@ -30,6 +32,8 @@ namespace SecondMonitor.Hub.Core.Strategy
             }
 
             var (pitLoss, stops) = MeasurePitLoss(trackers);
+            // Aucun arrêt vu : voie des stands du circuit reconnu + arrêt habituel de la catégorie ; la mesure la remplace dès le premier arrêt.
+            PitLossEstimate estimate = pitLoss.HasValue ? null : PitLossEstimator.For(snap);
             var (fieldGain, gainSamples) = MeasureFreshGain(trackers);
             double warmup = DefaultWarmup;
             double myPace = me.PaceLast3 ?? snap.Player?.AverageLap ?? me.LastLap ?? 0;
@@ -39,8 +43,16 @@ namespace SecondMonitor.Hub.Core.Strategy
 
             var plan = new PitPlanDto
             {
-                PitLoss = Math.Round(pitLoss ?? DefaultPitLoss, 1),
-                PitLossSource = pitLoss.HasValue ? $"mesuré sur {stops} arrêt{(stops > 1 ? "s" : string.Empty)}" : "estimation, aucun arrêt vu pour l'instant",
+                PitLoss = Math.Round(pitLoss ?? estimate?.Total ?? DefaultPitLoss, 1),
+                PitLossSource = pitLoss.HasValue ? $"mesuré sur {stops} arrêt{(stops > 1 ? "s" : string.Empty)}"
+                    : estimate?.Source ?? "estimation, aucun arrêt vu pour l'instant",
+                PitLossMeasured = pitLoss.HasValue,
+                PitLaneLoss = estimate?.LaneLoss,
+                StopTimeEstimate = estimate?.StopTime,
+                StopDetail = estimate?.StopDetail,
+                PitLossTrack = estimate?.TrackName,
+                PitLossConfidence = estimate?.LaneConfidence,
+                PitLaneEstimated = estimate?.LaneIsEstimate ?? false,
                 FreshTyreGain = freshGain.HasValue ? Math.Round(freshGain.Value, 2) : null,
                 FreshTyreGainSource = fieldGain.HasValue ? $"mesuré sur {gainSamples} relais" : playerGain.HasValue ? "d'après ta dégradation" : "inconnu pour l'instant",
                 WarmupPenalty = warmup,
@@ -297,6 +309,25 @@ namespace SecondMonitor.Hub.Core.Strategy
         public double PitLoss { get; set; }
 
         public string PitLossSource { get; set; }
+
+        /// <summary>Vrai quand PitLoss est mesuré sur les arrêts vus en course ; faux tant que c'est une estimation.</summary>
+        public bool PitLossMeasured { get; set; }
+
+        /// <summary>Estimation d'après le circuit : passage dans la voie des stands seul, sans l'arrêt (s). Null une fois mesuré.</summary>
+        public double? PitLaneLoss { get; set; }
+
+        /// <summary>Estimation d'après le circuit : temps immobile retenu pour la catégorie (s), et ce qu'il comprend.</summary>
+        public double? StopTimeEstimate { get; set; }
+
+        public string StopDetail { get; set; }
+
+        /// <summary>Circuit reconnu dont vient l'estimation, et confiance (0-1) dans sa valeur de voie des stands.</summary>
+        public string PitLossTrack { get; set; }
+
+        public double? PitLossConfidence { get; set; }
+
+        /// <summary>La voie des stands du circuit n'est pas publiée : estimée d'après sa longueur (géométrie OpenStreetMap).</summary>
+        public bool PitLaneEstimated { get; set; }
 
         /// <summary>Dernier arrêt du joueur : tour de sortie et temps perdu (entrée + sortie des stands comparées à son rythme).</summary>
         public int? PlayerLastStopLap { get; set; }
