@@ -300,7 +300,23 @@ public class UpdateTests
         public void Dispose()
         {
             using (Process.Start("pkill", new[] { "-f", Root })) { }
-            Directory.Delete(Root, true);
+            // Le script de remplacement peut encore écrire son journal un instant (vu sur Linux, GitHub Actions) : on réessaie.
+            for (int i = 0; ; i++)
+            {
+                try
+                {
+                    Directory.Delete(Root, true);
+                    return;
+                }
+                catch (IOException) when (i < 20)
+                {
+                    Thread.Sleep(250);
+                }
+                catch (UnauthorizedAccessException) when (i < 20)
+                {
+                    Thread.Sleep(250);
+                }
+            }
         }
 
         private static int DeadPid()
