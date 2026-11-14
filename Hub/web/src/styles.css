@@ -871,3 +871,17 @@ details.cx-log > summary { cursor: pointer; list-style: none; }
 .pitplan-cut.threat { border-left-color: var(--critical); }
 .pill.on { background: color-mix(in oklab, var(--good) 35%, var(--surface-3)); color: var(--text-primary); }
 .session-bar { gap: 8px; flex-wrap: wrap; }
+
+/* ───── Serveur de calcul (troisième ordinateur) : écran d'état, choix du premier lancement, liaison ───── */
+.calcul-page { min-height: 100vh; padding: var(--gutter); display: flex; flex-direction: column; gap: var(--gutter); max-width: 1180px; margin: 0 auto; }
+.calcul-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; }
+.calcul-head h1 { margin: 2px 0 6px; font-size: 26px; }
+.calcul-head .secondary { max-width: 680px; }
+.calcul-kicker { font-size: 12px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); }
+.calcul-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: var(--gutter); align-items: start; }
+.calcul-code { font-family: var(--mono); font-size: clamp(40px, 7vw, 64px); font-weight: 700; letter-spacing: 0.12em; text-align: center; padding: 10px 0; border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.calcul-code-input { flex: 0 1 150px; font-family: var(--mono); letter-spacing: 0.08em; }
+.calcul-choice { text-align: left; cursor: pointer; color: inherit; font: inherit; transition: border-color 0.15s, background 0.15s; }
+.calcul-choice:hover, .calcul-choice:focus-visible { border-color: var(--accent); background: var(--surface-hover); }
+.calcul-choice b { font-size: 16px; }
+.calcul-link { padding: 8px 0 4px; border-top: 1px solid var(--border); }

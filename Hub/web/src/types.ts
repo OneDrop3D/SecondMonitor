@@ -320,10 +320,15 @@ export interface HubSettings {
   fenetreSansGpu?: boolean;
   /** Voix de l'ingénieur quand le PC de jeu la demande : « pc », « ecrans » ou « deux ». */
   voiceOutput?: VoiceOutput;
+  /** Usage de cet ordinateur (changé par /api/mode, pas par l'enregistrement des réglages). */
+  mode?: string;
+  /** Serveur de calcul : identifiant de ce SecondMonitor, nom annoncé, port UDP des annonces. */
+  calcul?: { id: string; name: string; discoveryPort: number };
   ai: {
     ollamaUrl: string;
     localNodeName: string;
-    nodes: { name: string; url: string }[];
+    /** token : « relié » pour un serveur de calcul relié (le vrai jeton ne quitte jamais SecondMonitor). */
+    nodes: { name: string; url: string; token?: string; serverId?: string }[];
     aliases: Record<string, string>;
     listenModel: string;
     thinkModel: string;
@@ -424,6 +429,8 @@ export interface HubStatus {
   /** Postes audio du PC de jeu (collecteur : voix de l'ingénieur, micro). */
   stations?: AudioStation[];
   voiceOutput?: VoiceOutput;
+  /** Usage de cet ordinateur : « affichage », « calcul » (serveur de calcul) ou vide (premier lancement : à choisir). */
+  mode?: string;
 }
 
 // ───── Analyses (API /api/analysis/*, /api/telemetry, /api/weather) ─────

@@ -75,7 +75,9 @@ public sealed class OllamaClient
 
     public async Task<List<OllamaModel>> ListModelsAsync(string baseUrl, CancellationToken ct)
     {
-        JsonNode? tags = await _http.GetFromJsonAsync<JsonNode>($"{baseUrl}/api/tags", ct);
+        using var tagsResp = await SendAsync(HttpMethod.Get, $"{baseUrl}/api/tags", null, ct);
+        await EnsureOk(tagsResp, ct);
+        JsonNode? tags = await tagsResp.Content.ReadFromJsonAsync<JsonNode>(ct);
         var result = new List<OllamaModel>();
         foreach (JsonNode? m in tags?["models"]?.AsArray() ?? new JsonArray())
         {
@@ -88,7 +90,7 @@ public sealed class OllamaClient
             var model = new OllamaModel { Name = name, Id = name, SizeBytes = m?["size"]?.GetValue<long>() ?? 0 };
             try
             {
-                using var resp = await _http.PostAsJsonAsync($"{baseUrl}/api/show", new { model = name }, ct);
+                using var resp = await SendAsync(HttpMethod.Post, $"{baseUrl}/api/show", JsonContent.Create(new { model = name }), ct);
                 JsonNode? show = await resp.Content.ReadFromJsonAsync<JsonNode>(ct);
                 model.Capabilities = show?["capabilities"]?.AsArray().Select(c => c!.GetValue<string>()).ToList() ?? new();
                 model.Voices = show?["voices"]?.AsArray().Select(c => c!.GetValue<string>()).ToList() ?? new();
@@ -119,7 +121,7 @@ public sealed class OllamaClient
 
         try
         {
-            using var resp = await _http.PostAsJsonAsync($"{url}/api/show", new { model }, ct);
+            using var resp = await SendAsync(HttpMethod.Post, $"{url}/api/show", JsonContent.Create(new { model }), ct);
             JsonNode? show = await resp.Content.ReadFromJsonAsync<JsonNode>(ct);
             bool thinks = show?["capabilities"]?.AsArray().Any(c => c?.GetValue<string>() == "thinking") == true;
             ThinkingSupport[key] = thinks;
@@ -153,7 +155,7 @@ public sealed class OllamaClient
             body["think"] = think;
         }
 
-        using var resp = await _http.PostAsJsonAsync($"{url}/api/chat", body, ct);
+        using var resp = await SendAsync(HttpMethod.Post, $"{url}/api/chat", JsonContent.Create(body), ct);
         await EnsureOk(resp, ct);
         JsonNode? json = await resp.Content.ReadFromJsonAsync<JsonNode>(ct);
         string content = json?["message"]?["content"]?.GetValue<string>() ?? string.Empty;
@@ -185,7 +187,7 @@ public sealed class OllamaClient
         var file = new ByteArrayContent(audio);
         file.Headers.ContentType = new MediaTypeHeaderValue(fileName.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) ? "audio/wav" : "application/octet-stream");
         form.Add(file, "file", fileName);
-        using var resp = await _http.PostAsync($"{url}/v1/audio/transcriptions", form, ct);
+        using var resp = await SendAsync(HttpMethod.Post, $"{url}/v1/audio/transcriptions", form, ct);
         await EnsureOk(resp, ct);
         JsonNode? json = await resp.Content.ReadFromJsonAsync<JsonNode>(ct);
         return json?["text"]?.GetValue<string>()?.Trim() ?? string.Empty;
@@ -196,9 +198,25 @@ public sealed class OllamaClient
     {
         var (url, model, _) = Resolve(spec);
         var body = new { model, input = text, voice = string.IsNullOrEmpty(voice) ? "default" : voice, response_format = "wav" };
-        using var resp = await _http.PostAsJsonAsync($"{url}/v1/audio/speech", body, ct);
+        using var resp = await SendAsync(HttpMethod.Post, $"{url}/v1/audio/speech", JsonContent.Create(body), ct);
         await EnsureOk(resp, ct);
         return await resp.Content.ReadAsByteArrayAsync(ct);
+    }
+
+    /// <summary>
+    /// Requête vers une machine. Un serveur de calcul SecondMonitor relié (carte « Machines IA ») reçoit son jeton
+    /// dans l'en-tête « Authorization » ; un Ollama ouvert ne reçoit rien de plus.
+    /// </summary>
+    private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, HttpContent? content, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(method, url) { Content = content };
+        AiNode? node = _settings.Current.Ai.Nodes.FirstOrDefault(n => !string.IsNullOrEmpty(n.Token) && url.StartsWith(Normalize(n.Url) + "/", StringComparison.OrdinalIgnoreCase));
+        if (node != null)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", node.Token);
+        }
+
+        return await _http.SendAsync(request, ct);
     }
 
     private static string Normalize(string url)

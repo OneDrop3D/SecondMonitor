@@ -119,7 +119,7 @@ plist() {
   <key>LSMinimumSystemVersion</key><string>12.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.sports</string>
   <key>NSHighResolutionCapable</key><true/>
-  <key>NSLocalNetworkUsageDescription</key><string>SecondMonitor échange les données de course avec le PC de jeu sur le réseau local.</string>
+  <key>NSLocalNetworkUsageDescription</key><string>SecondMonitor échange les données de course avec le PC de jeu, et les questions de l'ingénieur avec les serveurs de calcul, sur le réseau local.</string>
 $micro
 </dict>
 </plist>

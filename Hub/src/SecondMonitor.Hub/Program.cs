@@ -10,6 +10,9 @@ using SecondMonitor.Hub.Services;
 //   --navigateur     interface dans le navigateur au lieu de la fenêtre
 //   --sans-fenetre   serveur seul (machine sans écran, Raspberry Pi…)
 //   --sans-gpu       fenêtre sans accélération graphique (Windows : fenêtre noire avec certains pilotes)
+//   --serveur-calcul cet ordinateur devient « serveur de calcul » : il prête son Ollama au SecondMonitor d'un autre
+//                    ordinateur (relais protégé par un code d'appairage, voir ComputeServerApi) ; choix retenu
+//   --affichage      cet ordinateur redevient celui qui affiche la course ; choix retenu
 bool headless = args.Contains("--sans-fenetre") || args.Contains("--serveur");
 bool useBrowser = args.Contains("--navigateur") || args.Contains("--ouvrir");
 bool noGpu = args.Contains("--sans-gpu");
@@ -30,6 +33,17 @@ var settings = new SettingsStore(dataDir);
 if (args.Contains("--demo"))
 {
     settings.Update(s => s.DemoMode = true);
+}
+
+if (args.Contains("--serveur-calcul") || args.Contains("--affichage"))
+{
+    settings.Update(s => s.Mode = args.Contains("--serveur-calcul") ? HubSettings.ModeCompute : HubSettings.ModeDisplay);
+}
+
+if (!SecondMonitor.Hub.Core.Compute.ComputeAnnouncement.IsValidId(settings.Current.Calcul.Id))
+{
+    // Identifiant stable de ce SecondMonitor (serveur de calcul annoncé, ou SecondMonitor qui se relie à un serveur).
+    settings.Update(s => s.Calcul.Id = Guid.NewGuid().ToString("N"));
 }
 
 // Application installée (Mac .app, Windows, Linux) : l'interface est à côté du programme, quel que soit le dossier de lancement.
@@ -90,6 +104,14 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<DataSourceService>
 builder.Services.AddSingleton<LiveHub>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<LiveHub>());
 builder.Services.AddHttpClient<OllamaClient>();
+// Serveur de calcul (ordinateur 3) et lien vers les serveurs de calcul (ordinateur 2) : ComputeServerApi.
+builder.Services.AddHttpClient("calcul");
+builder.Services.AddHttpClient("relais", c => c.Timeout = Timeout.InfiniteTimeSpan); // la requête d'origine fixe la durée
+builder.Services.AddSingleton(new SecondMonitor.Hub.Core.Compute.ComputePairing(Path.Combine(dataDir, "serveur-calcul.json")));
+builder.Services.AddSingleton<ComputeServerService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<ComputeServerService>());
+builder.Services.AddSingleton<ComputeLinkService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<ComputeLinkService>());
 builder.Services.AddSingleton<EngineerService>();
 builder.Services.AddHostedService<ProactiveService>();
 CarnetApi.Register(builder.Services); // carnet de session (IA)
@@ -101,6 +123,7 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 
 var app = builder.Build();
 app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(15) });
+ComputeServerApi.UseGuard(app, settings); // serveur de calcul : le réseau n'atteint que le relais protégé
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -132,6 +155,7 @@ app.MapGet("/api/status", (DataSourceService source, LiveHub hub) => Results.Jso
     httpsPort = httpsCertificate != null ? settings.Current.HttpsPort : (int?)null,
     stations = hub.Stations, // postes audio du PC de jeu (voix de l'ingénieur, micro)
     voiceOutput = settings.Current.VoiceOutput,
+    mode = settings.Current.Mode, // « affichage », « calcul » (serveur de calcul) ou vide (premier lancement : à choisir)
 }));
 
 // ───── Analyses détaillées (à la demande, hors flux temps réel) ─────
@@ -148,7 +172,7 @@ app.MapGet("/api/analysis/inputs", (RaceEngine engine, string? lap) =>
 app.MapGet("/api/player/laps", (RaceEngine engine) => Results.Json(engine.PlayerLaps(), LiveHub.Json));
 app.MapGet("/api/telemetry", (RaceEngine engine, double? since) => Results.Json(engine.ReadTelemetry(since ?? double.NegativeInfinity), LiveHub.Json));
 app.MapGet("/api/weather", (RaceEngine engine) => Results.Json(engine.BuildWeather(), LiveHub.Json));
-app.MapGet("/api/settings", (SettingsStore store) => store.Current);
+app.MapGet("/api/settings", (SettingsStore store) => store.PublicCopy()); // sans les jetons des serveurs de calcul
 app.MapPut("/api/settings", (SettingsStore store, HubSettings incoming) =>
 {
     store.Update(s =>
@@ -156,7 +180,9 @@ app.MapPut("/api/settings", (SettingsStore store, HubSettings incoming) =>
         s.GameHosts = incoming.GameHosts ?? new List<string>();
         s.DemoMode = incoming.DemoMode;
         s.DemoSpeed = incoming.DemoSpeed;
-        s.Ai = incoming.Ai ?? new AiSettings();
+        AiSettings ai = incoming.Ai ?? new AiSettings();
+        SettingsStore.KeepTokens(ai, s.Ai); // l'interface ne connaît pas les jetons : on garde ceux enregistrés
+        s.Ai = ai;
         // Lexique du pilote : seulement des corrections complètes et courtes ; morceaux d'audio entre 5 s et 2 min.
         s.Ai.Lexicon = (s.Ai.Lexicon ?? new()).Where(SecondMonitor.Hub.Core.Ai.RadioLexicon.IsValid)
             .Select(e => new SecondMonitor.Hub.Core.Ai.LexiconEntry { Heard = e.Heard.Trim(), Meant = e.Meant.Trim() }).Take(200).ToList();
@@ -164,7 +190,7 @@ app.MapPut("/api/settings", (SettingsStore store, HubSettings incoming) =>
         s.ThermalProfiles = incoming.ThermalProfiles ?? new List<SecondMonitor.Hub.Core.Race.ThermalProfile>();
         s.VoiceOutput = incoming.VoiceOutput is "pc" or "ecrans" or "deux" ? incoming.VoiceOutput : s.VoiceOutput;
     });
-    return Results.Ok(store.Current);
+    return Results.Ok(store.PublicCopy());
 });
 
 // ───── Ingénieur IA (Ollama, sur cet ordinateur uniquement) ─────
@@ -304,6 +330,7 @@ app.MapPost("/api/ai/say", async (EngineerService engineer, AskRequest req, Canc
 MusicApi.Map(app, dataDir); // Musique Deezer (/api/music/*, commandes vocales, priorité radio)
 UpdateApi.Map(app, dataDir, headless); // mises à jour (UpdateApi.cs)
 CarnetApi.Map(app); // carnet de session : /api/carnets
+ComputeServerApi.Map(app); // serveur de calcul : /calcul/* (relais protégé), /api/calcul/*, /api/mode
 
 // Toute autre route → l'application web (navigation côté client).
 app.MapFallbackToFile("index.html");
@@ -320,6 +347,23 @@ catch (Exception ex)
 
 Console.WriteLine($"SecondMonitor prêt : {localUrl}  (données : {dataDir})");
 HubJournal.Write(dataDir, "démarrage", $"SecondMonitor {typeof(Program).Assembly.GetName().Version} sur {Environment.OSVersion} : {localUrl}");
+var pairing = app.Services.GetRequiredService<SecondMonitor.Hub.Core.Compute.ComputePairing>();
+if (settings.Current.IsComputeServer)
+{
+    var computeServer = app.Services.GetRequiredService<ComputeServerService>();
+    Console.WriteLine($"Serveur de calcul « {computeServer.ServerName} » : code d'appairage {SecondMonitor.Hub.Core.Compute.ComputePairing.FormatCode(pairing.Code)} (à saisir sur l'autre ordinateur : Ingénieur IA › Machines IA › Relier).");
+    HubJournal.Write(dataDir, "serveur de calcul", $"Serveur de calcul « {computeServer.ServerName} » prêt (port {webPort})");
+}
+
+// Sans écran (Linux, --sans-fenetre) : le terminal est le seul endroit où lire le code ; on le redonne quand il change.
+pairing.CodeChanged += c =>
+{
+    if (settings.Current.IsComputeServer)
+    {
+        Console.WriteLine($"Serveur de calcul : nouveau code d'appairage {SecondMonitor.Hub.Core.Compute.ComputePairing.FormatCode(c)}");
+    }
+};
+
 if (httpsCertificate != null)
 {
     Console.WriteLine($"Depuis le PC de jeu, un iPad ou un téléphone (micro et volant) : https://<adresse-de-cet-ordinateur>:{settings.Current.HttpsPort}  — acceptez l'avertissement de certificat la première fois.");
@@ -331,7 +375,8 @@ if (headless)
     return;
 }
 
-if (useBrowser || !AppWindow.Run(localUrl, "SecondMonitor", dataDir, noGpu))
+string windowTitle = settings.Current.IsComputeServer ? "SecondMonitor — serveur de calcul" : "SecondMonitor";
+if (useBrowser || !AppWindow.Run(localUrl, windowTitle, dataDir, noGpu))
 {
     // Pas de fenêtre : interface dans le navigateur. Pour arrêter : Réglages › Quitter.
     AppWindow.OpenBrowser(localUrl);

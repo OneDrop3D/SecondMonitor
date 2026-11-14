@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLive } from './live';
 import { classColorVar } from './format';
-import type { DriverRow } from './types';
+import type { DriverRow, HubStatus } from './types';
 import { Leaderboard } from './components/Leaderboard';
 import { TrackMap } from './components/TrackMap';
 import { PlayerPanel } from './components/PlayerPanel';
@@ -33,6 +33,7 @@ import { collectorAddress, linkStage, useHubStatus } from './status';
 import { UpdateBanner } from './components/UpdateBanner';
 import { hasWindowParam, isExtraWindow, readDevicePref, readOwnPref, readPref, windowNumber, writeDevicePref, writePref } from './prefs';
 import { inAppWindow, openNewWindow } from './windows';
+import { ComputeServerView, ModeChoice } from './components/ComputeServer';
 
 type Tab = 'timing' | 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'ai' | 'carnet' | 'connection' | 'settings';
 
@@ -53,16 +54,20 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 ];
 
 export default function App() {
+  const status = useHubStatus();
+  // Serveur de calcul (troisième ordinateur) : il n'affiche pas la course, seulement son propre écran.
+  if (status?.mode === 'calcul') return <ComputeServerView />;
   return (
     <RadioProvider>
       <NoticeProvider>
-        <Shell />
+        <Shell status={status} />
+        {status?.mode === '' && <ModeChoice />}
       </NoticeProvider>
     </RadioProvider>
   );
 }
 
-function Shell() {
+function Shell({ status }: { status: HubStatus | null }) {
   const [radio, setRadio] = useState<RadioMessage[]>([]);
   const speakRef = useRef(speaksHere());
   const { snapshot, link } = useLive((m) => {
@@ -87,7 +92,6 @@ function Shell() {
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [theme, setThemeState] = useState(() => readPref('smhub-theme', 'dark'));
-  const status = useHubStatus();
   const version = status?.version ? String(status.version).split('.').slice(0, 3).join('.') : null;
   const [guide, setGuide] = useState(() => readDevicePref('smhub-guide-vu', '') === '');
   const closeGuide = () => { setGuide(false); writeDevicePref('smhub-guide-vu', '1'); };
@@ -258,7 +262,8 @@ function Shell() {
       </div>
       <StatusBar snapshot={snapshot} link={link} version={version} status={status} onConnection={() => setTab('connection')} extra={isExtraWindow ? <WindowBadge onSettings={() => setTab('settings')} /> : undefined} />
       <NoticeStack />
-      {guide && <GuideView status={status} snapshot={snapshot} onClose={closeGuide} onNavigate={(t) => setTab(t)} />}
+      {/* Premier lancement : le guide attend que l'usage de cet ordinateur soit choisi (ModeChoice). */}
+      {guide && status && status.mode !== '' && <GuideView status={status} snapshot={snapshot} onClose={closeGuide} onNavigate={(t) => setTab(t)} />}
       <RadioDock onOpen={() => setTab('ai')} />
       <UpdateBanner />
       {selected && <DriverDrawer driver={selected} onClose={() => setSelectedId(null)} />}
