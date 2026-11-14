@@ -331,7 +331,6 @@ namespace SecondMonitor.Hub.Core.Race
                     l.Speed[i] = Math.Round(l.Speed[from].Value + ((spd - l.Speed[from].Value) * f));
                     l.Rpm[i] = l.Rpm[from].HasValue ? Math.Round(l.Rpm[from].Value + ((s.Rpm - l.Rpm[from].Value) * f)) : s.Rpm;
                     l.Gear[i] = f < 0.5 ? l.Gear[from] : gear;
-                    l.Time[i] = l.Time[from].HasValue ? l.Time[from].Value + ((s.T - l.Time[from].Value) * f) : null;
                 }
             }
 
@@ -341,12 +340,38 @@ namespace SecondMonitor.Hub.Core.Race
             l.Speed[bin] = spd;
             l.Rpm[bin] = s.Rpm;
             l.Gear[bin] = gear;
-            l.Time[bin] = s.T;
             l.LastBin = bin;
+            RecordPassingTimes(previous, s, l);
 
             RecordShift(s, l);
             RecordControls(s, l, controls);
             _previousTraced = s;
+        }
+
+        /// <summary>
+        /// Heure de passage au centre de chaque case, interpolée entre deux mesures dont la position a changé.
+        /// Le Mans Ultimate avance le temps de session un envoi avant la position : une mesure « temps neuf, position ancienne »
+        /// fausserait l'écart entre deux tours (dents de scie de ±0,2 s) ; elle ne sert pas de repère.
+        /// </summary>
+        private static void RecordPassingTimes(Sample previous, Sample s, InputLap l)
+        {
+            bool freshPosition = previous == null || previous.Lap != s.Lap || Math.Abs(s.Dist - previous.Dist) > 0.01;
+            if (!freshPosition)
+            {
+                return;
+            }
+
+            (double T, double Dist)? anchor = l.TimeAnchor ?? (l.StartTime is double start ? (start, 0.0) : null);
+            if (anchor is (double t0, double d0) && s.Dist > d0 && s.T >= t0 && s.Dist - d0 <= 250)
+            {
+                for (int i = Math.Max(0, (int)Math.Ceiling((d0 / BinMeters) - 0.5)); i < l.Time.Length && (i + 0.5) * BinMeters <= s.Dist; i++)
+                {
+                    double c = (i + 0.5) * BinMeters;
+                    l.Time[i] = t0 + ((s.T - t0) * (c - d0) / (s.Dist - d0));
+                }
+            }
+
+            l.TimeAnchor = (s.T, s.Dist);
         }
 
         /// <summary>Heure du passage sur la ligne, interpolée entre la dernière mesure du tour précédent et la première de celui-ci.</summary>
@@ -743,6 +768,9 @@ namespace SecondMonitor.Hub.Core.Race
 
             /// <summary>Heure de session au passage de la ligne (null si inconnue : tour commencé ailleurs).</summary>
             public double? StartTime { get; set; }
+
+            /// <summary>Dernière mesure (heure, position) qui sert de repère pour les heures de passage.</summary>
+            public (double T, double Dist)? TimeAnchor { get; set; }
 
             public List<ShiftPointDto> Shifts { get; } = new();
 

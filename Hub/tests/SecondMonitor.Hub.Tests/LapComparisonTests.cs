@@ -173,6 +173,37 @@ public class LapComparisonTests
     }
 
     [Test]
+    public void DrivingWatch_PassingTimes_IgnoreStalePositions()
+    {
+        // Comme Le Mans Ultimate : 20 envois par seconde, temps de session et position avancés à 5 Hz, la position un envoi après le temps.
+        var watch = new DrivingWatch();
+        const double lapLength = 2000;
+        const double speedMs = 50;
+        double sessionTime = 0, dist = 0, total = 0;
+        for (int k = 0; total < 2.5 * lapLength; k++)
+        {
+            double physics = (k / 4) * 0.2; // instant de la dernière mise à jour physique
+            if (k % 4 == 0)
+            {
+                sessionTime = physics;
+            }
+            else if (k % 4 == 1)
+            {
+                total = physics * speedMs;
+                dist = total % lapLength;
+            }
+
+            int lap = (int)(total / lapLength);
+            watch.Update(sessionTime, Car(lap, dist, speedMs * 3.6, "5", 7000, 55), new InputInfo { ThrottlePedalPosition = 1 }, lapLength, null, "Practice", "Green");
+        }
+
+        LapDetailDto second = watch.LapDetail(2);
+        var errors = second.Elapsed.Select((e, i) => e.HasValue ? Math.Abs(e.Value - ((i + 0.5) * DrivingWatch.BinMeters / speedMs)) : 0).ToList();
+        Assert.That(second.Elapsed.Count(e => e.HasValue), Is.GreaterThan(195));
+        Assert.That(errors.Max(), Is.LessThan(0.02), "heure de passage juste à chaque case, sans dents de scie");
+    }
+
+    [Test]
     public void LapTrace_SurvivesASmallRollBack()
     {
         // Tête-à-queue au milieu du tour 2 : la voiture s'arrête, recule de 20 m, puis repart. Le tour garde sa trace (virages détectables).
