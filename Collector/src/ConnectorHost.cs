@@ -67,6 +67,12 @@ namespace SecondMonitor.Collector
 
         public int LastDriverCount { get; private set; }
 
+        /// <summary>
+        /// Voiture du pilote dans les dernières données du jeu (gommes montées, carburant) : lue seulement à la demande,
+        /// pour régler le menu des stands de Le Mans Ultimate. Null hors session.
+        /// </summary>
+        public SecondMonitor.DataModel.Snapshot.Drivers.DriverInfo LastPlayer { get; private set; }
+
         /// <summary>Nombre de lectures du jeu (jeux de données reçus du connecteur) depuis le démarrage.</summary>
         public long GameReads => Interlocked.Read(ref _gameReads);
 
@@ -250,6 +256,7 @@ namespace SecondMonitor.Collector
             }
 
             ActiveGame = null;
+            LastPlayer = null;
         }
 
         private void OnData(object sender, DataEventArgs e)
@@ -260,6 +267,7 @@ namespace SecondMonitor.Collector
             {
                 LastGameDataUtc = DateTime.UtcNow;
                 LastDriverCount = drivers;
+                LastPlayer = e.Data.PlayerInfo;
             }
 
             _server.SendData(e.Data);

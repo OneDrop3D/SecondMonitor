@@ -1,3 +1,5 @@
+import { readDevicePref, writeDevicePref } from './prefs';
+
 /** Enregistrement micro → WAV mono 16 kHz (format accepté par la transcription d'Ollama). */
 export class Recorder {
   private stream: MediaStream | null = null;
@@ -145,11 +147,11 @@ export function playBase64Wav(b64: string) {
 // ───── Choix du micro et du haut-parleur de cet écran (mémorisé sur l'appareil) ─────
 
 export function audioPref(kind: 'mic' | 'speaker'): string {
-  try { return localStorage.getItem(`smhub-audio-${kind}`) ?? ''; } catch { return ''; }
+  return readDevicePref(`smhub-audio-${kind}`, '');
 }
 
 export function setAudioPref(kind: 'mic' | 'speaker', id: string) {
-  try { if (id) localStorage.setItem(`smhub-audio-${kind}`, id); else localStorage.removeItem(`smhub-audio-${kind}`); } catch { /* stockage indisponible */ }
+  writeDevicePref(`smhub-audio-${kind}`, id || null);
 }
 
 export function canChooseSpeaker(): boolean {

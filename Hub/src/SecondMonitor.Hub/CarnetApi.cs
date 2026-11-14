@@ -10,6 +10,8 @@ namespace SecondMonitor.Hub;
 ///   POST   /api/carnets/{id}/recap      (re)générer le récapitulatif (IA si disponible, sinon calculé)
 ///   POST   /api/carnets/{id}/notes      ajouter une note { text, source }
 ///   DELETE /api/carnets/{id}            supprimer un carnet
+///   POST   /api/session/end             terminer la session en cours (carnet fermé et récapitulé)
+///   POST   /api/session/new             nouvelle session (carnet, mémoire et calculs repartent de zéro)
 /// </summary>
 public static class CarnetApi
 {
@@ -31,6 +33,14 @@ public static class CarnetApi
         app.MapPost("/api/carnets/{id}/notes", (CarnetService carnets, string id, CarnetNoteRequest note) =>
             string.IsNullOrWhiteSpace(note.Text) ? Results.BadRequest()
                 : carnets.AddNote(id, note.Text.Trim(), note.Source ?? "ingénieur") is { } c ? Results.Json(c, LiveHub.Json) : Results.NotFound());
+        // Boutons « Terminer la session » / « Nouvelle session » (écrans Ingénieur IA et Carnet).
+        app.MapPost("/api/session/end", (CarnetService carnets) => Results.Json(new { id = carnets.EndCurrent() }));
+        app.MapPost("/api/session/new", (CarnetService carnets, SecondMonitor.Hub.Core.Race.RaceEngine engine) =>
+        {
+            carnets.StartNew();
+            engine.StartNewSession(); // mémoire de course, conversation et calculs repartent de zéro
+            return Results.Ok();
+        });
         app.MapDelete("/api/carnets/{id}", (CarnetService carnets, string id) => carnets.Delete(id) ? Results.Ok() : Results.NotFound());
     }
 }

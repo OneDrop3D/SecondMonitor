@@ -16,7 +16,7 @@ public static class MusicApi
     {
         var engine = app.Services.GetRequiredService<RaceEngine>();
         var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Musique");
-        var music = new MusicService(dataDir, engine, logger);
+        var music = new MusicService(dataDir, engine, logger, app.Services.GetRequiredService<LiveHub>());
         MusicHook.Service = music;
         app.Lifetime.ApplicationStarted.Register(() => _ = Task.Run(() => music.RunAsync(app.Lifetime.ApplicationStopping)));
 
@@ -33,6 +33,8 @@ public static class MusicApi
                 s.DuckVolumePct = incoming.DuckVolumePct;
                 s.VolumeStepPct = incoming.VolumeStepPct;
                 s.MediaKeys = incoming.MediaKeys;
+                s.Output = incoming.Output;
+                s.FavoriteAutoPlay = incoming.FavoriteAutoPlay;
             });
             return Results.Json(music.Settings.Current, LiveHub.Json);
         });
@@ -76,6 +78,25 @@ public static class MusicApi
             return Results.Json(new { message = await music.OpenItemAsync(kind, req.Id, req.Title, ct) });
         });
 
+        // Playlist préférée : l'étoile d'un résultat de recherche (seulement des identifiants Deezer).
+        app.MapPost("/api/music/favorite", (MusicFavoriteRequest req) =>
+        {
+            if (!DeezerCatalog.TryParseKind(req.Kind, out MusicKind kind) || kind == MusicKind.Any || req.Id <= 0)
+            {
+                return Results.BadRequest(new { error = "Élément inconnu" });
+            }
+
+            string? picture = req.Picture != null && req.Picture.StartsWith("https://", StringComparison.Ordinal) && req.Picture.Length < 400 ? req.Picture : null;
+            music.Settings.Update(s => s.Favorite = new MusicFavorite { Kind = DeezerCatalog.KindPath(kind), Id = req.Id, Title = (req.Title ?? "ma sélection").Trim()[..Math.Min(120, (req.Title ?? "ma sélection").Trim().Length)], Picture = picture });
+            return Results.Json(music.Settings.Current, LiveHub.Json);
+        });
+
+        app.MapDelete("/api/music/favorite", () =>
+        {
+            music.Settings.Update(s => s.Favorite = null);
+            return Results.Json(music.Settings.Current, LiveHub.Json);
+        });
+
         // La voix de l'ingénieur commence / s'arrête sur le poste radio : la musique s'efface puis revient.
         app.MapPost("/api/music/voix", (MusicVoiceRequest req) =>
         {
@@ -107,5 +128,7 @@ public static class MusicApi
 public sealed record MusicCommandRequest(string Action);
 
 public sealed record MusicOpenRequest(string Kind, long Id, string? Title);
+
+public sealed record MusicFavoriteRequest(string Kind, long Id, string? Title, string? Picture);
 
 public sealed record MusicVoiceRequest(bool Playing);

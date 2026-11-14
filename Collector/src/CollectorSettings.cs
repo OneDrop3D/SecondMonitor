@@ -42,11 +42,26 @@ namespace SecondMonitor.Collector
         /// <summary>Port de l'interface de SecondMonitor (pour lui transmettre les appuis radio).</summary>
         public int PortSecondMonitor { get; set; } = 8686;
 
+        /// <summary>Radio de l'ingénieur sur ce PC : sa voix dans le casque du pilote, le micro de ce PC (fenêtre › « Radio de l'ingénieur »).</summary>
+        public RadioIngenieur RadioIngenieur { get; set; } = new();
+
         /// <summary>Priorité basse : le jeu passe toujours avant le collecteur.</summary>
         public bool PrioriteBasse { get; set; } = true;
 
         /// <summary>Mode diagnostic : CPU, mémoire, débit réseau et lectures du jeu affichés dans la fenêtre (ou la console).</summary>
         public bool Diagnostic { get; set; }
+
+        /// <summary>
+        /// SecondMonitor peut régler le menu des stands de Le Mans Ultimate depuis ce PC (API locale du jeu, port 6397), quand l'ingénieur
+        /// l'a activé et que le pilote le demande (« softs neufs », « la réparation »). Rien n'est envoyé au jeu sans demande.
+        /// </summary>
+        public bool MenuStandsLmu { get; set; } = true;
+
+        /// <summary>
+        /// SecondMonitor fait jouer sa musique Deezer sur ce PC (application Deezer de Windows), donc dans le casque du pilote :
+        /// recherche et commandes restent sur l'ordinateur de SecondMonitor (réglage « Musique sur : le PC de jeu »).
+        /// </summary>
+        public bool MusiqueDeezer { get; set; }
 
         [JsonIgnore]
         public string FilePath { get; private set; }
@@ -114,6 +129,7 @@ namespace SecondMonitor.Collector
             }
 
             settings ??= new CollectorSettings();
+            settings.RadioIngenieur ??= new RadioIngenieur();
             settings.FilePath = path;
             if (!File.Exists(path))
             {
@@ -129,5 +145,27 @@ namespace SecondMonitor.Collector
 
             return settings;
         }
+    }
+
+    /// <summary>Radio de l'ingénieur sur ce PC (collecteur.json). Les appareils sont ceux que la fenêtre du collecteur liste.</summary>
+    public sealed class RadioIngenieur
+    {
+        /// <summary>Entendre l'ingénieur sur ce PC (sinon, sa voix reste sur les écrans de SecondMonitor).</summary>
+        public bool Entendre { get; set; }
+
+        /// <summary>Sortie audio choisie (identifiant donné par la vue web ; vide = sortie par défaut du système).</summary>
+        public string Sortie { get; set; } = string.Empty;
+
+        /// <summary>Nom de la sortie, pour la retrouver si son identifiant change.</summary>
+        public string SortieNom { get; set; } = string.Empty;
+
+        /// <summary>Parler avec le micro de ce PC : le bouton radio enregistre ici au lieu de l'écran de SecondMonitor.</summary>
+        public bool Parler { get; set; }
+
+        /// <summary>Micro choisi (vide = micro par défaut du système).</summary>
+        public string Micro { get; set; } = string.Empty;
+
+        /// <summary>Nom du micro, pour le retrouver si son identifiant change.</summary>
+        public string MicroNom { get; set; } = string.Empty;
     }
 }

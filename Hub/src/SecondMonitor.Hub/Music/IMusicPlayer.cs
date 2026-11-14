@@ -1,5 +1,11 @@
+// Partagé avec le collecteur du PC de jeu (sans usings implicites ni annotations par défaut).
+#nullable enable
 namespace SecondMonitor.Hub.Music;
 
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Diagnostics;
 
 /// <summary>Ce que l'on sait du lecteur Deezer à un instant donné (null = inconnu sur ce système).</summary>

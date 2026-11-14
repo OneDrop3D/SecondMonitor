@@ -17,6 +17,9 @@ namespace SecondMonitor.Hub.Core.Music
         NowPlaying,
         Flow,
         Open,
+
+        /// <summary>« Mets ma playlist », « ma playlist préférée » : la playlist choisie avec l'étoile.</summary>
+        Favorite,
     }
 
     /// <summary>Ce qu'il faut chercher sur Deezer pour « mets … ».</summary>
@@ -129,6 +132,14 @@ namespace SecondMonitor.Hub.Core.Music
                 || Regex.IsMatch(t, @"^moins fort (la )?musique"))
             {
                 return new MusicIntent { Action = MusicAction.VolumeDown, Explicit = true };
+            }
+
+            // ───── Playlist préférée ─────
+            if (Regex.IsMatch(t, @"\b(mets|met|mettre|lance|lancer|joue|jouer|demarre|envoie|remets|relance)( moi| nous)? (ma|notre|la) (playlist|play list|liste) (preferee|favorite|perso)\b")
+                || Regex.IsMatch(t, @"\b(mets|met|mettre|lance|lancer|joue|jouer|demarre|remets|relance)( moi| nous)? (ma|notre) (playlist|play list)" + Polite)
+                || Regex.IsMatch(t, @"^(ma )?(playlist|play list) (preferee|favorite)" + Polite))
+            {
+                return new MusicIntent { Action = MusicAction.Favorite, Explicit = true };
             }
 
             // ───── Flow ─────

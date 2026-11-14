@@ -15,6 +15,7 @@ namespace SecondMonitor.Hub.Core.Race
         private double? _lapStartTime;
         private bool _wasInPits;
         private bool _pitSeenThisLap;
+        private bool _pitExitThisLap;
         private double? _pitEntryTime;
         private LapRecord _pendingLap;
         private double _pendingSince;
@@ -183,6 +184,7 @@ namespace SecondMonitor.Hub.Core.Race
             else if (!driver.InPits && _wasInPits)
             {
                 // Sortie de stand → nouvel arrêt + nouveau relais. Pas comptabilisé avant le départ (garage, grille).
+                _pitExitThisLap = true;
                 double? duration = _pitEntryTime.HasValue ? now - _pitEntryTime.Value : null;
                 if (driver.CompletedLaps > 0 || Laps.Count > 0)
                 {
@@ -239,9 +241,13 @@ namespace SecondMonitor.Hub.Core.Race
                     Time = measured,
                     EndTime = now,
                     IsPitLap = _pitSeenThisLap || driver.InPits,
-                    IsOutLap = Laps.Count == 0 || Laps[^1].IsPitLap,
+                    // Tour de sortie : celui pendant lequel la voiture quitte les stands. Pas forcément celui qui suit un tour « stand » :
+                    // au Mans (sortie après la ligne), le tour commencé dans la voie des stands est déjà le tour de sortie.
+                    IsOutLap = Laps.Count == 0 || _pitExitThisLap,
                     Valid = valid,
                     Compound = CurrentCompound,
+                    Stint = CurrentStint?.Index,
+                    TyreLaps = CurrentStint != null ? Math.Max(1, completed - CurrentStint.StartLap) : null,
                 };
 
                 Laps.Add(record);
@@ -249,6 +255,7 @@ namespace SecondMonitor.Hub.Core.Race
                 _pendingSince = now;
                 _lapStartTime = now;
                 _pitSeenThisLap = driver.InPits;
+                _pitExitThisLap = false;
                 _lastCompletedLaps = completed;
                 _lapValidSoFar = driver.CurrentLapValid;
             }
@@ -310,6 +317,12 @@ namespace SecondMonitor.Hub.Core.Race
         public bool Valid { get; set; }
 
         public string Compound { get; set; }
+
+        /// <summary>Relais (1 = premier) dans lequel le tour a été fait.</summary>
+        public int? Stint { get; set; }
+
+        /// <summary>Âge des pneus en tours à la fin de ce tour (1 = premier tour du relais, tour de sortie compris).</summary>
+        public int? TyreLaps { get; set; }
 
         public double? FuelUsed { get; set; }
 

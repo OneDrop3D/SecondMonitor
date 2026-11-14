@@ -9,6 +9,7 @@ namespace SecondMonitor.Hub.Core.Strategy
     /// <summary>
     /// Simulations d'arrêt, avec des valeurs mesurées sur tout le plateau quand elles existent :
     /// - perte au stand : tour d'entrée + tour de sortie − deux tours normaux, médiane des arrêts observés ;
+    ///   avant le premier arrêt vu, voie des stands du circuit reconnu + arrêt habituel de la catégorie (PitLossEstimator) ;
     /// - gain des pneus neufs : rythme juste avant l'arrêt contre rythme juste après, médiane du plateau ;
     /// - position à la sortie si vous rentrez maintenant ;
     /// - undercut (s'arrêter avant la voiture devant), overcut (rester dehors quand elle s'arrête),
@@ -16,6 +17,7 @@ namespace SecondMonitor.Hub.Core.Strategy
     /// </summary>
     public static class PitPlanner
     {
+        /// <summary>Perte d'un arrêt quand ni arrêt vu ni circuit reconnu (circuit inconnu, ou sans valeur dans pitlane.json).</summary>
         public const double DefaultPitLoss = 22;
         public const double DefaultWarmup = 0.8;
         private const double PassMargin = 0.5; // marge pour ressortir vraiment devant
@@ -30,6 +32,8 @@ namespace SecondMonitor.Hub.Core.Strategy
             }
 
             var (pitLoss, stops) = MeasurePitLoss(trackers);
+            // Aucun arrêt vu : voie des stands du circuit reconnu + arrêt habituel de la catégorie ; la mesure la remplace dès le premier arrêt.
+            PitLossEstimate estimate = pitLoss.HasValue ? null : PitLossEstimator.For(snap);
             var (fieldGain, gainSamples) = MeasureFreshGain(trackers);
             double warmup = DefaultWarmup;
             double myPace = me.PaceLast3 ?? snap.Player?.AverageLap ?? me.LastLap ?? 0;
@@ -39,12 +43,26 @@ namespace SecondMonitor.Hub.Core.Strategy
 
             var plan = new PitPlanDto
             {
-                PitLoss = Math.Round(pitLoss ?? DefaultPitLoss, 1),
-                PitLossSource = pitLoss.HasValue ? $"mesurée sur {stops} arrêt{(stops > 1 ? "s" : string.Empty)}" : "estimée (aucun arrêt observé pour l'instant)",
+                PitLoss = Math.Round(pitLoss ?? estimate?.Total ?? DefaultPitLoss, 1),
+                PitLossSource = pitLoss.HasValue ? $"mesuré sur {stops} arrêt{(stops > 1 ? "s" : string.Empty)}"
+                    : estimate?.Source ?? "estimation, aucun arrêt vu pour l'instant",
+                PitLossMeasured = pitLoss.HasValue,
+                PitLaneLoss = estimate?.LaneLoss,
+                StopTimeEstimate = estimate?.StopTime,
+                StopDetail = estimate?.StopDetail,
+                PitLossTrack = estimate?.TrackName,
+                PitLossConfidence = estimate?.LaneConfidence,
+                PitLaneEstimated = estimate?.LaneIsEstimate ?? false,
                 FreshTyreGain = freshGain.HasValue ? Math.Round(freshGain.Value, 2) : null,
-                FreshTyreGainSource = fieldGain.HasValue ? $"mesuré sur {gainSamples} relais" : playerGain.HasValue ? "d'après votre dégradation" : "inconnu pour l'instant",
+                FreshTyreGainSource = fieldGain.HasValue ? $"mesuré sur {gainSamples} relais" : playerGain.HasValue ? "d'après ta dégradation" : "inconnu pour l'instant",
                 WarmupPenalty = warmup,
             };
+
+            if (trackers != null && trackers.TryGetValue(me.Id, out DriverTracker mine) && LastStopLoss(mine) is var (lossLap, loss))
+            {
+                plan.PlayerLastStopLap = lossLap;
+                plan.PlayerLastStopLoss = Math.Round(loss, 1);
+            }
 
             var cls = snap.Drivers.Where(d => d.ClassId == me.ClassId && d.FinishStatus is not ("Dnf" or "Dq")).OrderBy(d => d.ClassPosition).ToList();
             plan.RejoinNow = Rejoin(snap, me, cls, plan.PitLoss);
@@ -87,8 +105,8 @@ namespace SecondMonitor.Hub.Core.Strategy
             if (d <= 0.05)
             {
                 cut.Text = d <= 0
-                    ? $"Undercut sur le numéro {rival.Number} ({N(gap, 1)} s devant) : non, même avec des pneus neufs vous seriez plus lent que lui de {N(-d, 2)} seconde par tour."
-                    : $"Undercut sur le numéro {rival.Number} ({N(gap, 1)} s devant) : non, les pneus neufs ne vous feraient gagner que {N(d, 2)} seconde par tour.";
+                    ? $"Undercut sur le numéro {rival.Number} ({N(gap, 1)} s devant) : non, même avec des pneus neufs tu serais plus lent que lui de {N(-d, 2)} seconde par tour."
+                    : $"Undercut sur le numéro {rival.Number} ({N(gap, 1)} s devant) : non, les pneus neufs ne te feraient gagner que {N(d, 2)} seconde par tour.";
                 return cut;
             }
 
@@ -96,10 +114,10 @@ namespace SecondMonitor.Hub.Core.Strategy
             cut.LapsNeeded = k;
             int? hisStopIn = rival.NextStop?.LapsUntil;
             cut.Feasible = k <= 2 || (hisStopIn is int h && h >= k);
-            string when = k <= 1 ? "même s'il s'arrête au tour suivant" : $"s'il reste dehors au moins {k} tours après vous";
+            string when = k <= 1 ? "même s'il s'arrête au tour suivant" : $"s'il reste dehors au moins {k} tours après toi";
             cut.Text = cut.Feasible
-                ? $"Undercut possible sur le numéro {rival.Number} ({N(gap, 1)} s devant) : en vous arrêtant avant lui, vous gagnez {N(d, 2)} s par tour avec des pneus neufs et passez devant {when}."
-                : $"Undercut difficile sur le numéro {rival.Number} ({N(gap, 1)} s devant) : il faudrait qu'il reste dehors {k} tours de plus que vous (gain {N(d, 2)} s par tour).";
+                ? $"Undercut possible sur le numéro {rival.Number} ({N(gap, 1)} s devant) : en t'arrêtant avant lui, tu gagnes {N(d, 2)} s par tour avec des pneus neufs et passe devant {when}."
+                : $"Undercut difficile sur le numéro {rival.Number} ({N(gap, 1)} s devant) : il faudrait qu'il reste dehors {k} tours de plus que toi (gain {N(d, 2)} s par tour).";
             return cut;
         }
 
@@ -119,7 +137,7 @@ namespace SecondMonitor.Hub.Core.Strategy
             cut.LapsNeeded = 1;
             cut.Feasible = gain1 > gap + PassMargin;
             cut.Text = cut.Feasible
-                ? $"Overcut possible sur le numéro {rival.Number} : s'il s'arrête avant vous, son tour de sortie sur pneus froids vous fait gagner {N(gain1, 1)} s, plus que les {N(gap, 1)} s d'écart. Restez dehors un tour de plus que lui."
+                ? $"Overcut possible sur le numéro {rival.Number} : s'il s'arrête avant toi, son tour de sortie sur pneus froids te fait gagner {N(gain1, 1)} s, plus que les {N(gap, 1)} s d'écart. Reste dehors un tour de plus que lui."
                 : $"Overcut sur le numéro {rival.Number} : non, ses pneus neufs vont plus vite ({N(d, 2)} s par tour) que ce qu'il perd au tour de sortie ({N(warmup, 1)} s).";
             return cut;
         }
@@ -144,8 +162,8 @@ namespace SecondMonitor.Hub.Core.Strategy
             cut.LapsNeeded = k;
             cut.Feasible = k <= 2;
             cut.Text = cut.Feasible
-                ? $"Menace d'undercut : le numéro {rival.Number} ({N(gap, 1)} s derrière) vous passe en {k} tour{(k > 1 ? "s" : string.Empty)} s'il s'arrête avant vous. Pour couvrir : rentrez le tour qui suit son arrêt."
-                : $"Faible menace d'undercut du numéro {rival.Number} ({N(gap, 1)} s derrière) : il lui faudrait {k} tours de pneus neufs avant votre arrêt.";
+                ? $"Menace d'undercut : le numéro {rival.Number} ({N(gap, 1)} s derrière) te passe en {k} tour{(k > 1 ? "s" : string.Empty)} s'il s'arrête avant toi. Pour couvrir : rentre le tour qui suit son arrêt."
+                : $"Faible menace d'undercut du numéro {rival.Number} ({N(gap, 1)} s derrière) : il lui faudrait {k} tours de pneus neufs avant ton arrêt.";
             return cut;
         }
 
@@ -175,7 +193,7 @@ namespace SecondMonitor.Hub.Core.Strategy
                 newAhead != null ? $"{N(r.AheadGap ?? 0, 1)} s derrière le numéro {newAhead.Number}" : null,
                 newBehind != null ? $"{N(r.BehindGap ?? 0, 1)} s devant le numéro {newBehind.Number}" : null,
             }.Where(x => x != null));
-            r.Text = $"Si vous rentrez maintenant, vous ressortez {pos}{(around.Length > 0 ? $", {around}" : string.Empty)}{(traffic > 0 ? $", avec {traffic} voiture(s) d'une autre catégorie tout près" : string.Empty)}.";
+            r.Text = $"Si tu rentres maintenant, tu ressors {pos}{(around.Length > 0 ? $", {around}" : string.Empty)}{(traffic > 0 ? $", avec {traffic} voiture(s) d'une autre catégorie tout près" : string.Empty)}.";
             return r;
         }
 
@@ -208,6 +226,33 @@ namespace SecondMonitor.Hub.Core.Strategy
             }
 
             return samples.Count == 0 ? (null, 0) : (Median(samples), samples.Count);
+        }
+
+        /// <summary>
+        /// Temps perdu par le dernier arrêt de ce pilote : tour d'entrée + tour de sortie − deux tours normaux (médiane de ses tours propres).
+        /// Null tant que le tour de sortie n'est pas bouclé.
+        /// </summary>
+        public static (int Lap, double Loss)? LastStopLoss(DriverTracker t)
+        {
+            var clean = t.Laps.Where(l => l.Time > 0 && !l.IsPitLap && !l.IsOutLap).Select(l => l.Time.Value).ToList();
+            if (clean.Count < 2)
+            {
+                return null;
+            }
+
+            double normal = Median(clean);
+            for (int i = t.Laps.Count - 2; i >= 0; i--)
+            {
+                LapRecord inLap = t.Laps[i];
+                LapRecord outLap = t.Laps[i + 1];
+                if (inLap.IsPitLap && outLap.IsOutLap && inLap.Time > 0 && outLap.Time > 0)
+                {
+                    double loss = inLap.Time.Value + outLap.Time.Value - (2 * normal);
+                    return loss is > 5 and < 300 ? (outLap.Lap, loss) : null;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>Gain des pneus neufs : médiane des 3 derniers tours d'un relais moins les tours 2 à 4 du suivant.</summary>
@@ -264,6 +309,30 @@ namespace SecondMonitor.Hub.Core.Strategy
         public double PitLoss { get; set; }
 
         public string PitLossSource { get; set; }
+
+        /// <summary>Vrai quand PitLoss est mesuré sur les arrêts vus en course ; faux tant que c'est une estimation.</summary>
+        public bool PitLossMeasured { get; set; }
+
+        /// <summary>Estimation d'après le circuit : passage dans la voie des stands seul, sans l'arrêt (s). Null une fois mesuré.</summary>
+        public double? PitLaneLoss { get; set; }
+
+        /// <summary>Estimation d'après le circuit : temps immobile retenu pour la catégorie (s), et ce qu'il comprend.</summary>
+        public double? StopTimeEstimate { get; set; }
+
+        public string StopDetail { get; set; }
+
+        /// <summary>Circuit reconnu dont vient l'estimation, et confiance (0-1) dans sa valeur de voie des stands.</summary>
+        public string PitLossTrack { get; set; }
+
+        public double? PitLossConfidence { get; set; }
+
+        /// <summary>La voie des stands du circuit n'est pas publiée : estimée d'après sa longueur (géométrie OpenStreetMap).</summary>
+        public bool PitLaneEstimated { get; set; }
+
+        /// <summary>Dernier arrêt du joueur : tour de sortie et temps perdu (entrée + sortie des stands comparées à son rythme).</summary>
+        public int? PlayerLastStopLap { get; set; }
+
+        public double? PlayerLastStopLoss { get; set; }
 
         public double? FreshTyreGain { get; set; }
 

@@ -66,6 +66,27 @@ namespace SecondMonitor.Hub.Core.Ai
             return t.TotalSeconds >= 60 ? $"1 min {t.Seconds:00}" : $"{(int)t.TotalSeconds} s";
         }
 
+        /// <summary>Retire les phrases répétées mot pour mot (« Tu ressors P1… Tu ressors P1… »).</summary>
+        public static string WithoutRepeats(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return text;
+            }
+
+            var seen = new System.Collections.Generic.HashSet<string>();
+            var kept = new System.Collections.Generic.List<string>();
+            foreach (string sentence in System.Text.RegularExpressions.Regex.Split(text.Trim(), @"(?<=[.!?])\s+"))
+            {
+                if (sentence.Length > 0 && seen.Add(sentence.Trim()))
+                {
+                    kept.Add(sentence.Trim());
+                }
+            }
+
+            return string.Join(" ", kept);
+        }
+
         /// <summary>Met une majuscule à la première lettre.</summary>
         public static string Cap(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0], Fr) + s[1..];
     }

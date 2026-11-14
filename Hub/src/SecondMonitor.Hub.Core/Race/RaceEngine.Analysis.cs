@@ -3,6 +3,7 @@ namespace SecondMonitor.Hub.Core.Race
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using SecondMonitor.DataModel.Snapshot.Drivers;
     using SecondMonitor.Hub.Core.Strategy;
     using SecondMonitor.Hub.Core.Telemetry;
 
@@ -114,6 +115,150 @@ namespace SecondMonitor.Hub.Core.Race
             }
         }
 
+        /// <summary>
+        /// Micro-secteurs de tous les tours bouclés (pilotes demandés, ou tous), avec le composé de pneus, le relais et l'âge des pneus :
+        /// de quoi comparer les tours entre eux, par gomme, par voiture ou par catégorie.
+        /// </summary>
+        public MicroSectorLapsDto BuildMicroSectorLaps(IEnumerable<string> ids)
+        {
+            lock (_lock)
+            {
+                var wanted = new HashSet<string>(ids ?? Enumerable.Empty<string>());
+                var dto = new MicroSectorLapsDto { Count = DriverLapAnalysis.MicroSectorCount };
+                foreach (DriverTracker t in Ordered())
+                {
+                    dto.LapLength = Math.Max(dto.LapLength, t.Analysis.LapLength);
+                    if (wanted.Count > 0 && !wanted.Contains(t.Id))
+                    {
+                        continue;
+                    }
+
+                    dto.Drivers.Add(MicroSectorLapsOf(t));
+                }
+
+                return dto;
+            }
+        }
+
+        internal static DriverMicroSectorLapsDto MicroSectorLapsOf(DriverTracker t)
+        {
+            DriverInfo d = t.Latest;
+            var times = new Dictionary<int, MicroSectorLap>();
+            foreach (MicroSectorLap ms in t.Analysis.MicroSectorLaps)
+            {
+                times[ms.Lap] = ms;
+            }
+
+            var row = new DriverMicroSectorLapsDto
+            {
+                Id = t.Id,
+                Name = d?.DriverLongName,
+                Number = d != null && (d.IsCarRaceNumberFilled || d.CarRaceNumber > 0) ? d.CarRaceNumber : null,
+                ClassId = d?.CarClassId ?? string.Empty,
+                ClassName = d?.CarClassName,
+                Car = d?.CarName,
+                IsPlayer = d?.IsPlayer == true,
+                SampleHz = Math.Round(t.Analysis.SampleHz, 1),
+            };
+
+            // Un tour peut apparaître deux fois (session rembobinée) : on garde le plus récent.
+            foreach (LapRecord l in t.Laps.GroupBy(l => l.Lap).Select(g => g.Last()))
+            {
+                times.TryGetValue(l.Lap, out MicroSectorLap ms);
+                row.Laps.Add(new MicroSectorLapDto
+                {
+                    Lap = l.Lap,
+                    Time = l.Time.HasValue ? Math.Round(l.Time.Value, 3) : null,
+                    Flags = (l.IsPitLap ? 1 : 0) | (l.IsOutLap ? 2 : 0) | (l.Valid ? 0 : 4) | (ms?.Pit.Any(p => p) == true ? 8 : 0),
+                    Compound = l.Compound,
+                    Stint = l.Stint,
+                    TyreLaps = l.TyreLaps,
+                    Ms = ms == null ? null : Round(ms.Times),
+                });
+            }
+
+            return row;
+        }
+
+        /// <summary>
+        /// Comparaison des tours du joueur : liste des tours gardés et détail de ceux demandés
+        /// (« best », « last », « current » ou numéros de tour ; 6 au plus).
+        /// </summary>
+        public LapComparisonDto BuildLapComparison(IEnumerable<string> which)
+        {
+            lock (_lock)
+            {
+                var dto = new LapComparisonDto { Step = DrivingWatch.BinMeters, LapLength = _last == null ? 0 : LapLength(_last) };
+                DriverInfo player = _last == null ? null : PlayerOf(_last);
+                DriverTracker tracker = player != null && _trackers.TryGetValue(DriverId(player), out DriverTracker pt) ? pt : null;
+                var records = new Dictionary<int, LapRecord>();
+                foreach (LapRecord l in tracker?.Laps ?? new List<LapRecord>())
+                {
+                    records[l.Lap] = l;
+                }
+
+                foreach (var (lap, complete, current) in _driving.RecordedLaps())
+                {
+                    records.TryGetValue(lap, out LapRecord r);
+                    dto.Laps.Add(new LapChoiceDto
+                    {
+                        Lap = lap,
+                        Time = r?.Time is double time ? Math.Round(time, 3) : null,
+                        Complete = complete,
+                        Current = current,
+                        Valid = r?.Valid ?? true,
+                        Pit = r?.IsPitLap == true,
+                        OutLap = r?.IsOutLap == true,
+                        Compound = r?.Compound ?? (current ? tracker?.CurrentCompound : null),
+                        TyreLaps = r?.TyreLaps,
+                    });
+                }
+
+                LapChoiceDto best = dto.Laps.Where(l => l.Complete && l.Valid && !l.Pit && !l.OutLap && l.Time > 0).OrderBy(l => l.Time).FirstOrDefault();
+                if (best != null)
+                {
+                    best.Best = true;
+                }
+
+                int? Resolve(string token) => token switch
+                {
+                    "best" => best?.Lap ?? dto.Laps.LastOrDefault(l => l.Complete)?.Lap,
+                    "last" => dto.Laps.LastOrDefault(l => l.Complete)?.Lap,
+                    "current" => dto.Laps.LastOrDefault(l => l.Current)?.Lap,
+                    _ => int.TryParse(token, out int n) ? n : null,
+                };
+
+                var wanted = (which ?? Enumerable.Empty<string>()).Select(Resolve).Where(n => n.HasValue).Select(n => n.Value).Distinct().Take(6);
+                foreach (int lap in wanted)
+                {
+                    LapDetailDto detail = _driving.LapDetail(lap);
+                    if (detail == null)
+                    {
+                        continue;
+                    }
+
+                    if (records.TryGetValue(lap, out LapRecord r))
+                    {
+                        detail.Time = r.Time is double time ? Math.Round(time, 3) : null;
+                        detail.Valid = r.Valid;
+                        detail.Pit = r.IsPitLap;
+                        detail.OutLap = r.IsOutLap;
+                        detail.Compound = r.Compound;
+                        detail.TyreLaps = r.TyreLaps;
+                        detail.Fuel = r.FuelUsed is double fuel ? Math.Round(fuel, 2) : null;
+                    }
+                    else if (detail.Current)
+                    {
+                        detail.Compound = tracker?.CurrentCompound;
+                    }
+
+                    dto.Traces.Add(detail);
+                }
+
+                return dto;
+            }
+        }
+
         public SpeedAnalysisDto BuildSpeedAnalysis()
         {
             lock (_lock)
@@ -206,7 +351,8 @@ namespace SecondMonitor.Hub.Core.Race
         }
 
         /// <summary>
-        /// Trajectoires (x, z, vitesse) sur une zone (virage ou ligne droite, avec ~60 m de marge) ou sur tout le tour.
+        /// Trajectoires (x, z, vitesse, distance depuis la ligne) sur une zone (virage ou ligne droite, avec ~60 m de marge)
+        /// ou sur tout le tour, à pleine résolution (une position tous les ~10 m) pour pouvoir zoomer sur un virage.
         /// Seuls le dernier et le meilleur tour de chaque pilote gardent leurs positions.
         /// </summary>
         public TrajectoriesDto BuildTrajectories(IEnumerable<string> ids, string segmentId, bool best)
@@ -236,13 +382,14 @@ namespace SecondMonitor.Hub.Core.Race
                     }
 
                     int n = trace.Speed.Length;
-                    IEnumerable<int> bins = seg == null ? Enumerable.Range(0, n).Where(i => i % 2 == 0) : Window(seg, n, 6);
+                    double binSize = t.Analysis.BinSize;
+                    IEnumerable<int> bins = seg == null ? Enumerable.Range(0, n) : Window(seg, n, 6);
                     var points = new List<double[]>();
                     foreach (int i in bins)
                     {
                         if (!float.IsNaN(trace.X[i]) && !float.IsNaN(trace.Z[i]))
                         {
-                            points.Add(new[] { Math.Round(trace.X[i], 2), Math.Round(trace.Z[i], 2), float.IsNaN(trace.Speed[i]) ? 0 : Math.Round(trace.Speed[i], 1) });
+                            points.Add(new[] { Math.Round(trace.X[i], 2), Math.Round(trace.Z[i], 2), float.IsNaN(trace.Speed[i]) ? 0 : Math.Round(trace.Speed[i], 1), Math.Round((i + 0.5) * binSize, 1) });
                         }
                     }
 
@@ -455,7 +602,95 @@ namespace SecondMonitor.Hub.Core.Race
 
         public double SampleHz { get; set; }
 
-        /// <summary>[x, z, vitesse km/h].</summary>
+        /// <summary>[x, z, vitesse km/h, distance depuis la ligne en m].</summary>
         public List<double[]> Points { get; set; } = new();
+    }
+
+    public sealed class MicroSectorLapsDto
+    {
+        public int Count { get; set; }
+
+        public double LapLength { get; set; }
+
+        public List<DriverMicroSectorLapsDto> Drivers { get; set; } = new();
+    }
+
+    public sealed class DriverMicroSectorLapsDto
+    {
+        public string Id { get; set; }
+
+        public string Name { get; set; }
+
+        public int? Number { get; set; }
+
+        public string ClassId { get; set; }
+
+        public string ClassName { get; set; }
+
+        public string Car { get; set; }
+
+        public bool IsPlayer { get; set; }
+
+        public double SampleHz { get; set; }
+
+        public List<MicroSectorLapDto> Laps { get; set; } = new();
+    }
+
+    public sealed class MicroSectorLapDto
+    {
+        public int Lap { get; set; }
+
+        public double? Time { get; set; }
+
+        /// <summary>1 = passage au stand, 2 = tour de sortie, 4 = tour invalide, 8 = un micro-secteur dans la voie des stands.</summary>
+        public int Flags { get; set; }
+
+        public string Compound { get; set; }
+
+        public int? Stint { get; set; }
+
+        /// <summary>Âge des pneus en tours (1 = premier tour du relais).</summary>
+        public int? TyreLaps { get; set; }
+
+        /// <summary>Temps des micro-secteurs (null : tour sans mesure, ou micro-secteur non mesuré).</summary>
+        public double?[] Ms { get; set; }
+    }
+
+    public sealed class LapComparisonDto
+    {
+        /// <summary>Pas des traces (m).</summary>
+        public double Step { get; set; }
+
+        public double LapLength { get; set; }
+
+        /// <summary>Tours du joueur gardés en mémoire (les plus anciens d'abord).</summary>
+        public List<LapChoiceDto> Laps { get; set; } = new();
+
+        /// <summary>Détail des tours demandés, dans l'ordre de la demande.</summary>
+        public List<LapDetailDto> Traces { get; set; } = new();
+    }
+
+    public sealed class LapChoiceDto
+    {
+        public int Lap { get; set; }
+
+        public double? Time { get; set; }
+
+        public bool Complete { get; set; }
+
+        public bool Current { get; set; }
+
+        public bool Valid { get; set; }
+
+        public bool Pit { get; set; }
+
+        public bool OutLap { get; set; }
+
+        /// <summary>Meilleur tour valide (hors stands) parmi ceux gardés.</summary>
+        public bool Best { get; set; }
+
+        public string Compound { get; set; }
+
+        public int? TyreLaps { get; set; }
     }
 }

@@ -243,6 +243,12 @@ public sealed class CarnetService : BackgroundService
 
         lock (_lock)
         {
+            if (Ended(snap))
+            {
+                return null;
+            }
+
+            _endedKey = null;
             CarnetSession c = Ensure(snap);
             Refresh(c, snap);
             if ((DateTime.UtcNow - _lastSave).TotalSeconds >= 15 || _dirty)
@@ -276,6 +282,11 @@ public sealed class CarnetService : BackgroundService
         CarnetRadio entry;
         lock (_lock)
         {
+            if (Ended(snap))
+            {
+                return;
+            }
+
             CarnetSession c = Ensure(snap);
             entry = new CarnetRadio
             {
@@ -320,6 +331,35 @@ public sealed class CarnetService : BackgroundService
             });
         }
     }
+
+    private string? _endedKey;
+
+    /// <summary>« Terminer la session » : le carnet en cours est fermé et récapitulé ; plus rien n'y est ajouté jusqu'à une nouvelle session.</summary>
+    public string? EndCurrent()
+    {
+        string? id;
+        lock (_lock)
+        {
+            id = _current?.Id;
+            _endedKey = _currentKey ?? (_engine.BuildSnapshot() is { HasData: true } snap ? CarnetBuilder.SessionKey(snap) : null);
+        }
+
+        Close("fin de session demandée par le pilote");
+        return id;
+    }
+
+    /// <summary>« Nouvelle session » : on repart d'un carnet vide (le précédent est fermé et récapitulé).</summary>
+    public void StartNew()
+    {
+        Close("nouvelle session demandée par le pilote");
+        lock (_lock)
+        {
+            _endedKey = null;
+        }
+    }
+
+    /// <summary>La session terminée à la main continue dans le jeu : on n'ouvre pas de nouveau carnet tant qu'elle dure.</summary>
+    private bool Ended(RaceSnapshot snap) => _endedKey != null && CarnetBuilder.SessionKey(snap) == _endedKey;
 
     /// <summary>Fin de session (changement de session) : on ferme le carnet et on génère son récapitulatif.</summary>
     private void Close(string reason)

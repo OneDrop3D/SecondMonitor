@@ -18,7 +18,26 @@ Dans la fenêtre :
 - *Lancer avec Windows* : démarrage automatique, fenêtre réduite ;
 - *Démonstration* : envoie une course fictive pour tester la liaison sans jeu.
 
+- *Laisser SecondMonitor régler le menu des stands de Le Mans Ultimate* (carte *Radio de l'ingénieur*, cochée par défaut) : quand l'ingénieur l'a activé
+  et que le pilote demande des pneus, la réparation ou du carburant, le collecteur règle le menu des stands par l'API locale du jeu (port 6397), puis le relit.
+  Rien n'est lu ni envoyé au jeu sans demande. *Tester l'API du menu des stands* lit le menu sans le modifier.
 - *Bouton radio* : choisissez une touche du clavier ou un bouton du volant de ce PC. Un appui démarre ou envoie la dictée de l'ingénieur IA sur SecondMonitor, ou le coupe s'il parle. Il fonctionne même quand le jeu est au premier plan.
+
+### Radio de l'ingénieur sur ce PC (voix et micro)
+
+La carte *Radio de l'ingénieur* de la fenêtre fait passer la radio par le casque et le micro du PC de jeu, au lieu de l'ordinateur qui affiche :
+
+- **Entendre l'ingénieur sur ce PC** : sa voix sort sur la sortie choisie (casque, haut-parleurs…) ; *Tester* joue trois bips dessus.
+  Dans SecondMonitor, *Réglages › Voix de l'ingénieur* décide si la voix reste aussi sur les écrans (« Le PC de jeu », « Les écrans de SecondMonitor » ou « Les deux »).
+- **Parler avec le micro de ce PC** : le bouton radio (ou la touche *Radio* de ClickDeck) enregistre le micro choisi ici. Un appui pour parler,
+  un second pour envoyer ; un appui pendant que l'ingénieur parle le coupe. *Tester* affiche le niveau du micro ; *Appuyer pour parler* fait la même chose que le bouton.
+- *Afficher les noms des appareils* : la vue web ne donne les noms des micros et des sorties qu'une fois le micro autorisé.
+
+Les choix sont gardés dans `collecteur.json` (`radioIngenieur`). La fenêtre doit rester ouverte (elle peut être réduite) : sans fenêtre (`--sans-fenetre`),
+la radio reste sur l'ordinateur qui affiche. La page de la fenêtre est servie en boucle locale sur `http://127.0.0.1:52643` (rien n'est ouvert sur le réseau) :
+c'est ce qui permet à la vue web d'utiliser le micro.
+Sur Mac, la sortie se choisit si la version de macOS le permet ; sinon la voix sort sur la sortie par défaut du système (la carte le dit).
+Sous Linux (WebKitGTK), micro et choix de la sortie dépendent de la version installée.
 
 Sans fenêtre (serveur, script) : `SecondMonitor-Collecteur.exe --sans-fenetre`.
 
@@ -56,6 +75,8 @@ La qualité et le démarrage automatique se règlent dans la fenêtre. Les autre
 | `prioriteBasse` | `true` | Le jeu passe toujours avant le collecteur. |
 | `jeuxDesactives` | `[]` | Jeux à ne pas surveiller (noms affichés au démarrage). |
 | `port` | `52642` | Port attendu par SecondMonitor. |
+| `portSecondMonitor` | `8686` | Port de l'interface de SecondMonitor (bouton radio, radio de l'ingénieur). |
+| `radioIngenieur` | désactivée | Voix et micro de ce PC pour l'ingénieur IA (réglés dans la fenêtre : `entendre`, `sortie`, `parler`, `micro`). |
 
 ## Consommation mesurée
 

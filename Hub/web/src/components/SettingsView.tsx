@@ -3,9 +3,12 @@ import { api } from '../live';
 import type { HubSettings, HubStatus, RaceSnapshot } from '../types';
 import { ThermalProfiles } from './ThermalProfiles';
 import { WheelBindingCard } from './EngineerView';
-import { isRadioStation, setRadioStation } from '../radio';
+import { isRadioStation, setRadioStation, useRadio } from '../radio';
+import { isExtraWindow, windowNumber } from '../prefs';
 import { MusicCard } from '../music/MusicCard';
 import { UpdateCard } from './UpdateBanner';
+import { useStations, type VoiceOutput } from '../stations';
+import { ComputeModeCard } from './ComputeServer';
 
 export function SettingsView({ theme, setTheme, snapshot }: { theme: string; setTheme: (t: string) => void; snapshot: RaceSnapshot | null }) {
   const [settings, setSettings] = useState<HubSettings | null>(null);
@@ -42,6 +45,7 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
     <div className="stack" style={{ maxWidth: 900 }}>
       {message && <div className="cx-advice">{message}</div>}
       <RadioSourcesCard />
+      <VoiceOutputCard value={settings.voiceOutput ?? 'pc'} saving={saving} onChange={(v) => save({ voiceOutput: v })} />
       <WheelBindingCard />
       <MusicCard />
 
@@ -77,6 +81,8 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
         </div>
       </div>
 
+      <ComputeModeCard />
+
       <UpdateCard />
 
       {['localhost', '127.0.0.1'].includes(location.hostname) && (
@@ -100,6 +106,53 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
   );
 }
 
+/** Voix de l'ingénieur : sur le PC de jeu (collecteur, casque du pilote), sur les écrans de SecondMonitor, ou les deux. */
+function VoiceOutputCard({ value, saving, onChange }: { value: VoiceOutput; saving: boolean; onChange: (v: VoiceOutput) => void }) {
+  const { stations } = useStations();
+  const r = useRadio();
+  const pc = stations.find((s) => s.voice || s.mic);
+  const pcPlays = value !== 'ecrans' && stations.some((s) => s.voice);
+  // Ce que fait CET écran, et pourquoi (même règle que la lecture : App.tsx, screensPlayVoice).
+  const here = !r.speakHere
+    ? 'Ici : voix coupée (case décochée).'
+    : value === 'pc' && pcPlays
+      ? 'Ici : silencieux, la voix passe par le casque du PC de jeu.'
+      : value === 'pc'
+        ? 'Ici : la voix sort, car aucun PC de jeu ne la joue pour l\'instant (collecteur fermé, ou « Entendre l\'ingénieur sur ce PC » décoché). Décochez la case pour la couper ici.'
+        : value === 'deux' && pcPlays ? 'Ici : la voix sort aussi (choix « Les deux »).' : 'Ici : la voix sort.';
+  return (
+    <div className="card">
+      <div className="card-head"><span className="card-title">Voix de l'ingénieur</span><span className="muted">{pc ? `${pc.name}${pc.voice ? ' : voix' : ''}${pc.voice && pc.mic ? ' et' : pc.mic ? ' :' : ''}${pc.mic ? ' micro' : ''}` : 'PC de jeu non déclaré'}</span></div>
+      <div className="card-body stack-sm">
+        <div className="row">
+          <span className="secondary">Voix sur</span>
+          <div className="seg">
+            {([['ecrans', 'Les écrans de SecondMonitor'], ['pc', 'Le PC de jeu'], ['deux', 'Les deux']] as const).map(([k, l]) => (
+              <button key={k} className={value === k ? 'on' : ''} disabled={saving} onClick={() => onChange(k)}>{l}</button>
+            ))}
+          </div>
+        </div>
+        <label className="switch">
+          <input type="checkbox" checked={r.speakHere} onChange={(e) => r.setSpeakHere(e.target.checked)} />
+          <span>Cet écran peut faire entendre la voix (réglage propre à cet écran, comme « Écouter ici »)</span>
+        </label>
+        <div className={`status ${r.speakHere && !(value === 'pc' && pcPlays) ? 'short' : ''}`}><span className="ico">{r.speakHere && !(value === 'pc' && pcPlays) ? '🔊' : '🔇'}</span>{here}</div>
+        {isExtraWindow && (
+          <p className="secondary small" style={{ margin: 0 }}>
+            Fenêtre {windowNumber} (ajoutée pour un autre écran) : muette par défaut, pour ne pas entendre la voix deux fois.
+            La fenêtre principale la fait entendre ; cochez la case ci-dessus seulement si vous voulez l'entendre aussi depuis celle-ci.
+          </p>
+        )}
+        <p className="secondary small" style={{ margin: 0 }}>
+          Le PC de jeu fait entendre la voix (casque du pilote) quand « Entendre l'ingénieur sur ce PC » est coché dans la fenêtre du <b>collecteur</b>,
+          carte « Radio de l'ingénieur ». Il peut aussi enregistrer son propre micro avec le bouton radio du PC de jeu.
+          Sans PC de jeu déclaré, la voix reste sur les écrans (case « Écouter ici » de l'Ingénieur IA).
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /** Où appuyer pour parler à l'ingénieur : volant de cet ordinateur, touche ou volant du PC de jeu, ClickDeck. */
 function RadioSourcesCard() {
   const [station, setStation] = useState(isRadioStation());
@@ -116,6 +169,11 @@ function RadioSourcesCard() {
           <input type="checkbox" checked={station} onChange={(e) => { setRadioStation(e.target.checked); setStation(e.target.checked); }} />
           <span>Cet écran est le <b>poste radio</b> : il écoute le micro quand on appuie sur un bouton du PC de jeu ou de ClickDeck. Un seul écran devrait l'être (par défaut, la fenêtre de SecondMonitor).</span>
         </label>
+        {isExtraWindow && (
+          <p className="secondary small" style={{ margin: 0 }}>
+            Fenêtre {windowNumber} (ajoutée pour un autre écran) : pas poste radio par défaut et sans bouton de volant, la fenêtre principale s'en charge.
+          </p>
+        )}
       </div>
     </div>
   );

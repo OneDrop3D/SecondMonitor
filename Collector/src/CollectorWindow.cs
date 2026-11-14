@@ -43,15 +43,20 @@ namespace SecondMonitor.Collector
                     .SetMinSize(420, 520)
                     .Center()
                     .SetResizable(true)
+                    .SetGrantBrowserPermissions(true)   // micro de ce PC (radio de l'ingénieur) sans question à chaque fois
+                    .SetMediaStreamEnabled(true)
+                    .SetMediaAutoplayEnabled(true)       // voix de l'ingénieur jouée sans clic
                     .SetContextMenuEnabled(false)
                     .SetDevToolsEnabled(false)
                     .SetLogVerbosity(0)
                     .SetMinimized(minimized);
                 // Windows : dossier de travail de WebView2 dans le profil de l'utilisateur (le dossier du programme peut être
                 // en lecture seule ; WebView2 ne peut alors pas démarrer et la fenêtre reste noire).
+                // Un dossier à part pour le collecteur : WebView2 refuse deux réglages différents sur un même dossier,
+                // et SecondMonitor (sur ce même PC) utilise d'autres réglages que le collecteur.
                 if (OperatingSystem.IsWindows())
                 {
-                    window.SetTemporaryFilesPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SecondMonitor", "WebView2"));
+                    window.SetTemporaryFilesPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SecondMonitor", "WebView2-Collecteur"));
                 }
 
                 string icon = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "SecondMonitor.ico" : "icone.png");
@@ -134,7 +139,22 @@ namespace SecondMonitor.Collector
                     voitures = runtime.Host.LastDriverCount,
                     conseil = runtime.Advice() is { } a ? new { titre = a.Title, texte = a.Text, action = a.Action } : null,
                     radio = new { supporte = RadioButton.Supported, bouton = runtime.Radio?.Description ?? "aucun", apprentissage = runtime.Radio?.Learning ?? false },
+                    radioIng = new
+                    {
+                        s.RadioIngenieur.Entendre,
+                        s.RadioIngenieur.Sortie,
+                        s.RadioIngenieur.SortieNom,
+                        s.RadioIngenieur.Parler,
+                        s.RadioIngenieur.Micro,
+                        s.RadioIngenieur.MicroNom,
+                        lien = runtime.Engineer?.Status,
+                        relie = runtime.Engineer?.Host != null,
+                        voixSur = runtime.Engineer?.VoiceOutput ?? "pc",
+                    },
                     diagnostic = s.Diagnostic,
+                    menuStands = s.MenuStandsLmu,
+                    musique = new { active = s.MusiqueDeezer, possible = runtime.Engineer?.MusicAvailable ?? false },
+                    menuStandsDernier = runtime.Engineer?.LastPitMenu,
                     mesures = s.Diagnostic ? runtime.Diagnostics.Sample()?.Text : null,
                 });
             }
@@ -169,6 +189,27 @@ namespace SecondMonitor.Collector
             string startQuality = NormalizeQuality(runtime.Settings.Qualite);
             void OnLog(string line) => Send(new { type = "journal", ligne = line });
             runtime.LogAdded += OnLog;
+
+            // Radio de l'ingénieur sur ce PC : la voix et les appuis arrivent de SecondMonitor, le son passe par la page.
+            EngineerLink engineer = runtime.Engineer;
+            void OnEngineerMessage(object m) => Send(m);
+            void OnPress() => Send(new { type = "radio-appui" });
+            if (engineer != null)
+            {
+                engineer.ToPage += OnEngineerMessage;
+                engineer.PressRequested += OnPress;
+            }
+
+            void Detach()
+            {
+                runtime.LogAdded -= OnLog;
+                if (engineer != null)
+                {
+                    engineer.ToPage -= OnEngineerMessage;
+                    engineer.PressRequested -= OnPress;
+                    engineer.DetachPage();
+                }
+            }
 
             window.RegisterWebMessageReceivedHandler((_, message) =>
             {
@@ -222,6 +263,33 @@ namespace SecondMonitor.Collector
                             runtime.SetDemo(root.GetProperty("valeur").GetBoolean());
                             SendState();
                             break;
+                        case "stand-autoriser":
+                            runtime.Settings.MenuStandsLmu = root.GetProperty("valeur").GetBoolean();
+                            runtime.Settings.Save();
+                            engineer?.SettingsChanged();
+                            SendState();
+                            break;
+                        case "musique-deezer":
+                            runtime.Settings.MusiqueDeezer = root.GetProperty("valeur").GetBoolean();
+                            runtime.Settings.Save();
+                            engineer?.SettingsChanged();
+                            SendState();
+                            break;
+                        case "voix-joue":
+                            // La page joue (ou a fini) la voix de l'ingénieur : SecondMonitor efface la musique pendant ce temps.
+                            _ = engineer?.ReportVoiceAsync(root.GetProperty("valeur").GetBoolean());
+                            break;
+                        case "stand-tester":
+                            if (engineer != null)
+                            {
+                                _ = System.Threading.Tasks.Task.Run(async () =>
+                                {
+                                    var (ok, text) = await engineer.TestPitMenuAsync();
+                                    Send(new { type = "stand-resultat", ok, texte = text });
+                                });
+                            }
+
+                            break;
                         case "diagnostic":
                             runtime.Settings.Diagnostic = root.GetProperty("valeur").GetBoolean();
                             runtime.Settings.Save();
@@ -259,6 +327,47 @@ namespace SecondMonitor.Collector
                         case "visualiseur":
                             OpenViewer(runtime);
                             break;
+                        case "radio-capacites":
+                            engineer?.AttachPage(root.GetProperty("valeur").GetProperty("micro").GetBoolean());
+                            SendState();
+                            break;
+                        case "radio-reglage":
+                            {
+                                JsonElement v = root.GetProperty("valeur");
+                                RadioIngenieur r = runtime.Settings.RadioIngenieur;
+                                r.Entendre = v.GetProperty("entendre").GetBoolean();
+                                r.Sortie = Text(v, "sortie");
+                                r.SortieNom = Text(v, "sortieNom");
+                                r.Parler = v.GetProperty("parler").GetBoolean();
+                                r.Micro = Text(v, "micro");
+                                r.MicroNom = Text(v, "microNom");
+                                runtime.Settings.Save();
+                                engineer?.SettingsChanged();
+                                SendState();
+                                break;
+                            }
+
+                        case "radio-envoyer":
+                            {
+                                // Ce qu'a dit le pilote (WAV 16 kHz) : envoyé à l'ingénieur, la page attend la fin de l'envoi.
+                                byte[] wav = Convert.FromBase64String(root.GetProperty("valeur").GetString() ?? string.Empty);
+                                if (engineer != null)
+                                {
+                                    _ = System.Threading.Tasks.Task.Run(async () => Send(new { type = "radio-envoye", erreur = await engineer.SendQuestionAsync(wav) }));
+                                }
+
+                                break;
+                            }
+
+                        case "radio-couper":
+                            _ = engineer?.StopSpeakingAsync();
+                            break;
+                        case "radio-phase":
+                            _ = engineer?.ReportPhaseAsync(root.GetProperty("valeur").GetString());
+                            break;
+                        case "radio-journal":
+                            runtime.Log($"Radio de l'ingénieur : {root.GetProperty("valeur").GetString()}");
+                            break;
                     }
                 }
                 catch (Exception ex)
@@ -267,25 +376,41 @@ namespace SecondMonitor.Collector
                 }
             });
 
+            // Page servie en boucle locale (http://127.0.0.1) : la vue web la considère sûre et autorise le micro.
+            // Sinon (port impossible à ouvrir), chargée en mémoire comme avant : tout marche sauf le micro de ce PC.
+            LocalPage page = LocalPage.TryStart(Page());
             try
             {
-                window.LoadRawString(Page());
+                if (page != null)
+                {
+                    window.Load(new Uri(page.Url));
+                }
+                else
+                {
+                    runtime.Log("Fenêtre chargée sans serveur local : le micro de ce PC ne sera pas disponible pour la radio.");
+                    window.LoadRawString(Page());
+                }
+
                 window.WaitForClose();
             }
             catch (Exception ex) when (IsMissingWebView(ex))
             {
-                runtime.LogAdded -= OnLog;
+                Detach();
                 return false;
             }
             finally
             {
                 timer?.Dispose();
                 updates?.Dispose();
+                page?.Dispose();
             }
 
-            runtime.LogAdded -= OnLog;
+            Detach();
             return true;
         }
+
+        private static string Text(JsonElement e, string name) =>
+            e.TryGetProperty(name, out JsonElement v) && v.ValueKind == JsonValueKind.String ? v.GetString() : string.Empty;
 
         /// <summary>Message simple dans une petite fenêtre. Faux si aucune fenêtre n'est possible.</summary>
         public static bool Message(string title, string text)

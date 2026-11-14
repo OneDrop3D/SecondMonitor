@@ -95,9 +95,14 @@ Sur le PC de jeu, la fenêtre du **collecteur** a le même bouton (jamais de vé
   la version sans installation (.zip) remplace son dossier.
 - **Linux** : l'archive remplace `~/.local/share/secondmonitor` puis `installer.sh --silencieux` rafraîchit les raccourcis.
 
-Les versions sont annoncées par le manifeste `secondmonitor.json` du dépôt [OneDrop3D/mises-a-jour](https://github.com/OneDrop3D/mises-a-jour)
-(même format que Multibook et ClickDeck), écrit par OneDrop3D à chaque publication. Seuls les fichiers des releases de
-OneDrop3D/SecondMonitor, en https et avec leur SHA-256, sont acceptés.
+Même système de mise à jour que Multibook et l'application ClickDeck : le manifeste `secondmonitor.json` est lu sur le site
+OneDrop3D (`/api/mises-a-jour/secondmonitor`, dès que son adresse est connue : `SECONDMONITOR_SITE_MAJ`) et sur le dépôt
+[OneDrop3D/mises-a-jour](https://github.com/OneDrop3D/mises-a-jour) ; la version la plus haute l'emporte, une source injoignable
+est ignorée. Seuls sont acceptés, en https et avec leur SHA-256, les fichiers des releases de OneDrop3D/mises-a-jour
+(étiquettes `secondmonitor-v<version>`, comme les autres produits), ceux des releases de OneDrop3D/SecondMonitor (versions
+publiées jusqu'ici) et ceux du site qui a donné le manifeste. Un système dont le fichier n'a pas encore été reconstruit pour la
+dernière version se voit proposer la version de son fichier, jamais une version qu'il ne peut pas installer. Les gros fichiers
+se téléchargent sur quatre connexions en parallèle.
 
 ## Démarrer
 
@@ -145,6 +150,10 @@ En course multi-catégories, le tableau montre votre catégorie et les autres vo
   - un bouton du volant branché sur l'ordinateur qui affiche ;
   - une **touche du clavier ou un bouton du volant du PC de jeu** : réglage dans la fenêtre du collecteur ; marche même pendant le jeu, sous Windows ;
   - une touche **ClickDeck**.
+- **Voix et micro sur le PC de jeu** : dans la fenêtre du collecteur, carte *Radio de l'ingénieur*, cochez « Entendre l'ingénieur sur ce PC »
+  (et choisissez le casque) et/ou « Parler avec le micro de ce PC » (et choisissez le micro). Le bouton radio du PC de jeu et ClickDeck enregistrent
+  alors le micro du PC de jeu. *Réglages › Voix de l'ingénieur* dans SecondMonitor : voix sur le PC de jeu seul (par défaut), sur les écrans, ou les deux.
+  La carte *Radio* de l'écran *Ingénieur IA* indique quand le PC de jeu a la voix ou le micro.
 - Les chiffres sont calculés par SecondMonitor : l'IA ne les invente pas.
 - Il calcule le **rythme** : le vôtre, celui qu'il faut pour rattraper la voiture devant ou pour gagner, et ce que donne le rythme actuel à l'arrivée.
   Il donne aussi la tendance météo des 30 minutes suivantes. Il répond à plusieurs questions posées d'un coup.
@@ -159,6 +168,20 @@ En course multi-catégories, le tableau montre votre catégorie et les autres vo
 - Il prend la parole de lui-même quand une décision se présente :
   - **pneus trop chauds sur tout un tour** ou en surchauffe depuis plus de 30 s, ou encore froids au tour de formation ;
   - pluie, relais à allonger, box dans deux tours, voiture qui revient, freins ou moteur trop chauds.
+- **Alertes de pilotage** dites tout de suite, en une phrase : limites de piste (trop large ou coupé, points avant pénalité), temps annulé,
+  pénalité, moteur coupé au départ, et **usure brutale** d'un pneu analysée (virage, phase, cause probable, réglage à essayer avec les valeurs actuelles).
+- Il connaît la **voiture** : catégorie (Hypercar LMH ou LMDh, LMP2, LMGT3, GTE, GT3, GT4, F1), ce qui se règle en roulant et les **réglages actuels**
+  lus dans le jeu (répartition, migration, TC, ABS, cartographie, regen, énergie ; Le Mans Ultimate, et en partie F1 24 et ACC).
+- **Pédales et volant** enregistrés sur chaque tour : bloc *Pédales et volant* de l'accueil et analyse du pilotage à la voix.
+- Ton radio : réponses courtes, « Copy » en anglais (réglable). Si l'IA réfléchit plus de 2,5 s, il répond « Copy, je reviens vers vous » et vous pouvez
+  poser d'autres questions ; les questions pour l'IA passent une à la fois, chacune chez son **spécialiste** (pneus, stratégie, voiture, course).
+- **Demandes d'arrêt** à la voix (« je boxe », « softs neufs », « la réparation aussi ») confirmées et gardées pour l'arrêt.
+  Dans **Le Mans Ultimate**, l'ingénieur peut régler lui-même le menu des stands (il le propose à la première demande) : le collecteur du PC de jeu passe
+  par l'API locale du jeu (port 6397, non officielle), relit le menu pour vérifier et le résultat est dit à la radio. « Essaie l'API » lit le menu sans rien changer.
+- **Mode thinking** des modèles qui l'ont (Qwen 3, DeepSeek R1, gpt-oss…) : activable à la voix (« active le mode thinking », « coupe le thinking »)
+  ou dans l'écran *Ingénieur IA* ; plus juste mais plus lent. Il n'est jamais envoyé à un modèle qui ne l'a pas.
+- Il **tutoie** le pilote. Les annonces de limites de piste se coupent à la voix (« coupe les limites de piste ») ou dans l'écran *Ingénieur IA*.
+- Boutons **Terminer la session** / **Nouvelle session** et menu pour revoir une session passée (écran *Ingénieur IA*).
 - Il garde une **mémoire de la course** et on peut changer de modèle à la voix. Les modèles peuvent tourner sur plusieurs machines (un Raspberry Pi par exemple).
 - Un **mode test** fonctionne sans jeu.
 
@@ -240,7 +263,11 @@ Une session peut être rejouée : `SecondMonitorHub --rejouer <fichier.smrec> [-
 
 Options de SecondMonitor :
 - `--navigateur` ouvre l'interface dans le navigateur au lieu de la fenêtre ;
-- `--sans-fenetre` lance le serveur seul (machine sans écran, Raspberry Pi).
+- `--sans-fenetre` lance le serveur seul (machine sans écran, Raspberry Pi) ;
+- `--sans-gpu` affiche la fenêtre sans accélération graphique (Windows : fenêtre noire avec certains pilotes) ; même effet avec `"fenetreSansGpu": true` dans `settings.json`.
+
+Si la fenêtre n'affiche pas l'interface au bout de 15 s, SecondMonitor l'ouvre dans le navigateur et en note la raison dans `journal.txt`.
+Sous Windows, SecondMonitor et le collecteur ont chacun leur dossier WebView2 (`%LOCALAPPDATA%\SecondMonitor\WebView2-Affichage` et `WebView2-Collecteur`).
 
 ## Crédits et licence
 

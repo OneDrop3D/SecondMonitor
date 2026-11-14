@@ -10,5 +10,11 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\SecondMonitor.Hub.Core\SecondMonitor.Hub.Core.csproj" />
+    <!-- Serveur de calcul : les essais de bout en bout lancent SecondMonitorHub.dll (construit avant les tests, sans y être lié). -->
+    <ProjectReference Include="..\..\src\SecondMonitor.Hub\SecondMonitor.Hub.csproj" ReferenceOutputAssembly="false" Private="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Menu des stands de Le Mans Ultimate (collecteur) : testé contre un faux LMU local. -->
+    <Compile Include="..\..\..\Collector\src\LmuPitMenu.cs" Link="Linked\LmuPitMenu.cs" />
   </ItemGroup>
 </Project>

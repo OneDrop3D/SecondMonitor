@@ -24,6 +24,32 @@ public sealed class HubSettings
 
     public AiSettings Ai { get; set; } = new();
 
+    /// <summary>Fenêtre sans accélération graphique (comme l'option « --sans-gpu ») : Windows, fenêtre noire avec certains pilotes.</summary>
+    public bool FenetreSansGpu { get; set; }
+
+    /// <summary>
+    /// Où se fait entendre la voix de l'ingénieur quand le PC de jeu la demande (collecteur, « Entendre l'ingénieur sur ce PC ») :
+    /// « pc » (le PC de jeu seul, par défaut), « ecrans » (les écrans de SecondMonitor seuls) ou « deux ».
+    /// </summary>
+    public string VoiceOutput { get; set; } = "pc";
+
+    /// <summary>
+    /// Usage de cet ordinateur : « affichage » (affiche la course : chronométrage, stratégie, ingénieur IA) ou « calcul »
+    /// (serveur de calcul : prête les modèles de son Ollama au SecondMonitor d'un autre ordinateur). Vide = pas encore choisi
+    /// (premier lancement : l'interface pose la question). Changé par « /api/mode » ou l'option « --serveur-calcul ».
+    /// </summary>
+    public string Mode { get; set; } = ModeDisplay;
+
+    /// <summary>Serveur de calcul (nom annoncé, port des annonces) et identifiant de ce SecondMonitor.</summary>
+    public ComputeSettings Calcul { get; set; } = new();
+
+    public const string ModeDisplay = "affichage";
+
+    public const string ModeCompute = "calcul";
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsComputeServer => Mode == ModeCompute;
+
     /// <summary>Plages de température (bleu = froid, vert = bon, rouge = trop chaud) par jeu et par voiture.</summary>
     public List<Core.Race.ThermalProfile> ThermalProfiles { get; set; } = new();
 }
@@ -34,6 +60,31 @@ public sealed class AiNode
     public string Name { get; set; } = "";
 
     public string Url { get; set; } = "";
+
+    /// <summary>
+    /// Jeton remis par un serveur de calcul SecondMonitor à l'appairage, joint à chaque requête (vide pour un Ollama ouvert).
+    /// Jamais renvoyé à l'interface (<see cref="SettingsStore.PublicCopy"/>).
+    /// </summary>
+    public string Token { get; set; } = "";
+
+    /// <summary>Identifiant du serveur de calcul : son adresse est mise à jour quand il réapparaît ailleurs sur le réseau.</summary>
+    public string ServerId { get; set; } = "";
+
+    /// <summary>Ce que l'interface reçoit à la place du jeton.</summary>
+    public const string HiddenToken = "relié";
+}
+
+/// <summary>Réglages du serveur de calcul (« ordinateur 3 ») et de la découverte (« ordinateur 2 »).</summary>
+public sealed class ComputeSettings
+{
+    /// <summary>Identifiant stable de ce SecondMonitor (serveur annoncé, ou SecondMonitor qui se relie). Créé au premier démarrage.</summary>
+    public string Id { get; set; } = "";
+
+    /// <summary>Nom annoncé sur le réseau quand cet ordinateur est serveur de calcul (vide = nom de l'ordinateur).</summary>
+    public string Name { get; set; } = "";
+
+    /// <summary>Port UDP des annonces des serveurs de calcul.</summary>
+    public int DiscoveryPort { get; set; } = Core.Compute.ComputeAnnouncement.DefaultPort;
 }
 
 public sealed class AiSettings
@@ -73,6 +124,51 @@ public sealed class AiSettings
 
     /// <summary>L'IA prend la parole d'elle-même (pluie, relais à allonger, arrêt proche, menace derrière, surchauffe).</summary>
     public bool ProactiveRadio { get; set; } = true;
+
+    /// <summary>Alertes de pilotage dites tout de suite : limites de piste, temps annulé, pénalité, usure brutale, départ.</summary>
+    public bool DrivingAlerts { get; set; } = true;
+
+    /// <summary>
+    /// Mode « thinking » des modèles qui l'ont (Qwen 3, DeepSeek R1, gpt-oss…) : l'IA raisonne avant de répondre, plus juste mais plus lent.
+    /// Activable à la voix (« active le mode thinking », « réfléchis plus ») ; sans effet sur les modèles qui ne l'ont pas.
+    /// </summary>
+    public bool ThinkingMode { get; set; }
+
+    /// <summary>Annonces de limites de piste et de temps annulé (désactivables à la voix : « coupe les limites de piste »).</summary>
+    public bool TrackLimitAlerts { get; set; } = true;
+
+    /// <summary>
+    /// L'ingénieur règle lui-même le menu des stands de Le Mans Ultimate (par le collecteur du PC de jeu) quand le pilote demande
+    /// des pneus, la réparation ou du carburant. Désactivé tant que le pilote ne l'a pas accepté (l'ingénieur le propose).
+    /// </summary>
+    public bool LmuPitMenu { get; set; }
+
+    /// <summary>Accusés de réception radio en anglais (« Copy », « Understood »), comme une vraie radio d'équipe.</summary>
+    public bool EnglishCalls { get; set; } = true;
+
+    /// <summary>
+    /// Spécialistes : un modèle par domaine (« pneus », « stratégie », « voiture », « course »), vide = modèle « réflexion ».
+    /// Chaque spécialiste ne reçoit que les faits et les connaissances de son domaine : réponses plus rapides et plus justes.
+    /// </summary>
+    public Dictionary<string, string> Specialists { get; set; } = new();
+
+    /// <summary>Temps (s) au-delà duquel l'ingénieur répond « Copy, je regarde et je reviens vers vous » et laisse le pilote poser une autre question.</summary>
+    public double AckAfterSeconds { get; set; } = 2.5;
+
+    /// <summary>
+    /// Modèle pour les questions difficiles (analyse, « pourquoi », plusieurs sujets, longues), par exemple un plus gros modèle
+    /// sur un serveur de calcul (« nom@machine ») ; vide = le modèle habituel. Les questions simples restent sur le modèle habituel.
+    /// </summary>
+    public string HardModel { get; set; } = "";
+
+    /// <summary>Lexique de piste : corrections ajoutées par le pilote pour la dictée (« ce qu'elle entend » → « ce que j'ai dit »).</summary>
+    public List<SecondMonitor.Hub.Core.Ai.LexiconEntry> Lexicon { get; set; } = new();
+
+    /// <summary>
+    /// Durée maximale (s) d'un morceau d'audio envoyé au modèle « écoute ». Au-delà, l'enregistrement est découpé sur un silence
+    /// et chaque morceau est transcrit à part (certains modèles refusent plus de 30 ou 60 secondes).
+    /// </summary>
+    public int ListenChunkSeconds { get; set; } = 28;
 }
 
 public sealed class SettingsStore
@@ -102,6 +198,48 @@ public sealed class SettingsStore
         return Path.Combine(root, "SecondMonitorHub");
     }
 
+    /// <summary>
+    /// Copie des réglages pour l'interface : les jetons des serveurs de calcul y sont remplacés par « relié »
+    /// (l'interface est ouverte à tout le réseau local ; le jeton ne quitte pas ce SecondMonitor).
+    /// </summary>
+    public HubSettings PublicCopy()
+    {
+        HubSettings copy;
+        lock (_lock)
+        {
+            copy = JsonSerializer.Deserialize<HubSettings>(JsonSerializer.Serialize(Current, Options), Options) ?? new HubSettings();
+        }
+
+        foreach (AiNode node in copy.Ai.Nodes)
+        {
+            node.Token = string.IsNullOrEmpty(node.Token) ? "" : AiNode.HiddenToken;
+        }
+
+        return copy;
+    }
+
+    /// <summary>
+    /// Réglages IA reçus de l'interface : elle ne connaît pas les jetons, on garde ceux déjà enregistrés (même nom de machine).
+    /// Une machine retirée dans l'interface perd son jeton avec elle ; une machine ajoutée à la main sous le même nom,
+    /// mais ailleurs, n'en hérite pas (le jeton ne part que vers le serveur qui l'a donné).
+    /// </summary>
+    public static void KeepTokens(AiSettings incoming, AiSettings current)
+    {
+        incoming.Nodes ??= new List<AiNode>();
+        foreach (AiNode node in incoming.Nodes)
+        {
+            AiNode? known = current.Nodes.FirstOrDefault(n => n.Name.Equals(node.Name, StringComparison.OrdinalIgnoreCase));
+            bool same = known != null
+                && ((!string.IsNullOrEmpty(known.ServerId) && known.ServerId == node.ServerId) || string.Equals(known.Url, node.Url, StringComparison.OrdinalIgnoreCase));
+            node.Token = same ? known!.Token : "";
+            node.ServerId = same ? known!.ServerId : "";
+            if (same)
+            {
+                node.Url = known!.Url; // adresse suivie par la découverte, pas celle (peut-être ancienne) de l'interface
+            }
+        }
+    }
+
     public void Update(Action<HubSettings> change)
     {
         HubSettings copy;
@@ -124,6 +262,9 @@ public sealed class SettingsStore
             {
                 return JsonSerializer.Deserialize<HubSettings>(File.ReadAllText(_path), Options) ?? new HubSettings();
             }
+
+            // Premier lancement : l'interface demande comment utiliser cet ordinateur (affichage ou serveur de calcul).
+            return new HubSettings { Mode = "" };
         }
         catch (Exception)
         {

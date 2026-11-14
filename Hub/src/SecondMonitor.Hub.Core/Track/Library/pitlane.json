@@ -1,0 +1,3003 @@
+{
+ "_lisezMoi": [
+  "Temps perdu par un passage dans la voie des stands, SANS l'arrêt lui-même (entrée, limiteur, sortie, comparés au même trajet en piste : ce que coûte un drive-through).",
+  "Lu par Hub/src/SecondMonitor.Hub.Core/Track/PitLaneLibrary.cs ; sert à l'ingénieur avant le premier arrêt vu en course (Strategy/PitPlanner.cs, PitLossEstimator.cs), puis la mesure le remplace.",
+  "circuits : un par circuit de circuits.json (même id). pitLaneLossSeconds, pitLaneLength (m, zone au limiteur quand elle est connue), speedLimitKph, category (série pour laquelle la valeur vaut), confidence (0-1), method, sources (adresses), notes ; reason quand il n'y a pas de valeur ; variants : valeurs d'autres catégories ; osmPitLength / osmBypassedLength : voie et piste contournée mesurées dans OpenStreetMap ; speedAssumed : vitesse limite supposée (rien de publié) ; publishedPitLaneLength : longueur publiée qui a servi à une estimation.",
+  "confidence : 0,85-0,95 publié par une source primaire ; 0,7-0,8 sources concordantes ou chronos officiels ; 0,5-0,65 mesure communautaire ou valeur dérivée ; 0,3-0,45 estimation géométrique (method « estimé »).",
+  "Bases : F1 = drive-through net mesuré sur les chronos officiels (arrêt complet = valeur + ~3 s de freinage et relance + immobilisation) ; WEC (outils LMU) et IMSA = temps de traversée de la voie, perte nette 0 à 3 s plus faible.",
+  "Recalcul pour une autre vitesse limite : perte' = perte + pitLaneLength × 3,6 × (1/v' − 1/v).",
+  "stopTimes : secondes à ajouter pour un arrêt (freinage dans l'emplacement, immobilisation, relance) selon le jeu et la catégorie (« * » = tous). games : catégorie et vitesse limite de référence de chaque jeu.",
+  "Estimations : Hub/tools/circuits_stands.py --pitlane (géométrie OpenStreetMap, formule calée sur les pertes F1 publiées) ; seules les valeurs « estimé » sont réécrites."
+ ],
+ "games": [
+  {
+   "game": "LMU",
+   "category": "WEC",
+   "speedLimitKph": 60,
+   "sources": [
+    "https://www.fia.com/system/files/documents/2026_fia_world_endurance_championship_sporting_regulations_mu_v1.2wmsc.pdf",
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/"
+   ],
+   "notes": "Règle WEC (règlement sportif 2026, art. 12.1.4) reprise par les outils de stratégie LMU ; aucune source Studio 397 ne la confirme."
+  },
+  {
+   "game": "F1",
+   "category": "F1",
+   "speedLimitKph": null,
+   "sources": [
+    "https://f1chronicle.com/f1-pit-stop-time-loss-data/"
+   ],
+   "notes": "Jeux EA F1 : valeur F1 du circuit (vitesse limite réelle du circuit, 80 km/h le plus souvent, 60 à Monaco)."
+  },
+  {
+   "game": "ACC",
+   "category": "ACC",
+   "speedLimitKph": 50,
+   "sources": [
+    "https://solox.gg/acc-pitstop-guide/"
+   ],
+   "notes": "ACC limite la voie à 50 km/h ; aucun tableau par circuit trouvé : valeur recalculée à 50 km/h à partir de la plus sûre."
+  },
+  {
+   "game": "*",
+   "category": null,
+   "speedLimitKph": 60,
+   "sources": [
+    "https://www.fia.com/system/files/documents/2026_fia_world_endurance_championship_sporting_regulations_mu_v1.2wmsc.pdf"
+   ],
+   "notes": "Autres jeux : 60 km/h, la limite la plus courante pour les GT et les prototypes (WEC, IMSA) ; valeur recalculée quand la longueur de voie est connue."
+  }
+ ],
+ "stopTimes": [
+  {
+   "game": "LMU",
+   "carClass": "Hypercar",
+   "seconds": 52,
+   "detail": "plein d'énergie et quatre pneus",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://www.trophi.ai/post/how-to-pit-in-le-mans-ultimate-complete-pit-stop-strategy-guide",
+    "https://lemansultimate.com/patch-2-26th-march-2024-public-notes/",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/12_2024/committee/WEC_2024_D05_Hypercar_Technical_information_08012024.pdf",
+    "https://api.fia.com/sites/default/files/wec_2026_d21_all_sporting_clarifications_13102026.pdf",
+    "https://www.24h-lemans.com/en/news/2026-24-hours-of-le-mans-ferrari-wins-the-5th-24-hours-of-le-mans-pit-stop-challenge-60731",
+    "https://newsroom.genesis.com/genesis-magma-racings-2026-wec-season-guide-part-3-pit-stops/"
+   ],
+   "notes": "Formule LMU (TSR) : arrêt = 2 s (arrêt + relance) + 0,40 s par % d'énergie virtuelle + pneus (2 pneus 5 s, 4 pneus 12 s), à ajouter à la perte de voie. StrategyMaster : 42 s pour 100 % d'énergie, mêmes 5 / 12 s pour les pneus. Dans LMU (patch 2), le changement de pilote est simultané au ravitaillement ; les pneus, réparations et freins se font après. Réel : la FIA remplit le réservoir virtuel à « énergie du relais / 40 s » après un temps d'amarrage fixé par la BoP (~1 s) ; le ravitaillement se fait en premier, sans outil, puis au plus 4 mécaniciens et 2 pistolets changent les roues (meilleur temps du Pit Stop Challenge 2026 pour 4 pneus : 8,87 s ; en course ~10-14 s). Valeurs retenues pour un relais complet (~95 %) : ≈ 40 s carburant seul, ≈ 52 s carburant + 4 pneus. Pour un complément partiel : 2 + 0,40 × % ajouté."
+  },
+  {
+   "game": "LMU",
+   "carClass": "LMP2",
+   "seconds": 55,
+   "detail": "plein de carburant et quatre pneus",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://api.fia.com/sites/default/files/wec_2025_d25_lmp2_sporting_technical_lemans_23052025.pdf",
+    "https://api.fia.com/sites/default/files/wec_2026_d21_all_sporting_clarifications_13102026.pdf",
+    "https://www.24h-lemans.com/en/news/2026-24-hours-of-le-mans-ferrari-wins-the-5th-24-hours-of-le-mans-pit-stop-challenge-60731"
+   ],
+   "notes": "LMU (TSR) : la LMP2 n'a pas d'énergie virtuelle, ravitaillement en litres à 0,59 s/L ; StrategyMaster : plein en 42 s. Pour ~70 L : 2 + 0,59 × 70 ≈ 43 s ; +12 s pour 4 pneus ≈ 55 s. Réel (24 h du Mans 2025, seule course WEC des LMP2) : réservoir 75 L maximum, temps de ravitaillement imposé ≥ 4,0 s × tours depuis le dernier plein (11 tours → 44 s). Pit Stop Challenge 2026 LMP2 (4 pneus seuls) : 10,6 s."
+  },
+  {
+   "game": "LMU",
+   "carClass": "GT3",
+   "seconds": 54,
+   "detail": "plein d'énergie et quatre pneus",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://www.fia.com/sites/default/files/wec_2024_d06_lmgt3_technical_information_08012024.pdf",
+    "https://api.fia.com/sites/default/files/wec_2026_d21_all_sporting_clarifications_13102026.pdf",
+    "https://www.24h-lemans.com/en/news/2026-24-hours-of-le-mans-ferrari-wins-the-5th-24-hours-of-le-mans-pit-stop-challenge-60731"
+   ],
+   "notes": "LMU : 0,42 s par % d'énergie virtuelle (TSR et StrategyMaster) + 2 s d'arrêt/relance ; pour ~95 % ≈ 42 s, +12 s pour 4 pneus ≈ 54 s. Réel (décision FIA WEC 2024 D06) : le réservoir virtuel se remplit à « énergie du relais / 40 s » après un temps d'amarrage défini par la BoP. Pit Stop Challenge 2026 LMGT3 (4 pneus seuls) : 8,87 s."
+  },
+  {
+   "game": "LMU",
+   "carClass": "*",
+   "seconds": 52,
+   "detail": "plein d'énergie et quatre pneus",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://www.trophi.ai/post/how-to-pit-in-le-mans-ultimate-complete-pit-stop-strategy-guide",
+    "https://lemansultimate.com/patch-2-26th-march-2024-public-notes/",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/12_2024/committee/WEC_2024_D05_Hypercar_Technical_information_08012024.pdf",
+    "https://api.fia.com/sites/default/files/wec_2026_d21_all_sporting_clarifications_13102026.pdf",
+    "https://www.24h-lemans.com/en/news/2026-24-hours-of-le-mans-ferrari-wins-the-5th-24-hours-of-le-mans-pit-stop-challenge-60731",
+    "https://newsroom.genesis.com/genesis-magma-racings-2026-wec-season-guide-part-3-pit-stops/"
+   ],
+   "notes": "Catégorie LMU non reconnue : valeur de l'Hypercar."
+  },
+  {
+   "game": "F1",
+   "carClass": "*",
+   "seconds": 5.5,
+   "detail": "quatre pneus, freinage et relance dans l'emplacement compris",
+   "sources": [
+    "https://f1chronicle.com/f1-pit-stop-time-loss-data/",
+    "https://steamcommunity.com/app/2108330/discussions/0/4139438760461307800",
+    "https://steamcommunity.com/app/3059520/discussions/0/604159978054430975/",
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/"
+   ],
+   "notes": "2.5 s d'immobilisation (jeu EA, bon arrêt) + 3.0 s de freinage et relance dans l'emplacement à 80 km/h. F1 réelle : immobilisation typique ~2,5 s (F1 Chronicle : ~2,5 s d'un arrêt type ; les meilleurs arrêts 1,8-2,2 s, médiane réelle plus proche de 2,5-3 s avec les arrêts ratés). Jeu EA F1 : ~2,2 s pour un arrêt parfait (appui au bon moment, F1 23), un peu moins de 3 s s'il est trop tôt, ~3,5 s trop tard ; 2-2,5 s pour un bon arrêt en F1 25 ; plus lent en carrière tant que les installations ne sont pas améliorées. IMPORTANT : un arrêt coûte plus que pitLaneLossSeconds + immobilisation. Le freinage jusqu'à l'arrêt dans l'emplacement et la relance coûtent en plus ~3 s à 80 km/h (~2 s à 60 km/h). Mesure : sur 27 drive-through de 2014-2026, la traversée de la voie est 5,7 s plus courte en médiane qu'un arrêt de la même course (IQR 5,5-6,0). Perte totale d'un arrêt ≈ pitLaneLossSeconds + boxManeuverSeconds + stationarySeconds (ou directement stopLossTypicalSeconds de chaque circuit, qui inclut ~2,5 s d'immobilisation)."
+  },
+  {
+   "game": "ACC",
+   "carClass": "*",
+   "seconds": 32,
+   "detail": "quatre pneus et ravitaillement en même temps",
+   "sources": [
+    "https://solox.gg/acc-pitstop-guide/",
+    "https://steamcommunity.com/app/805550/discussions/0/4712410385452902797/?l=english",
+    "https://steamcommunity.com/app/805550/discussions/0/1629665087690491928/?l=english",
+    "https://cdn.g-portal.com/ServerAdminHandbook_v8.pdf",
+    "https://coachdaveacademy.com/tutorials/understanding-penalties-in-acc/"
+   ],
+   "notes": "30 s de changement des quatre pneus pendant lesquels le ravitaillement se fait, + ~2 s de freinage et relance à 50 km/h. Guide solox.gg : « The pit lane limit is 50 km/h » et « Tyres and fuel together take about 30 seconds by default » ; forum Steam : les 4 pneus verrouillent la voiture ≈30 s, un changement de freins ajoute 45 s (75 s au total), un arrêt standard « 30-33 seconds ». Je n'ai trouvé AUCUNE source donnant le débit de carburant d'ACC : le manuel serveur officiel (v1.10.2) dit seulement que le ravitaillement « consume time linear to the amount refuelled » sauf si isRefuellingTimeFixed=true (durée fixe), et le patch 1.0.8 a corrigé le calcul selon le carburant déjà à bord. fuelOnlySeconds laissé à null ; fuelAndTyresSeconds=30 ne vaut que si le volume ajouté tient dans le temps du changement de pneus (sinon plus long). Pénalités ACC : drive-through non purgé en fin de course = +30 s (règle du jeu, Coach Dave), /dt de l'admin serveur converti en +80 s ; ces forfaits ne sont pas des pertes par circuit. Réglage serveur à vérifier en course (fuel/pneus obligatoires, fenêtre)."
+  },
+  {
+   "game": "*",
+   "carClass": "*",
+   "seconds": 32,
+   "detail": "ravitaillement et quatre pneus",
+   "sources": [
+    "https://www.toyota.com/racing/lexus-gt3/news/tech-talk---refueling-the-rc-f-gt3",
+    "https://speedcafe.com/video-the-gen3-supercar-fuel-rig-and-coupling/",
+    "https://www.autobild.de/artikel/dtm-mercedes-boxenstopps-13966269.html",
+    "https://www.motorsport.com/all/news/red-bulls-pitstops-af-corse-ferrari/6628483/",
+    "https://sportscar365.com/imsa/iwsc/teams-adjusting-to-new-pit-stop-regulations/",
+    "https://europefaq.sporting.gt-world-challenge.com",
+    "https://www.intercontinentalgtchallenge.com/documents/notice/1874/Laguna+Seca+Sporting+Note+-+Pit+Stop+Times.pdf",
+    "https://www.gt-world-challenge-america.com/news/1456/chat-gt3-what-are-the-elements-of-a-pit-stop",
+    "https://www.britishgt.com/documents/notice/1191/Bulletin+1+v2+16.06.25.pdf",
+    "https://solox.gg/acc-pitstop-guide/",
+    "https://steamcommunity.com/app/805550/discussions/0/4712410385452902797/?l=english"
+   ],
+   "notes": "Valeur générique des autres jeux (GT et prototypes en endurance) : ~30 s d'immobilisation pour le carburant et les pneus (ACC ~30 s ; GT3 réel ~2 l/s, pneus ~7 s, carburant et pneus simultanés en IMSA) + ~2 s de freinage et relance. Pneus seuls : DTM GT3 (4 roues, 2 pistolets actifs max, sans carburant) ≈7 s d'immobilisation (Auto Bild : « rund sieben Sekunden (reine Standzeit) » ; arrêts les plus rapides 6,2-7,0 s). Carburant : un GT3 (Lexus RC F GT3) se remplit à « just over 2 liters/second » (Toyota Racing, page vue via extrait de recherche) ; Supercars Gen3 ≈2,4 l/s ; donc ≈ litres/2 s (100 l ≈ 50 s). Séquence : IMSA GTD = carburant, pneus et changement de pilote simultanés (4 mécaniciens dont 1 ravitailleur, 2 pistolets ; règles 2014, temps de ravitaillement minimal depuis 2018), donc carburant+pneus ≈ temps de carburant ; SRO Europe = « refuelling need to be always the first operation » puis pneus (FAQ GTWC Europe ; à Spa 2023 pneus/pilote autorisés pendant le ravitaillement), avec temps de ravitaillement minimal/maximal fixé par la BoP (ravitaillement court max 3 s). Arrêts imposés boucle à boucle (incluent la traversée) : IGTC Laguna Seca 2017 GT3 carburant + plus d'un pneu ≥ 96 s, arrêts courts ≤ 50 s ; GTWC America sprint 65-86 s (changement de pilote, traversée 21-46 s) ; GTWC Asia 90 s ; British GT 70-75 s (sprint, sans carburant) et 115-120 s (avec ravitaillement). fuelOnlySeconds/fuelAndTyresSeconds dépendent du volume et des règles de série : laissés à null."
+  }
+ ],
+ "circuits": [
+  {
+   "id": "au-1953",
+   "name": "Albert Park Circuit",
+   "category": "F1",
+   "pitLaneLossSeconds": 15.2,
+   "pitLaneLength": 281,
+   "speedLimitKph": 80,
+   "confidence": 0.75,
+   "method": "dérivé des chronos officiels, recoupé",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+    "https://speedcafe.com/f1-pit-lane-limit-increase-for-albert-park/",
+    "https://f1i.com/news/560069-clarification-albert-park-pit-lane-speed-to-remain-at-80km-h.html",
+    "https://x.com/kunalashah/status/1770633186617516394",
+    "https://www.f1-fansite.com/f1-circuits/albert-park-circuit/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Albert Park : 60 km/h de 2010 à 2019, 80 km/h depuis 2022 (voie élargie de 2 m) ; la FIA a confirmé 80 km/h en 2026 malgré une annonce de retour à 60. Par course : 2022 22,0 (n=6), 2024 20,5 (n=27), 2026 22,2 (n=6) ; 2025 pluie, inexploitable. Longueur : Kunal Shah (stats F1) donne 281 m et ~13 s en voie à 80 km/h, cohérent avec ma dérivation. Ancienne config 60 km/h (2016) : arrêt ~24,8 s, drive-through mesuré ~21 s.",
+   "variants": []
+  },
+  {
+   "id": "bh-2002",
+   "name": "Bahrain International Circuit",
+   "category": "WEC",
+   "pitLaneLossSeconds": 25,
+   "pitLaneLength": 441,
+   "speedLimitKph": 60,
+   "confidence": 0.65,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/13_2025/08_8%20Hours%20of%20Bahrain/006_Doc%206%20-%20BRIEFING%20NOTES.pdf",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/13_2025/08_8%20Hours%20of%20Bahrain/007_Doc%207%20-%20Bulletin%20No.%201.pdf",
+    "https://www.formuladream.app/blog/f1-pit-stop-cost-measured"
+   ],
+   "notes": "LMU : 25 s. La traversée officielle (441 m à 60 km/h) donne 26,5 s et la F1 (23 s d'arrêt complet à 80 km/h) suggère ~26-27 s en réel à 60 km/h : la valeur LMU est peut-être 1-2 s optimiste. Conversion FIA 50 s : réglementaire et majorée, pas une mesure.",
+   "variants": [
+    {
+     "category": "F1",
+     "pitLaneLossSeconds": 18.3,
+     "pitLaneLength": 420,
+     "speedLimitKph": 80,
+     "confidence": 0.8,
+     "method": "dérivé des chronos officiels, recoupé",
+     "sources": [
+      "https://github.com/TracingInsights/RaceData",
+      "https://api.jolpi.ca/ergast/",
+      "https://www.formuladream.app/blog/f1-pit-stop-cost-measured",
+      "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+      "https://flowracers.com/blog/f1-free-pit-stop/",
+      "https://www.f1-fansite.com/f1-circuits/bahrain-international-circuit/"
+     ],
+     "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Par course : 22,9 / 24,1 / 24,1 / 24,0 / 23,0 (2021-2025). Sources publiées un peu plus basses (23,0-23,1) : valeur centrale ~23,5 possible. Pas de GP de Bahreïn à Sakhir en 2026 (couru à Sepang)."
+    }
+   ],
+   "osmPitLength": 771,
+   "osmBypassedLength": 768
+  },
+  {
+   "id": "cn-2004",
+   "name": "Shanghai International Circuit",
+   "category": "F1",
+   "pitLaneLossSeconds": 17.7,
+   "pitLaneLength": 380,
+   "speedLimitKph": 80,
+   "confidence": 0.75,
+   "method": "dérivé des chronos officiels, recoupé",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+    "https://flowracers.com/blog/f1-free-pit-stop/",
+    "https://www.f1-fansite.com/f1-circuits/shanghai-international-circuit/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Par course : 2018 23,2 ; 2019 23,5 ; 2024 23,2 ; 2025 22,7. Drive-through mesuré 2019 : 18,5 s.",
+   "variants": []
+  },
+  {
+   "id": "es-1991",
+   "name": "Circuit de Barcelona-Catalunya",
+   "category": "WEC",
+   "pitLaneLossSeconds": 24,
+   "pitLaneLength": 369,
+   "speedLimitKph": 60,
+   "confidence": 0.6,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://www.gt4europeanseries.com/documents/notice/1358/GT4+Briefing+Presentation+-+Barcelona.pdf",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/14_2026/09_6%20Hours%20of%20Barcelona/008_Doc%208%20-%20Bulletin%20no.%201.pdf",
+    "https://www.formuladream.app/blog/f1-pit-stop-cost-measured",
+    "https://www.automoto.it/news/le-mans-ultimate-1-3-arriva-barcellona-l-ultima-lmp3-e-un-boost-di-performance-che-fa-la-differenza.html"
+   ],
+   "notes": "Dans LMU depuis le DLC ELMS Pack 3. LMU : 24 / 23,5 s. La traversée SRO (369 m) donne 22,1 s, mais la F1 (22,4 s d'arrêt complet à 80 km/h) suggère une perte réelle de ~25 s à 60 km/h : 24 s est plausible. Le WEC est venu à Barcelone en 2026 (conversion FIA 44 s, majorée).",
+   "variants": [
+    {
+     "category": "F1",
+     "pitLaneLossSeconds": 17.5,
+     "pitLaneLength": 370,
+     "speedLimitKph": 80,
+     "confidence": 0.8,
+     "method": "dérivé des chronos officiels, recoupé",
+     "sources": [
+      "https://github.com/TracingInsights/RaceData",
+      "https://api.jolpi.ca/ergast/",
+      "https://www.formuladream.app/blog/f1-pit-stop-cost-measured",
+      "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+      "https://f1chronicle.com/f1-pit-stop-time-loss-data/",
+      "https://flowracers.com/blog/f1-free-pit-stop/",
+      "https://www.f1-fansite.com/f1-circuits/catalunya-circuit/"
+     ],
+     "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Par course : 23,0 / 22,4 / 23,8 / 22,7 / 22,1 / 24,0 (2021-2026). F1 Chronicle 2026 : médiane 23,83 (arrêt propre 22,05) ; FormulaDream 2025 : 22,44. Ancien drive-through mesuré à 100 km/h (2010-2013, voie ~13,3 s) : 12-13 s."
+    }
+   ],
+   "osmPitLength": 1033,
+   "osmBypassedLength": 1055
+  },
+  {
+   "id": "mc-1929",
+   "name": "Circuit de Monaco",
+   "category": "F1",
+   "pitLaneLossSeconds": 16.4,
+   "pitLaneLength": 330,
+   "speedLimitKph": 60,
+   "confidence": 0.8,
+   "method": "dérivé des chronos officiels + drive-through mesurés",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.formuladream.app/blog/f1-pit-stop-cost-measured",
+    "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+    "https://f1chronicle.com/f1-pit-stop-time-loss-data/",
+    "https://www.the-race.com/formula-1/f1-reduce-pitlane-speed-limit-some-races-explained/",
+    "https://www.planetf1.com/news/martin-brundle-monaco-gp-pit-lane-speeding-penalties-pierre-gasly",
+    "https://www.f1-fansite.com/f1-circuits/monaco-circuit/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; à Monaco (60 km/h) l'écart mesuré est plus faible (4,0 s en 2026, 4,8 s en 2025) : retenu 4,5 s ; rappel 80 km/h : 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Monaco reste à 60 km/h (2026). Validation directe : drive-through mesurés 16,2 s (2025) et 16,2 s (2026), identiques à la valeur retenue. FormulaDream 2025 (17,85) utilise la médiane du peloton comme référence, ce qui sous-estime à Monaco (course 2025 à deux arrêts imposés, rythme géré).",
+   "variants": [],
+   "osmPitLength": 304,
+   "osmBypassedLength": 489
+  },
+  {
+   "id": "ca-1978",
+   "name": "Circuit Gilles-Villeneuve",
+   "category": "F1",
+   "pitLaneLossSeconds": 13.8,
+   "pitLaneLength": 410,
+   "speedLimitKph": 80,
+   "confidence": 0.8,
+   "method": "dérivé des chronos officiels, recoupé",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.formuladream.app/blog/f1-pit-stop-cost-measured",
+    "https://flowracers.com/blog/f1-free-pit-stop/",
+    "https://www.f1-fansite.com/f1-circuits/circuit-gilles-villeneuve/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Par course : 2018 18,8 ; 2019 19,2 ; 2022 19,5 ; 2023 19,8. FormulaDream 2025 : 19,44 (concorde). 2024 (pluie) et 2025 (données du miroir corrompues en fin de course) écartés ; 2026 donne ~23,9 (n=7, voie ~1 s plus longue) : à surveiller. Bakkarranna 2024 (28,96) faussé par la pluie.",
+   "variants": []
+  },
+  {
+   "id": "fr-1969",
+   "name": "Circuit Paul Ricard",
+   "category": "WEC",
+   "pitLaneLossSeconds": 30,
+   "pitLaneLength": 415,
+   "speedLimitKph": 60,
+   "confidence": 0.5,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://lemanscup.alkamelsystems.com/Results_NoticeBoard/10_2026/02_LE%20CASTELLET/009_Doc%209%20-%20Briefing%20Notes%20-%20MLMC%20Le%20Castellet.pdf",
+    "https://www.gt-world-challenge-europe.com/documents/notice/8148/Team+Manager+&+Briefing+Presentation+Paul+Ricard.pdf",
+    "https://traxion.gg/le-mans-ultimate-confirms-ginetta-lmp3-and-circuit-paul-ricard-elms-dlc/"
+   ],
+   "notes": "Dans LMU depuis le DLC ELMS Pack 2. Les outils divergent : TSR 30 s, StrategyMaster 32,5 s (= traversée de 541 m, longueur SRO). Avec la longueur ACO (414,7 m) la traversée ne serait que de 24,9 s. Fourchette plausible 25-32,5 s : à vérifier en jeu.",
+   "variants": [
+    {
+     "category": "F1",
+     "pitLaneLossSeconds": 18.6,
+     "pitLaneLength": 560,
+     "speedLimitKph": 80,
+     "confidence": 0.65,
+     "method": "dérivé des chronos officiels, recoupé",
+     "sources": [
+      "https://github.com/TracingInsights/RaceData",
+      "https://api.jolpi.ca/ergast/",
+      "https://flowracers.com/blog/f1-free-pit-stop/",
+      "https://www.f1-fansite.com/f1-circuits/circuit-paul-ricard-layout-lap-record/"
+     ],
+     "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Dernier GP de France en 2022. Par course : 2019 24,8 ; 2021 23,0 ; 2022 28,5 (n=5, SC). Temps en voie passé de ~25,2 s (2018) à ~30,5 s (2019+) : configuration de voie modifiée en 2019 ; la perte au tour, elle, reste ~24-25 s. flowracers : 24,9."
+    }
+   ],
+   "osmPitLength": 875,
+   "osmBypassedLength": 875
+  },
+  {
+   "id": "at-1969",
+   "name": "Red Bull Ring",
+   "category": "F1",
+   "pitLaneLossSeconds": 15.6,
+   "pitLaneLength": 360,
+   "speedLimitKph": 80,
+   "confidence": 0.8,
+   "method": "dérivé des chronos officiels, recoupé",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+    "https://f1chronicle.com/f1-pit-stop-time-loss-data/",
+    "https://flowracers.com/blog/f1-free-pit-stop/",
+    "https://www.f1-fansite.com/f1-circuits/red-bull-ring/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Très stable : 20,3 à 21,6 par course 2021-2026. F1 Chronicle 2026 : 21,48. Drive-through mesurés 2017/2019 : 14,6 / 15,7 / 15,9 s.",
+   "variants": [
+    {
+     "category": "DTM",
+     "pitLaneLossSeconds": 24,
+     "pitLaneLength": null,
+     "speedLimitKph": 50,
+     "confidence": 0.6,
+     "method": "dérivé de la pénalité DTM d'arrêt non fait (moins 9 s d'arrêt supposés)",
+     "sources": [
+      "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM_2025_Sportliches_Reglement.pdf",
+      "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM-Reglement-2023.pdf",
+      "https://www.motorsport.com/all/news/red-bulls-pitstops-af-corse-ferrari/6628483/"
+     ],
+     "notes": "Règlement sportif DTM 2025, art. 39.7 : pénalité forfaitaire propre au circuit si l'arrêt obligatoire n'a pas été fait (course arrêtée et non reprise) = coût d'un arrêt obligatoire DTM (4 roues, 2 pistolets actifs max, pas de carburant). J'ai soustrait 9 s (≈7 s d'immobilisation, arrêts DTM GT3 les plus rapides 6,2-7,0 s, + ≈2 s de freinage/relance dans le box) pour approcher un drive-through. Limite DTM : 50 km/h entre les lignes d'entrée et de sortie (art. Boxengasse du même règlement). Hors liste (circuit F1, tracé GP) : ligne gardée à part. Ne pas appliquer au tracé National."
+    }
+   ],
+   "osmPitLength": 998,
+   "osmBypassedLength": 1066
+  },
+  {
+   "id": "gb-1948",
+   "name": "Silverstone Circuit",
+   "category": "WEC",
+   "pitLaneLossSeconds": 20.5,
+   "pitLaneLength": 335,
+   "speedLimitKph": 60,
+   "confidence": 0.6,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://www.gt-world-challenge-europe.com/documents/notice/3187/Drivers+Briefing+notes+Silverstone.pdf",
+    "https://traxion.gg/le-mans-ultimates-first-elms-dlc-available-now-adds-silverstone-and-ligier-lmp3-car/",
+    "https://www.britishgt.com/documents/notice/1429/Bulletin+1.pdf"
+   ],
+   "notes": "Silverstone est dans LMU depuis le DLC ELMS Pack 1 (23 sept. 2025). LMU : 20,2 s (ELMS) / 21 s (WEC) selon TSR, 20,5 s selon StrategyMaster, égal à la traversée de 335 m à 60 km/h. Limite ELMS/WEC 60 km/h. | Autres séries : British GT : Bulletin 1 officiel British GT : vitesse limite et « Pit Entry/Exit Loop » = distance et temps entre les boucles de chronométrage d'entrée et de sortie à la vitesse limite (zone chronométrée, pas forcément toute la voie). Les arrêts obligatoires British GT sont à durée minimale imposée (mesurée boucle à boucle), donc aucune perte de drive-through publiée ; la perte réelle = temps de boucle + décélération/entrée/sortie − temps en piste sur le même tronçon. En ACC (GT World Challenge/British GT DLC) la limite est 50 km/h, pas 40. Temps de boucle publié : 24.1 s. Arrêt obligatoire minimal : 115 s GT3 / 145 s GT4. Hors liste (Silverstone GP, circuit F1) : ligne gardée à part. Silverstone 500, 25-26 avril 2026 (identique en 2025, notice 1054).",
+   "variants": [
+    {
+     "category": "F1",
+     "pitLaneLossSeconds": 14.2,
+     "pitLaneLength": 510,
+     "speedLimitKph": 80,
+     "confidence": 0.8,
+     "method": "dérivé des chronos officiels, recoupé",
+     "sources": [
+      "https://github.com/TracingInsights/RaceData",
+      "https://api.jolpi.ca/ergast/",
+      "https://f1chronicle.com/f1-pit-stop-time-loss-data/",
+      "https://flowracers.com/blog/f1-free-pit-stop/",
+      "https://www.f1-fansite.com/f1-circuits/silverstone-circuit/"
+     ],
+     "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Temps en voie long (~28,7 s arrêt compris) mais la voie coupe Club : perte nette ~20 s. F1 Chronicle 2026 : 20,95. 2024 et 2025 humides écartés (Bakkarranna 2024 = 35,6, faussé). flowracers 27,8 ressemble à un temps en voie, pas à une perte. Drive-through mesuré 2017 : 14,5 s."
+    }
+   ],
+   "osmPitLength": 1125,
+   "osmBypassedLength": 1304
+  },
+  {
+   "id": "de-1932",
+   "name": "Hockenheimring",
+   "category": "F1",
+   "pitLaneLossSeconds": 13.0,
+   "pitLaneLength": 310,
+   "speedLimitKph": 80,
+   "confidence": 0.7,
+   "method": "dérivé des chronos officiels",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.f1-fansite.com/f1-circuits/hockenheimring/",
+    "https://www.motorsportweek.com/2013/07/22/7854"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Dernier GP en 2019 (pluie, écarté). Par course : 2014 19,0 ; 2016 18,0 ; 2018 17,5. La voie coupe la Südkurve, d'où une perte faible. Longueur cohérente avec les drive-through de 2005-2006 à 100 km/h (voie ~11,1 s, soit ~310 m).",
+   "variants": [
+    {
+     "category": "DTM",
+     "pitLaneLossSeconds": 23,
+     "pitLaneLength": null,
+     "speedLimitKph": 50,
+     "confidence": 0.6,
+     "method": "dérivé de la pénalité DTM d'arrêt non fait (moins 9 s d'arrêt supposés)",
+     "sources": [
+      "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM_2025_Sportliches_Reglement.pdf",
+      "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM-Reglement-2023.pdf",
+      "https://www.motorsport.com/all/news/red-bulls-pitstops-af-corse-ferrari/6628483/"
+     ],
+     "notes": "Règlement sportif DTM 2025, art. 39.7 : pénalité forfaitaire propre au circuit si l'arrêt obligatoire n'a pas été fait (course arrêtée et non reprise) = coût d'un arrêt obligatoire DTM (4 roues, 2 pistolets actifs max, pas de carburant). J'ai soustrait 9 s (≈7 s d'immobilisation, arrêts DTM GT3 les plus rapides 6,2-7,0 s, + ≈2 s de freinage/relance dans le box) pour approcher un drive-through. Limite DTM : 50 km/h entre les lignes d'entrée et de sortie (art. Boxengasse du même règlement). Hors liste (circuit F1) : ligne gardée à part."
+    }
+   ],
+   "osmPitLength": 861,
+   "osmBypassedLength": 908
+  },
+  {
+   "id": "hu-1986",
+   "name": "Hungaroring",
+   "category": "F1",
+   "pitLaneLossSeconds": 15.8,
+   "pitLaneLength": 370,
+   "speedLimitKph": 80,
+   "confidence": 0.8,
+   "method": "dérivé des chronos officiels, recoupé",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.formuladream.app/blog/f1-pit-stop-cost-measured",
+    "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+    "https://flowracers.com/blog/f1-free-pit-stop/",
+    "https://www.f1-fansite.com/f1-circuits/hungaroring/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Par course : 20,3 / 23,3 / 21,4 / 20,1 / 21,0 / 22,2 (2021-2026). Drive-through mesurés 2015-2016 : 15,0 à 19,8 s (médiane ~16,6).",
+   "variants": []
+  },
+  {
+   "id": "be-1925",
+   "name": "Circuit de Spa-Francorchamps",
+   "category": "WEC",
+   "pitLaneLossSeconds": 23,
+   "pitLaneLength": 387,
+   "speedLimitKph": 60,
+   "confidence": 0.7,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/13_2025/03_6%20Hours%20of%20Spa/007_Doc%207%20-%20BRIEFING%20NOTES.pdf",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/14_2026/02_6%20Hours%20of%20Spa/005_Doc%205%20-%20Bulletin%20no.%201%20AMENDED.pdf",
+    "https://newsroom.genesis.com/genesis-magma-racings-2026-wec-season-guide-part-3-pit-stops/",
+    "https://www.britishgt.com/documents/notice/1191/Bulletin+1+v2+16.06.25.pdf"
+   ],
+   "notes": "LMU : 23 s (TSR) / 23,5 s (StrategyMaster) = traversée de 386,6 m à 60 km/h. Recoupement : Genesis Magma (équipe WEC) donne 50-60 s pour un arrêt complet sous drapeau vert à Spa, soit ≈ 23 s de voie + 30-37 s d'arrêt, cohérent. Conversion FIA d'un drive-through non purgé : 32 s (majorée). | Autres séries : British GT : Bulletin 1 officiel British GT : vitesse limite et « Pit Entry/Exit Loop » = distance et temps entre les boucles de chronométrage d'entrée et de sortie à la vitesse limite (zone chronométrée, pas forcément toute la voie). Les arrêts obligatoires British GT sont à durée minimale imposée (mesurée boucle à boucle), donc aucune perte de drive-through publiée ; la perte réelle = temps de boucle + décélération/entrée/sortie − temps en piste sur le même tronçon. En ACC (GT World Challenge/British GT DLC) la limite est 50 km/h, pas 40. Temps de boucle publié : 27.7 s. Arrêt obligatoire minimal : 120 s GT3 (2025) / 165 s GT3 voie complète (2026). Hors liste (Spa) : ligne gardée à part. 2025 : boucles voie F1 386 m = 27,7 s à 50 km/h ; 2026 (notice 1579) : voie complète T19-Eau Rouge 994 m = 71,5 s à 50 km/h. | Variante LMU « Endurance » (voie longue de 994 m) : 60 s de traversée à 60 km/h selon les outils LMU, non reconnue séparément par la bibliothèque des tracés ; perte nette probablement 45 à 55 s (la voie contourne La Source).",
+   "variants": [
+    {
+     "category": "F1",
+     "pitLaneLossSeconds": 13.1,
+     "pitLaneLength": 390,
+     "speedLimitKph": 80,
+     "confidence": 0.8,
+     "method": "dérivé des chronos officiels, recoupé",
+     "sources": [
+      "https://github.com/TracingInsights/RaceData",
+      "https://api.jolpi.ca/ergast/",
+      "https://f1chronicle.com/f1-pit-stop-time-loss-data/",
+      "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+      "https://flowracers.com/blog/f1-free-pit-stop/",
+      "https://www.f1-fansite.com/f1-circuits/spa-francorchamps-circuit/"
+     ],
+     "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Plus faible perte du calendrier. F1 Chronicle (2022-2026, 104 arrêts) : 18,4 ; Bakkarranna 2024 : 17,9. 2025-2026 un peu plus hauts (20,6-20,8, n faibles). Drive-through mesuré 2015 : 12,0 s."
+    }
+   ],
+   "osmPitLength": 717,
+   "osmBypassedLength": 770
+  },
+  {
+   "id": "it-1922",
+   "name": "Autodromo Nazionale Monza",
+   "category": "WEC",
+   "pitLaneLossSeconds": 25,
+   "pitLaneLength": 418,
+   "speedLimitKph": 60,
+   "confidence": 0.65,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://www.gt4europeanseries.com/documents/notice/402/GT4+Briefing+Presentation+-+Monza.pdf",
+    "https://www.formuladream.app/blog/f1-pit-stop-cost-measured"
+   ],
+   "notes": "LMU : 25 s (deux outils). Longueur officielle trouvée seulement côté SRO : 418 m (« Monza pitlane delta time = 30 s » à 50 km/h, soit exactement la traversée) ; à 60 km/h cela donne 25,1 s. Recoupement F1 2025 : perte d'arrêt complète 25,1 s à 80 km/h (arrêt ~2-3 s compris). Pas de document WEC Monza récent trouvé (pas de conversion FIA).",
+   "variants": [
+    {
+     "category": "F1",
+     "pitLaneLossSeconds": 19.7,
+     "pitLaneLength": 420,
+     "speedLimitKph": 80,
+     "confidence": 0.85,
+     "method": "dérivé des chronos officiels, recoupé",
+     "sources": [
+      "https://github.com/TracingInsights/RaceData",
+      "https://api.jolpi.ca/ergast/",
+      "https://www.formuladream.app/blog/f1-pit-stop-cost-measured",
+      "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+      "https://flowracers.com/blog/f1-free-pit-stop/",
+      "https://www.f1-fansite.com/f1-circuits/autodromo-nazionale-monza/"
+     ],
+     "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Trois sources indépendantes concordent à 0,1 s près (25,1-25,2). Drive-through mesuré 2019 : 19,9 s."
+    }
+   ],
+   "osmPitLength": 737,
+   "osmBypassedLength": 737
+  },
+  {
+   "id": "sg-2008",
+   "name": "Marina Bay Street Circuit",
+   "category": "F1",
+   "pitLaneLossSeconds": 18.0,
+   "pitLaneLength": 420,
+   "speedLimitKph": 80,
+   "confidence": 0.75,
+   "method": "dérivé des chronos officiels, recoupé",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.racefans.net/2025/10/01/pit-lane-speed-limit-raised-for-singapore-gp-in-bid-to-increase-strategy-options/",
+    "https://www.the-race.com/formula-1/f1-reduce-pitlane-speed-limit-some-races-explained/",
+    "https://f1chronicle.com/f1-pit-stop-time-loss-data/",
+    "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Singapour : 60 km/h jusqu'en 2024, 80 km/h depuis 2025 (voie élargie d'1 m). À 80 km/h : 23,2 (2025) et 23,6 (2026), conforme à l'estimation de The Race (22-23 s). À 60 km/h (2016-2024) : arrêt ~28,2 s (The Race : 29 s ; Bakkarranna 2024 : 28,9), soit drive-through ~23,2 s (−5,0) ; longueur ~405 m (drive-through 2018 : 24,3 s en voie à 60 km/h). F1 Chronicle 27,9 mélange les deux époques.",
+   "variants": [],
+   "osmPitLength": 822,
+   "osmBypassedLength": 855
+  },
+  {
+   "id": "ru-2014",
+   "name": "Sochi Autodrom",
+   "category": "F1",
+   "pitLaneLossSeconds": 19.9,
+   "pitLaneLength": 560,
+   "speedLimitKph": 80,
+   "confidence": 0.8,
+   "method": "dérivé des chronos officiels + drive-through mesurés",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://github.com/den124333/f1-pit-stops",
+    "https://www.f1-fansite.com/f1-circuits/sochi-street-circuit-layout-records/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Dernier GP en 2021. Stable 24,6-26,6 sur 8 éditions. Validation directe : drive-through mesurés 20,4 s (2016) et 19,6 s (2019). Temps en voie médian 30,1 s (den124333 : 30,1 s aussi).",
+   "variants": []
+  },
+  {
+   "id": "jp-1962",
+   "name": "Suzuka International Racing Course",
+   "category": "F1",
+   "pitLaneLossSeconds": 17.1,
+   "pitLaneLength": 400,
+   "speedLimitKph": 80,
+   "confidence": 0.8,
+   "method": "dérivé des chronos officiels, recoupé",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.formuladream.app/blog/f1-pit-stop-cost-measured",
+    "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+    "https://flowracers.com/blog/f1-free-pit-stop/",
+    "https://www.f1-fansite.com/f1-circuits/suzuka-circuit/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Par course : 22,1 / 22,5 / 22,1 / 23,3 / 22,5 (2022-2026). FormulaDream 2025 : 23,48 ; Bakkarranna 2024 : 21,21. Drive-through mesurés 2013 (début 80 km/h) : 16,9-17,8 s.",
+   "variants": [
+    {
+     "category": "GT World Challenge Asia",
+     "pitLaneLossSeconds": 33,
+     "pitLaneLength": 415,
+     "speedLimitKph": 50,
+     "confidence": 0.85,
+     "method": "publié",
+     "sources": [
+      "https://www.gt-world-challenge-asia.com/documents/notice/779/JC+B1+Pit+stops+V1.pdf"
+     ],
+     "notes": "Bulletin officiel GT World Challenge Asia « Minimum Mandatory Pit Stop Times » : « Pit Entry to Pit Exit » = distance et temps boucle à boucle à 50 km/h ; « Converted In-Race Penalties : Drive Through » = équivalent officiel d'un drive-through. Dans tous les bulletins trouvés, ce drive-through converti = temps de traversée à 50 km/h + ≈3 s (SUGO 27,0→30 ; Suzuka 29,9→33 ; Sepang 30,4→33 ; Mandalika 38,5→42 ; Beijing 50→53 à 40 km/h). Traversée publiée : 29.9 s. Hors liste (Suzuka, circuit F1) : ligne gardée à part. Boucle 415,2 m aussi dans https://www.gt-world-challenge-asia.com/documents/notice/640/B6+Pit+Stops+Race+2+%E3%83%94%E3%83%83%E3%83%88%E3%82%B9%E3%83%88%E3%83%83%E3%83%97+R2.pdf"
+    }
+   ],
+   "osmPitLength": 886,
+   "osmBypassedLength": 895
+  },
+  {
+   "id": "us-2012",
+   "name": "Circuit of the Americas",
+   "category": "WEC",
+   "pitLaneLossSeconds": 25,
+   "pitLaneLength": 413,
+   "speedLimitKph": 60,
+   "confidence": 0.75,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/14_2026/06_Lone%20Star%20Le%20Mans/004_Doc%204%20-%20BRIEFING%20NOTES.pdf",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/13_2025/06_Lone%20Star%20Le%20Mans/008_Doc%208%20-%20BRIEFING%20NOTES.pdf",
+    "https://www.dailysportscar.com/2024/09/02/83-ferrari-holds-on-to-win-lone-star-le-mans.html",
+    "https://www.formuladream.app/blog/f1-pit-stop-cost-measured"
+   ],
+   "notes": "LMU : 25 s (deux outils) = traversée officielle ~413-418 m à 60 km/h. Seul recoupement réel direct trouvé : en 2024, le drive-through de Kobayashi (Toyota n° 7, Hypercar) a changé 11 s d'avance en environ 11 s de retard, soit ≈ 22 s de perte nette. La valeur LMU est donc peut-être ~3 s pessimiste.",
+   "variants": [
+    {
+     "category": "F1",
+     "pitLaneLossSeconds": 15.5,
+     "pitLaneLength": 410,
+     "speedLimitKph": 80,
+     "confidence": 0.85,
+     "method": "dérivé des chronos officiels + drive-through mesurés",
+     "sources": [
+      "https://github.com/TracingInsights/RaceData",
+      "https://api.jolpi.ca/ergast/",
+      "https://www.formuladream.app/blog/f1-pit-stop-cost-measured",
+      "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+      "https://flowracers.com/blog/f1-free-pit-stop/",
+      "https://www.f1-fansite.com/f1-circuits/circuit-of-the-americas/"
+     ],
+     "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Concordance : FormulaDream 2025 21,15 ; Bakkarranna 2024 21,13. Drive-through mesurés 15,7 s (2013) et 15,2 s (2018), égaux à la valeur retenue."
+    },
+    {
+     "category": "GT World Challenge America",
+     "pitLaneLossSeconds": 41,
+     "pitLaneLength": null,
+     "speedLimitKph": 50,
+     "confidence": 0.85,
+     "method": "publié",
+     "sources": [
+      "https://www.gt-world-challenge-america.com/documents/notice/1108/Stewards+Bulletin+No+2+-+DTP+Equivalent+%26+Min+Pit+Stop+Times+for+GT3+and+GT4.pdf",
+      "https://www.gt-world-challenge-america.com/news/1456/chat-gt3-what-are-the-elements-of-a-pit-stop"
+     ],
+     "notes": "Bulletin des commissaires SRO America « Drive Thru Penalty Equivalent Time » : temps officiel jugé équivalent à un drive-through pour l'épreuve (utilisé pour convertir un drive-through en pénalité de temps). Limite SRO America : 50 km/h dans toute la voie (48 km/h mini dans la voie rapide), comme ACC. Valeur fixée par épreuve, pas de méthode publiée ; le bulletin Road Atlanta 2026 précise que ses temps sont mesurés « loop to loop » (ligne de chrono d'entrée → de sortie), ce qui vaut au moins pour les temps d'arrêt minimaux. Épreuve : mai 2023. Arrêt minimal imposé (boucle à boucle) : 76 s. Hors liste (COTA, circuit F1) : ligne gardée à part."
+    }
+   ],
+   "osmPitLength": 948,
+   "osmBypassedLength": 1010
+  },
+  {
+   "id": "mx-1962",
+   "name": "Autódromo Hermanos Rodríguez",
+   "category": "F1",
+   "pitLaneLossSeconds": 17.4,
+   "pitLaneLength": 400,
+   "speedLimitKph": 80,
+   "confidence": 0.8,
+   "method": "dérivé des chronos officiels, recoupé",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+    "https://flowracers.com/blog/f1-free-pit-stop/",
+    "https://www.f1-fansite.com/f1-circuits/autodromo-hermanos-rodriguez-layout-records/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Par course : 23,0 / 23,3 / 21,9 / 23,2 / 22,4 / 23,6. Drive-through mesuré 2025 : 18,8 s (un peu au-dessus de la valeur retenue).",
+   "variants": [],
+   "osmPitLength": 795,
+   "osmBypassedLength": 806
+  },
+  {
+   "id": "br-1940",
+   "name": "Autódromo José Carlos Pace - Interlagos",
+   "category": "WEC",
+   "pitLaneLossSeconds": 23,
+   "pitLaneLength": 387,
+   "speedLimitKph": 60,
+   "confidence": 0.7,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/13_2025/05_6%20Hours%20of%20Sao%20Paulo/005_Doc%205%20-%20BRIEFING%20NOTES.pdf",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/13_2025/05_6%20Hours%20of%20Sao%20Paulo/007_Doc%207%20-%20Bulletin%20no.%201.pdf",
+    "https://fiawec.alkamelsystems.com/Results/14_2025/05_SAO%20PAULO/613_FIA%20WEC/202507131130_Race/06_Hour%206/03_Classification_Race_Hour%206.PDF"
+   ],
+   "notes": "LMU : 23 / 23,5 s = traversée officielle 387,4 m à 60 km/h. Conversion FIA 40 s = valeur réglementaire majorée.",
+   "variants": [
+    {
+     "category": "F1",
+     "pitLaneLossSeconds": 16.2,
+     "pitLaneLength": 390,
+     "speedLimitKph": 80,
+     "confidence": 0.75,
+     "method": "dérivé des chronos officiels, recoupé",
+     "sources": [
+      "https://github.com/TracingInsights/RaceData",
+      "https://api.jolpi.ca/ergast/",
+      "https://flowracers.com/blog/f1-free-pit-stop/",
+      "https://www.f1-fansite.com/f1-circuits/autodromo-interlagos/",
+      "https://formula1math.substack.com/p/the-mechanics-of-f1-pit-stops"
+     ],
+     "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Par course : 20,4 / 21,7 / 22,2 / 21,8 (2024 pluie écarté). 2026 : 25,9 (n=16, temps en voie +1 s) : config ou conditions à vérifier. La voie complète (route d'entrée à sortie) mesure ~1 140 m selon formula1math ; la zone chronométrée est bien plus courte. Drive-through mesurés 2013 : 14,1-15,2 s."
+    }
+   ],
+   "osmPitLength": 1372,
+   "osmBypassedLength": 1418
+  },
+  {
+   "id": "ae-2009",
+   "name": "Yas Marina Circuit",
+   "category": "F1",
+   "pitLaneLossSeconds": 17.2,
+   "pitLaneLength": 360,
+   "speedLimitKph": 80,
+   "confidence": 0.8,
+   "method": "dérivé des chronos officiels, recoupé",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+    "https://flowracers.com/blog/f1-free-pit-stop/",
+    "https://www.f1-fansite.com/f1-circuits/yas-marina-circuit/",
+    "https://oversteer48.com/abu-dhabi-f1-track-layout/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Tracé 2021+. Par course : 23,1 / 23,2 / 22,1 / 22,8 / 22,4. Bakkarranna 2024 : 23,6. La voie complète avec la sortie en tunnel fait ~1,07 km selon oversteer48 ; la zone chronométrée ~360 m. Drive-through mesuré 2015 (ancien tracé) : 17,7 s.",
+   "variants": [],
+   "osmPitLength": 1127,
+   "osmBypassedLength": 1133
+  },
+  {
+   "id": "it-1953",
+   "name": "Autodromo Enzo e Dino Ferrari",
+   "category": "WEC",
+   "pitLaneLossSeconds": 33,
+   "pitLaneLength": 549,
+   "speedLimitKph": 60,
+   "confidence": 0.7,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/13_2025/02_6%20Hours%20of%20Imola/007_Doc%207%20-%20Briefing%20Notes.pdf",
+    "https://www.formuladream.app/blog/f1-pit-stop-cost-measured"
+   ],
+   "notes": "LMU : 33 s (deux outils) = traversée officielle 549 m à 60 km/h. Recoupement F1 2025 : 27,5 s d'arrêt complet à 80 km/h, cohérent avec ~33 s de voie à 60 km/h. Conversion FIA non trouvée.",
+   "variants": [
+    {
+     "category": "F1",
+     "pitLaneLossSeconds": 22.7,
+     "pitLaneLength": 550,
+     "speedLimitKph": 80,
+     "confidence": 0.85,
+     "method": "dérivé des chronos officiels, recoupé (Pirelli)",
+     "sources": [
+      "https://github.com/TracingInsights/RaceData",
+      "https://api.jolpi.ca/ergast/",
+      "https://racingnews365.com/the-race-strategy-options-for-the-2024-f1-emilia-romagna-gp",
+      "https://f1chronicle.com/f1-pit-stop-time-loss-data/",
+      "https://www.formuladream.app/blog/f1-pit-stop-cost-measured",
+      "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+      "https://flowracers.com/blog/f1-free-pit-stop/",
+      "https://www.f1-fansite.com/f1-circuits/autodromo-enzo-e-dino-ferrari-imola/"
+     ],
+     "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Plus forte perte des circuits récents. Pirelli (Mario Isola, 2024) : 28 s ; F1 Chronicle : 28,1 ; FormulaDream 2025 : 27,52 ; Bakkarranna 2024 : 27,45 ; mon calcul : 28,2. Ancienne config (100 km/h, 2004-2006) : arrêt ~21 s avec ravitaillement, non comparable."
+    }
+   ],
+   "osmPitLength": 1030,
+   "osmBypassedLength": 1033
+  },
+  {
+   "id": "de-1927",
+   "name": "Nürburgring",
+   "category": "F1",
+   "pitLaneLossSeconds": 19.1,
+   "pitLaneLength": 390,
+   "speedLimitKph": 80,
+   "confidence": 0.55,
+   "method": "dérivé des chronos officiels",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.f1-fansite.com/f1-circuits/nurburgring/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Dernier GP : Eifel 2020 (froid, SC), un seul échantillon, dispersion large (IQR 22,9-27,0). En 2013 (100 km/h) : arrêt ~18,6 s. f1-fansite donne 21 (arrondi, provenance inconnue). Valeur à prendre avec prudence.",
+   "variants": [],
+   "osmPitLength": 949,
+   "osmBypassedLength": 981
+  },
+  {
+   "id": "pt-2008",
+   "name": "Autódromo Internacional do Algarve",
+   "category": "WEC",
+   "pitLaneLossSeconds": 28,
+   "pitLaneLength": 476,
+   "speedLimitKph": 60,
+   "confidence": 0.6,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://www.gt-world-challenge-europe.com/get_noticedocument?noticedocument_id=11382",
+    "https://elms.alkamelsystems.com/Results_NoticeBoard/15_2026/07_4%20Hours%20of%20Portimao/007_Doc%207%20-%20Bulletin%20no.%202.pdf",
+    "https://elms.alkamelsystems.com/Results_NoticeBoard/14_2025/07_4%20Hours%20of%20Portimao/008_Doc%208%20-%20Briefing%20Presentation.pdf"
+   ],
+   "notes": "LMU : 28 / 28,5 s = traversée de 476,3 m (longueur SRO) à 60 km/h. Le briefing ELMS 2025 confirme 60 km/h. Pas de document WEC récent (dernier WEC à Portimão : 2023).",
+   "variants": [
+    {
+     "category": "F1",
+     "pitLaneLossSeconds": 22.2,
+     "pitLaneLength": 470,
+     "speedLimitKph": 80,
+     "confidence": 0.6,
+     "method": "dérivé des chronos officiels",
+     "sources": [
+      "https://github.com/TracingInsights/RaceData",
+      "https://api.jolpi.ca/ergast/",
+      "https://www.f1-fansite.com/f1-circuits/portimao-circuit-layout-records/"
+     ],
+     "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Deux GP (2020 : 28,0, n=19 ; 2021 : 26,4, n=5). Voie longue (~26-27 s arrêt compris) et sortie lointaine. f1-fansite donne 19 (arrondi, contredit par les chronos)."
+    }
+   ],
+   "osmPitLength": 1218,
+   "osmBypassedLength": 1283
+  },
+  {
+   "id": "it-1914",
+   "name": "Autodromo Internazionale del Mugello",
+   "category": "F1",
+   "pitLaneLossSeconds": 18.8,
+   "pitLaneLength": 390,
+   "speedLimitKph": 80,
+   "confidence": 0.55,
+   "method": "dérivé des chronos officiels",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.f1-fansite.com/f1-circuits/mugello-circuit-layout-records/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Unique GP (Toscane 2020, deux drapeaux rouges) : n=13, IQR 23,2-26,1. f1-fansite : 22.",
+   "variants": [],
+   "osmPitLength": 1009,
+   "osmBypassedLength": 1004
+  },
+  {
+   "id": "my-1999",
+   "name": "Sepang International Circuit",
+   "category": "F1",
+   "pitLaneLossSeconds": 18.0,
+   "pitLaneLength": 430,
+   "speedLimitKph": 80,
+   "confidence": 0.6,
+   "method": "dérivé des chronos officiels, recoupé (Williams)",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.williamsf1.com/articles/12b41bc9-dd65-4fe2-836a-8b8f9c2a55b7/technical-brief-bahrain-in-malaysia",
+    "https://www.f1-fansite.com/f1-circuits/sepang-circuit-kuala-lumpur-malaysia/",
+    "https://www.motorsportweek.com/2013/07/22/7854"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Configuration 80 km/h 2014-2017 : 23,5 / 24,5 / 22,7 / 22,3. Williams (avant le « GP de Bahreïn en Malaisie » d'octobre 2026) : « ~22 s, arrêt compris ». MAIS la course de 2026 donne 26,7 s (n=22) avec un temps en voie de ~28,1 s contre ~24,4 s en 2017 : entrée de voie modifiée (borne déplacée par la FIA) ou limite réduite, non vérifié. Si la configuration 2026 fait foi : drive-through ~21,2 s.",
+   "variants": [
+    {
+     "category": "GT World Challenge Asia",
+     "pitLaneLossSeconds": 33,
+     "pitLaneLength": 423,
+     "speedLimitKph": 50,
+     "confidence": 0.85,
+     "method": "publié",
+     "sources": [
+      "https://www.gt-world-challenge-asia.com/documents/notice/1185/B1+Pit+Stops+R1+revised+03.04.pdf"
+     ],
+     "notes": "Bulletin officiel GT World Challenge Asia « Minimum Mandatory Pit Stop Times » : « Pit Entry to Pit Exit » = distance et temps boucle à boucle à 50 km/h ; « Converted In-Race Penalties : Drive Through » = équivalent officiel d'un drive-through. Dans tous les bulletins trouvés, ce drive-through converti = temps de traversée à 50 km/h + ≈3 s (SUGO 27,0→30 ; Suzuka 29,9→33 ; Sepang 30,4→33 ; Mandalika 38,5→42 ; Beijing 50→53 à 40 km/h). Traversée publiée : 30.4 s. Hors liste (Sepang, ancien circuit F1) : ligne gardée à part."
+    }
+   ],
+   "osmPitLength": 991,
+   "osmBypassedLength": 933
+  },
+  {
+   "id": "tr-2005",
+   "name": "Intercity Istanbul Park",
+   "category": "F1",
+   "pitLaneLossSeconds": 14.3,
+   "pitLaneLength": 390,
+   "speedLimitKph": 80,
+   "confidence": 0.55,
+   "method": "dérivé des chronos officiels",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.f1-fansite.com/f1-circuits/istanbul-park-circuit/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Deux GP 2020-2021, tous deux sur piste humide/intermédiaires : sur sol sec, la perte serait probablement ~0,5-1 s plus élevée (le tronçon court-circuité se parcourt plus vite). 2010-2011 (100 km/h) : 18,1 et 17,3. f1-fansite : 19.",
+   "variants": [],
+   "osmPitLength": 908,
+   "osmBypassedLength": 991
+  },
+  {
+   "id": "nl-1948",
+   "name": "Circuit Zandvoort",
+   "category": "F1",
+   "pitLaneLossSeconds": 13.8,
+   "pitLaneLength": 270,
+   "speedLimitKph": 80,
+   "confidence": 0.8,
+   "method": "dérivé des chronos officiels + drive-through mesuré",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.formuladream.app/blog/f1-pit-stop-cost-measured",
+    "https://f1chronicle.com/f1-pit-stop-time-loss-data/",
+    "https://speedcafe.com/f1-news-2025-dutch-grand-prix-pit-speed-limit-change-explained-fia-pirelli-strategy-shakeup/",
+    "https://www.the-race.com/formula-1/f1-reduce-pitlane-speed-limit-some-races-explained/",
+    "https://www.f1-fansite.com/f1-circuits/circuit-zandvoort-layout-records/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Zandvoort : 60 km/h 2021-2024, 80 km/h depuis 2025. À 80 km/h : 18,4 (2025, n=6), 19,4 (2026, n=34) ; FormulaDream 2025 : 18,36 ; F1 Chronicle cite 18,1 s. Drive-through mesuré 2026 : 12,9 s. À 60 km/h (2021-2024) : arrêt ~22,4 s, drive-through ~17,4 s.",
+   "variants": [
+    {
+     "category": "DTM",
+     "pitLaneLossSeconds": 26,
+     "pitLaneLength": null,
+     "speedLimitKph": 50,
+     "confidence": 0.6,
+     "method": "dérivé de la pénalité DTM d'arrêt non fait (moins 9 s d'arrêt supposés)",
+     "sources": [
+      "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM_2025_Sportliches_Reglement.pdf",
+      "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM-Reglement-2023.pdf",
+      "https://www.motorsport.com/all/news/red-bulls-pitstops-af-corse-ferrari/6628483/"
+     ],
+     "notes": "Règlement sportif DTM 2025, art. 39.7 : pénalité forfaitaire propre au circuit si l'arrêt obligatoire n'a pas été fait (course arrêtée et non reprise) = coût d'un arrêt obligatoire DTM (4 roues, 2 pistolets actifs max, pas de carburant). J'ai soustrait 9 s (≈7 s d'immobilisation, arrêts DTM GT3 les plus rapides 6,2-7,0 s, + ≈2 s de freinage/relance dans le box) pour approcher un drive-through. Limite DTM : 50 km/h entre les lignes d'entrée et de sortie (art. Boxengasse du même règlement). Hors liste (circuit F1) : ligne gardée à part."
+    }
+   ],
+   "osmPitLength": 754,
+   "osmBypassedLength": 783
+  },
+  {
+   "id": "fr-1960",
+   "name": "Circuit de Nevers Magny-Cours",
+   "category": "F1",
+   "pitLaneLossSeconds": 13.5,
+   "pitLaneLength": 410,
+   "speedLimitKph": 100,
+   "confidence": 0.45,
+   "method": "drive-through mesurés (époque ravitaillement)",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.motorsportweek.com/2013/07/22/7854",
+    "https://www.f1-fansite.com/f1-circuits/circuit-de-nevers-magny-cours/"
+   ],
+   "notes": "Dernier GP en 2008, ère du ravitaillement : la perte d'un arrêt (23,4-23,8 s en 2007-2008) inclut un ravitaillement de durée inconnue, donc inutilisable telle quelle. pitLaneLossSeconds = drive-through mesurés directement : 13,1 s (2007) et 13,9 s (2008), voie traversée en ~14,6 s. Limite de course de l'époque : 100 km/h (règle générale jusqu'à mi-2013, non vérifiée pour cette course). À 80 km/h, ~+3,5 s, soit ~17 s (estimation). En 2004-2006 (voie plus courte) : drive-through ~10-11 s. rawPublishedValue = perte médiane d'un arrêt avec ravitaillement (2007-2008) ; pas de soustraction appliquée : la valeur retenue est la mesure directe des drive-through.",
+   "variants": [],
+   "osmPitLength": 726,
+   "osmBypassedLength": 760
+  },
+  {
+   "id": "pt-1972",
+   "name": "Autódromo do Estoril",
+   "pitLaneLossSeconds": 25.5,
+   "pitLaneLength": 561,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.f1-fansite.com/f1-circuits/autodromo-do-estoril-layout-records/",
+    "https://www.openstreetmap.org/way/363050271"
+   ],
+   "notes": "Estimé : 999 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~561 m au limiteur, 1062 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : F1 : ~17.0 s estimés pour l'époque (vitesse limite inconnue), non retenu : estimation géométrique à la place. Dernier GP en 1996, ère du ravitaillement ; aucun drive-through dans les données. Perte d'un arrêt 26,7-28,7 s (ravitaillement compris), temps en voie ~29 s. En supposant ~8 s d'immobilisation et ~3 s de freinage/relance, drive-through ≈ 17 s (±3 s). Limite de vitesse de l'époque non vérifiée.",
+   "variants": [],
+   "osmPitLength": 999,
+   "osmBypassedLength": 1062,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "br-1977",
+   "name": "Autódromo Internacional Nelson Piquet",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": null,
+   "confidence": 0,
+   "method": "",
+   "sources": [
+    "https://www.f1-fansite.com/f1-circuits/autodromo-internacional-nelson-piquet-layout-records/",
+    "https://en.wikipedia.org/wiki/Jacarepagu%C3%A1_Circuit"
+   ],
+   "notes": "F1 : Identifiant à éclaircir : « Jacarepaguá » = Autódromo Internacional Nelson Piquet de Rio de Janeiro (ouvert en 1977-78, GP du Brésil 1978 et 1981-1989, rebaptisé Nelson Piquet en 1988, démoli en 2012). Le circuit de Brasília porte aussi le nom de Nelson Piquet mais n'a accueilli qu'une course F1 hors championnat (1974). Aucune donnée d'arrêt (les données commencent en 1994) et pas de limite de vitesse en voie à l'époque (introduite en 1994) : rien de mesurable.",
+   "variants": [],
+   "reason": "circuit de Jacarepaguá (Rio de Janeiro), démoli en 2012 : GP antérieurs aux données d'arrêt (1994) et aux limites de vitesse en voie, pas de voie des stands dans OpenStreetMap ; l'étiquette « Brasília / Nelson Piquet » de la bibliothèque est à corriger"
+  },
+  {
+   "id": "sa-2021",
+   "name": "Jeddah Corniche Circuit",
+   "category": "F1",
+   "pitLaneLossSeconds": 15.4,
+   "pitLaneLength": 340,
+   "speedLimitKph": 80,
+   "confidence": 0.75,
+   "method": "dérivé des chronos officiels + drive-through mesuré",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+    "https://flowracers.com/blog/f1-free-pit-stop/",
+    "https://www.f1-fansite.com/f1-circuits/jeddah-street-circuit-layout-lap-record/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). La plupart des arrêts à Djeddah se font sous SC : n=27 seulement au drapeau vert (2025 : 20,8, n=15). Bakkarranna 2024 : 20,6. Drive-through mesuré 2022 : 16,1 s. Pas de GP en 2026.",
+   "variants": []
+  },
+  {
+   "id": "us-2022",
+   "name": "Miami International Autodrome",
+   "category": "F1",
+   "pitLaneLossSeconds": 14.6,
+   "pitLaneLength": 380,
+   "speedLimitKph": 80,
+   "confidence": 0.75,
+   "method": "dérivé des chronos officiels + drive-through mesuré",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://f1chronicle.com/f1-pit-stop-time-loss-data/",
+    "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+    "https://flowracers.com/blog/f1-free-pit-stop/",
+    "https://oversteer48.com/miami-grand-prix-layout/",
+    "https://www.f1-fansite.com/f1-circuits/miami-international-autodromo-layout-lap-records/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Par course : 21,7 / 20,1 / 20,4 / 18,2 (n=4) / 19,8. F1 Chronicle 2026 : 19,74 (le plus faible de 2026). Drive-through mesuré 2026 : 17,6 s (au-dessus de la valeur retenue). Longueur : oversteer48 donne 375 m, ma dérivation ~380 m.",
+   "variants": [],
+   "osmPitLength": 740,
+   "osmBypassedLength": 806
+  },
+  {
+   "id": "qa-2004",
+   "name": "Losail International Circuit",
+   "category": "WEC",
+   "pitLaneLossSeconds": 30,
+   "pitLaneLength": null,
+   "speedLimitKph": 60,
+   "confidence": 0.6,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/13_2025/01_1812%20km%20of%20Qatar/015_Doc%2015%20-%20Bulletin%20no.%201.pdf",
+    "https://thepeninsulaqatar.com/article/04/10/2023/ashghal-sets-guinness-world-record-for-longest-motorsport-pitlane-building-at-lusail-circuit",
+    "https://www.formuladream.app/blog/f1-pit-stop-cost-measured"
+   ],
+   "notes": "LMU : 30 / 30,5 s. Pas de longueur officielle trouvée. Recoupement F1 2025 (25,4 s d'arrêt complet à 80 km/h) cohérent avec ~30 s de voie à 60 km/h. Conversion FIA 60 s : réglementaire et majorée (le double de la perte physique).",
+   "variants": [
+    {
+     "category": "F1",
+     "pitLaneLossSeconds": 21.7,
+     "pitLaneLength": 500,
+     "speedLimitKph": 80,
+     "confidence": 0.8,
+     "method": "dérivé des chronos officiels, recoupé",
+     "sources": [
+      "https://github.com/TracingInsights/RaceData",
+      "https://api.jolpi.ca/ergast/",
+      "https://f1chronicle.com/f1-pit-stop-time-loss-data/",
+      "https://www.formuladream.app/blog/f1-pit-stop-cost-measured",
+      "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+      "https://www.f1-fansite.com/f1-circuits/losail-international-circuit-layout-lap-record/"
+     ],
+     "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Par course : 26,2 / 27,8 / 27,6 / 26,8. F1 Chronicle : 27,7 ; Bakkarranna 2024 : 28,3 ; FormulaDream 2025 : 25,4. Drive-through mesuré 2024 : 22,8 s. f1-fansite (20) manifestement faux."
+    }
+   ],
+   "osmPitLength": 1230,
+   "osmBypassedLength": 1255
+  },
+  {
+   "id": "es-2026",
+   "name": "Circuito de Madring",
+   "category": "F1",
+   "pitLaneLossSeconds": 21.0,
+   "pitLaneLength": 562,
+   "speedLimitKph": 80,
+   "confidence": 0.7,
+   "method": "dérivé des chronos officiels, recoupé (Pirelli, Williams)",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.the-race.com/formula-1/five-first-impressions-of-f1-new-madring-circuit/",
+    "https://www.the-race.com/formula-1/f1-teams-face-big-madring-strategy-dilemma/",
+    "https://www.williamsf1.com/articles/e7ec3969-2875-4679-91e6-6e0f541543c7/technical-brief-spain",
+    "https://www.planetf1.com/news/fia-lando-norris-mclaren-spanish-grand-prix-2026-investigation",
+    "https://nosmokesport.com/sport-news/madring-circuit-spanish-gp-strategy/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Publié : GP d'Espagne au Madring, septembre 2026. Voie officielle de 562 m entre les lignes de limitation (The Race), la plus longue de la saison, sortie au virage 3. Pirelli : ~25 s ; Williams : ~22 s + temps d'immobilisation ; mesure de course (n=12) : 26,5 s. Limite 80 km/h (Norris sanctionné à 88,5 km/h).",
+   "variants": [],
+   "osmPitLength": 903,
+   "osmBypassedLength": 988
+  },
+  {
+   "id": "az-2016",
+   "name": "Baku City Circuit",
+   "category": "F1",
+   "pitLaneLossSeconds": 16.0,
+   "pitLaneLength": 330,
+   "speedLimitKph": 80,
+   "confidence": 0.8,
+   "method": "dérivé des chronos officiels + drive-through mesurés",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+    "https://github.com/den124333/f1-pit-stops",
+    "https://flowracers.com/blog/f1-free-pit-stop/",
+    "https://www.f1-fansite.com/f1-circuits/baku-street-circuit/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Par course : 21,4 / 23,6 / 20,9 / 21,5 / 21,2. Bakkarranna 2024 : 21,49. Drive-through mesurés 2017-2019 : 15,6 / 16,9 / 15,9 s (concordent).",
+   "variants": [],
+   "osmPitLength": 737,
+   "osmBypassedLength": 750
+  },
+  {
+   "id": "us-2023",
+   "name": "Las Vegas Street Circuit",
+   "category": "F1",
+   "pitLaneLossSeconds": 16.9,
+   "pitLaneLength": 350,
+   "speedLimitKph": 80,
+   "confidence": 0.75,
+   "method": "dérivé des chronos officiels, recoupé",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://raw.githubusercontent.com/Bakkarranna/f1-race-strategy/main/data/processed/pit_losses.csv",
+    "https://www.f1-fansite.com/f1-circuits/las-vegas-strip-circuit-layout-records/"
+   ],
+   "notes": "Valeur brute = perte médiane d'un arrêt au drapeau vert, calculée par moi sur les chronos officiels (tour d'entrée + tour de sortie − 2 × rythme propre du pilote sur ses tours propres voisins ; SC/VSC/drapeau rouge exclus). Soustraction = arrêt immobile (~2,5-3 s) + freinage/relance dans l'emplacement (~2,5-3 s) : l'écart médian de temps en voie entre un arrêt et un drive-through dans la même course vaut 5,7 s à 80 km/h (27 cas 2014-2026, IQR 5,5-6,0) ; retenu 5,5 s (les drive-through mesurés au tour donnent ~0,4 s de moins). Par course : 23,8 / 22,3 / 22,2. Bakkarranna 2024 : 21,7. Drive-through mesuré 2024 : 20,9 s (bien au-dessus : un seul cas, à confirmer).",
+   "variants": [],
+   "osmPitLength": 492,
+   "osmBypassedLength": 517
+  },
+  {
+   "id": "us-1909",
+   "name": "Indianapolis Motor Speedway",
+   "pitLaneLossSeconds": 32.9,
+   "pitLaneLength": 884,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.f1-fansite.com/f1-circuits/indianapolis-grand-prix-circuit-layout-records/",
+    "https://www.openstreetmap.org/way/588780337",
+    "https://www.openstreetmap.org/way/588780338",
+    "https://www.openstreetmap.org/way/588780327",
+    "https://www.openstreetmap.org/way/588780328",
+    "https://www.openstreetmap.org/way/588780264",
+    "https://www.openstreetmap.org/way/1176980820",
+    "https://www.openstreetmap.org/way/588780283",
+    "https://www.openstreetmap.org/way/1176980819"
+   ],
+   "notes": "Estimé : 1575 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~884 m au limiteur, 1627 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : F1 : ~20.0 s estimés pour l'époque (vitesse limite inconnue), non retenu : estimation géométrique à la place. Tracé F1 2000-2007, ère du ravitaillement : perte d'un arrêt 24,4-27,3 s (ravitaillement compris), temps en voie médian ~25 s. Un seul drive-through dans les données (2003, course humide) : voie traversée en 18,0 s, perte mesurée 22,2 s. En combinant ce temps de traversée avec la relation voie/perte de 2004-2007 : ~19,3 s. Retenu ~20 s (entre 19 et 22). Longue voie le long de la ligne droite de l'ovale. Limite de l'époque non vérifiée (probablement 100 km/h en course).",
+   "variants": [],
+   "osmPitLength": 1575,
+   "osmBypassedLength": 1627,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "ar-1952",
+   "name": "Autódromo Oscar y Juan Gálvez",
+   "category": "F1",
+   "pitLaneLossSeconds": 21.0,
+   "pitLaneLength": null,
+   "speedLimitKph": 100,
+   "confidence": 0.35,
+   "method": "drive-through mesurés (1995)",
+   "sources": [
+    "https://github.com/TracingInsights/RaceData",
+    "https://api.jolpi.ca/ergast/",
+    "https://www.f1-fansite.com/f1-circuits/autodromo-oscar-alfredo-galvez-layout-records/"
+   ],
+   "notes": "Dernier GP en 1998, ère du ravitaillement. Trois drive-through mesurés en 1995 : 20,8 / 22,0 / 23,0 s (voie traversée en ~26,4 s). Perte d'un arrêt 1996-1998 : ~21 s (ravitaillement compris), ce qui suggère que le drive-through a pu baisser après 1995 (configuration de voie ou limite différente). Retenu ~21 s, faible confiance. Limite de l'époque non vérifiée. Vitesse limite supposée : 100 km/h, règle générale de la F1 en course avant mi-2013 (non vérifiée pour cette course).",
+   "variants": []
+  },
+  {
+   "id": "za-1961",
+   "name": "Kyalami Grand Prix Circuit",
+   "pitLaneLossSeconds": 20.6,
+   "pitLaneLength": 319,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.f1-fansite.com/f1-circuits/kyalami-circuit-layout-records/",
+    "https://www.openstreetmap.org/way/793806972"
+   ],
+   "notes": "Estimé : 569 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~319 m au limiteur, 613 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : F1 : Derniers GP en 1992-1993, avant les données d'arrêt (1994+) et avant l'instauration des limites de vitesse en voie (1994). Rien de publié ni de mesurable pour la F1.",
+   "variants": [],
+   "osmPitLength": 569,
+   "osmBypassedLength": 613,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "us-1956",
+   "name": "Watkins Glen International",
+   "pitLaneLossSeconds": 22.8,
+   "pitLaneLength": 423,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.f1-fansite.com/f1-circuits/watkins-glen-international-layout-records/",
+    "https://www.openstreetmap.org/way/20164027",
+    "https://www.openstreetmap.org/way/50289311"
+   ],
+   "notes": "Estimé : 754 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~423 m au limiteur, 802 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : F1 : Dernier GP de F1 en 1980 : aucune donnée d'arrêt, aucune limite de vitesse en voie à l'époque. Rien de publié pour la F1.",
+   "variants": [],
+   "osmPitLength": 754,
+   "osmBypassedLength": 802,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "gb-brands-hatch-gp",
+   "name": "Brands Hatch Grand Prix",
+   "category": "British GT",
+   "pitLaneLossSeconds": 28.9,
+   "pitLaneLength": 277,
+   "speedLimitKph": 40,
+   "confidence": 0.4,
+   "method": "estimé",
+   "sources": [
+    "https://docs.msv.com/3",
+    "https://www.openstreetmap.org/way/4906930"
+   ],
+   "notes": "Estimé : zone au limiteur publiée de 277 m, ~494 m de piste contournée, à 40 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : British GT : Bulletin 1 officiel British GT : vitesse limite et « Pit Entry/Exit Loop » = distance et temps entre les boucles de chronométrage d'entrée et de sortie à la vitesse limite (zone chronométrée, pas forcément toute la voie). Les arrêts obligatoires British GT sont à durée minimale imposée (mesurée boucle à boucle), donc aucune perte de drive-through publiée ; la perte réelle = temps de boucle + décélération/entrée/sortie − temps en piste sur le même tronçon. En ACC (GT World Challenge/British GT DLC) la limite est 50 km/h, pas 40. Temps de boucle publié : 24.9 s. Arrêt obligatoire minimal : 115 s GT3 / 145 s GT4. Manche 8, 23-24 août 2025.",
+   "variants": [],
+   "osmPitLength": 559,
+   "osmBypassedLength": 563,
+   "publishedPitLaneLength": 277,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-brands-hatch-indy",
+   "name": "Brands Hatch Indy",
+   "category": "Course nationale UK",
+   "pitLaneLossSeconds": 21.3,
+   "pitLaneLength": 314,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://ebooks.motorsportuk.org/motorsport-uk-ncr-2026-edition-2/0952123001742394230/p801",
+    "https://www.openstreetmap.org/way/4906930"
+   ],
+   "notes": "Estimé : 559 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~314 m au limiteur, 563 m de piste contournée, à 60 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Course nationale UK : Règlement national Motorsport UK (NCR) : vitesse maximale dans la voie des stands 60 km/h (37,2 mph), réductible par les documents officiels de l'épreuve (le British GT impose 40 km/h sur ses circuits anglais). Aucune valeur de perte publiée trouvée. La limite BTCC propre n'a pas pu être lue (règlement BARC inaccessible). Même voie des stands que le GP (British GT y applique 40 km/h, boucles 277 m).",
+   "variants": [],
+   "osmPitLength": 559,
+   "osmBypassedLength": 563,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-donington-gp",
+   "name": "Donington Park Grand Prix",
+   "category": "British GT",
+   "pitLaneLossSeconds": 27.8,
+   "pitLaneLength": 256,
+   "speedLimitKph": 40,
+   "confidence": 0.4,
+   "method": "estimé",
+   "sources": [
+    "https://www.britishgt.com/documents/notice/990/Bulletin+1.pdf",
+    "https://www.openstreetmap.org/way/90102737"
+   ],
+   "notes": "Estimé : zone au limiteur publiée de 256 m, ~456 m de piste contournée, à 40 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : British GT : Bulletin 1 officiel British GT : vitesse limite et « Pit Entry/Exit Loop » = distance et temps entre les boucles de chronométrage d'entrée et de sortie à la vitesse limite (zone chronométrée, pas forcément toute la voie). Les arrêts obligatoires British GT sont à durée minimale imposée (mesurée boucle à boucle), donc aucune perte de drive-through publiée ; la perte réelle = temps de boucle + décélération/entrée/sortie − temps en piste sur le même tronçon. En ACC (GT World Challenge/British GT DLC) la limite est 50 km/h, pas 40. Temps de boucle publié : 23.0 s. Arrêt obligatoire minimal : 115 s GT3 / 145 s GT4. Manche 1, 5-6 avril 2025.",
+   "variants": [],
+   "osmPitLength": 478,
+   "osmBypassedLength": 474,
+   "publishedPitLaneLength": 256,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-donington-national",
+   "name": "Donington Park National",
+   "category": "Course nationale UK",
+   "pitLaneLossSeconds": 20.5,
+   "pitLaneLength": 268,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://ebooks.motorsportuk.org/motorsport-uk-ncr-2026-edition-2/0952123001742394230/p801",
+    "https://www.openstreetmap.org/way/90102737"
+   ],
+   "notes": "Estimé : 478 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~268 m au limiteur, 474 m de piste contournée, à 60 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Course nationale UK : Règlement national Motorsport UK (NCR) : vitesse maximale dans la voie des stands 60 km/h (37,2 mph), réductible par les documents officiels de l'épreuve (le British GT impose 40 km/h sur ses circuits anglais). Aucune valeur de perte publiée trouvée. La limite BTCC propre n'a pas pu être lue (règlement BARC inaccessible). Même voie des stands que le GP (British GT : 40 km/h, boucles 256 m).",
+   "variants": [],
+   "osmPitLength": 478,
+   "osmBypassedLength": 474,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-oulton-international",
+   "name": "Oulton Park International",
+   "category": "British GT",
+   "pitLaneLossSeconds": 24.8,
+   "pitLaneLength": 199,
+   "speedLimitKph": 40,
+   "confidence": 0.4,
+   "method": "estimé",
+   "sources": [
+    "https://docs.msv.com/5",
+    "https://www.openstreetmap.org/way/721714385"
+   ],
+   "notes": "Estimé : zone au limiteur publiée de 199 m, ~355 m de piste contournée, à 40 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : British GT : Bulletin 1 officiel British GT : vitesse limite et « Pit Entry/Exit Loop » = distance et temps entre les boucles de chronométrage d'entrée et de sortie à la vitesse limite (zone chronométrée, pas forcément toute la voie). Les arrêts obligatoires British GT sont à durée minimale imposée (mesurée boucle à boucle), donc aucune perte de drive-through publiée ; la perte réelle = temps de boucle + décélération/entrée/sortie − temps en piste sur le même tronçon. En ACC (GT World Challenge/British GT DLC) la limite est 50 km/h, pas 40. Temps de boucle publié : 17.9 s. Arrêt obligatoire minimal : 70 s GT3. Manches 2-3, 23-25 mai 2026 (tracé International).",
+   "variants": [],
+   "osmPitLength": 529,
+   "osmBypassedLength": 546,
+   "publishedPitLaneLength": 199,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-oulton-island",
+   "name": "Oulton Park Island",
+   "category": "Course nationale UK",
+   "pitLaneLossSeconds": 20.7,
+   "pitLaneLength": 297,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://ebooks.motorsportuk.org/motorsport-uk-ncr-2026-edition-2/0952123001742394230/p801",
+    "https://www.openstreetmap.org/way/721714385"
+   ],
+   "notes": "Estimé : 529 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~297 m au limiteur, 546 m de piste contournée, à 60 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Course nationale UK : Règlement national Motorsport UK (NCR) : vitesse maximale dans la voie des stands 60 km/h (37,2 mph), réductible par les documents officiels de l'épreuve (le British GT impose 40 km/h sur ses circuits anglais). Aucune valeur de perte publiée trouvée. La limite BTCC propre n'a pas pu être lue (règlement BARC inaccessible). Même voie des stands que l'International (British GT : 40 km/h, boucles 199 m).",
+   "variants": [],
+   "osmPitLength": 529,
+   "osmBypassedLength": 546,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-oulton-fosters",
+   "name": "Oulton Park Fosters",
+   "category": "Course nationale UK",
+   "pitLaneLossSeconds": 20.7,
+   "pitLaneLength": 297,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://ebooks.motorsportuk.org/motorsport-uk-ncr-2026-edition-2/0952123001742394230/p801",
+    "https://www.openstreetmap.org/way/721714385"
+   ],
+   "notes": "Estimé : 529 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~297 m au limiteur, 546 m de piste contournée, à 60 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Course nationale UK : Règlement national Motorsport UK (NCR) : vitesse maximale dans la voie des stands 60 km/h (37,2 mph), réductible par les documents officiels de l'épreuve (le British GT impose 40 km/h sur ses circuits anglais). Aucune valeur de perte publiée trouvée. La limite BTCC propre n'a pas pu être lue (règlement BARC inaccessible). Même voie des stands que l'International (British GT : 40 km/h, boucles 199 m).",
+   "variants": [],
+   "osmPitLength": 529,
+   "osmBypassedLength": 546,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-snetterton-300",
+   "name": "Snetterton 300",
+   "category": "British GT",
+   "pitLaneLossSeconds": 27.3,
+   "pitLaneLength": 246,
+   "speedLimitKph": 40,
+   "confidence": 0.4,
+   "method": "estimé",
+   "sources": [
+    "https://www.britishgt.com/documents/notice/1681/Bulletin+1.pdf",
+    "https://www.openstreetmap.org/way/145755934"
+   ],
+   "notes": "Estimé : zone au limiteur publiée de 246 m, ~438 m de piste contournée, à 40 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : British GT : Bulletin 1 officiel British GT : vitesse limite et « Pit Entry/Exit Loop » = distance et temps entre les boucles de chronométrage d'entrée et de sortie à la vitesse limite (zone chronométrée, pas forcément toute la voie). Les arrêts obligatoires British GT sont à durée minimale imposée (mesurée boucle à boucle), donc aucune perte de drive-through publiée ; la perte réelle = temps de boucle + décélération/entrée/sortie − temps en piste sur le même tronçon. En ACC (GT World Challenge/British GT DLC) la limite est 50 km/h, pas 40. Temps de boucle publié : 22.1 s. Arrêt obligatoire minimal : 75 s GT3. Manches 5-6, 15-16 août 2026 (identique en 2025 : https://docs.msv.com/4) British GT - Bulletin 1.pdf).",
+   "variants": [],
+   "osmPitLength": 663,
+   "osmBypassedLength": 663,
+   "publishedPitLaneLength": 246,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-snetterton-200",
+   "name": "Snetterton 200",
+   "category": "Course nationale UK",
+   "pitLaneLossSeconds": 22.7,
+   "pitLaneLength": 372,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://ebooks.motorsportuk.org/motorsport-uk-ncr-2026-edition-2/0952123001742394230/p801",
+    "https://www.openstreetmap.org/way/145755934"
+   ],
+   "notes": "Estimé : 663 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~372 m au limiteur, 663 m de piste contournée, à 60 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Course nationale UK : Règlement national Motorsport UK (NCR) : vitesse maximale dans la voie des stands 60 km/h (37,2 mph), réductible par les documents officiels de l'épreuve (le British GT impose 40 km/h sur ses circuits anglais). Aucune valeur de perte publiée trouvée. La limite BTCC propre n'a pas pu être lue (règlement BARC inaccessible). Même voie des stands que le 300 (British GT : 40 km/h, boucles 246 m).",
+   "variants": [],
+   "osmPitLength": 663,
+   "osmBypassedLength": 663,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-silverstone-international",
+   "name": "Silverstone International",
+   "category": "Course nationale UK",
+   "pitLaneLossSeconds": 24.0,
+   "pitLaneLength": 581,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://ebooks.motorsportuk.org/motorsport-uk-ncr-2026-edition-2/0952123001742394230/p801",
+    "https://www.openstreetmap.org/way/227902927"
+   ],
+   "notes": "Estimé : 1035 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~581 m au limiteur, 1189 m de piste contournée, à 60 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Course nationale UK : Règlement national Motorsport UK (NCR) : vitesse maximale dans la voie des stands 60 km/h (37,2 mph), réductible par les documents officiels de l'épreuve (le British GT impose 40 km/h sur ses circuits anglais). Aucune valeur de perte publiée trouvée. La limite BTCC propre n'a pas pu être lue (règlement BARC inaccessible). Voie des stands du tracé International (Wing/« Silverstone International pits ») différente de celle du GP : ne pas reprendre les 336 m du British GT.",
+   "variants": [],
+   "osmPitLength": 1035,
+   "osmBypassedLength": 1189,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-knockhill",
+   "name": "Knockhill Racing Circuit",
+   "category": "Course nationale UK",
+   "pitLaneLossSeconds": 19.4,
+   "pitLaneLength": 221,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://ebooks.motorsportuk.org/motorsport-uk-ncr-2026-edition-2/0952123001742394230/p801",
+    "https://www.openstreetmap.org/way/5064300"
+   ],
+   "notes": "Estimé : 393 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~221 m au limiteur, 390 m de piste contournée, à 60 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Course nationale UK : Règlement national Motorsport UK (NCR) : vitesse maximale dans la voie des stands 60 km/h (37,2 mph), réductible par les documents officiels de l'épreuve (le British GT impose 40 km/h sur ses circuits anglais). Aucune valeur de perte publiée trouvée. La limite BTCC propre n'a pas pu être lue (règlement BARC inaccessible).",
+   "variants": [],
+   "osmPitLength": 393,
+   "osmBypassedLength": 390,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-thruxton",
+   "name": "Thruxton Circuit",
+   "category": "Course nationale UK",
+   "pitLaneLossSeconds": 19.7,
+   "pitLaneLength": 252,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://ebooks.motorsportuk.org/motorsport-uk-ncr-2026-edition-2/0952123001742394230/p801",
+    "https://www.openstreetmap.org/way/168899566"
+   ],
+   "notes": "Estimé : 449 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~252 m au limiteur, 467 m de piste contournée, à 60 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Course nationale UK : Règlement national Motorsport UK (NCR) : vitesse maximale dans la voie des stands 60 km/h (37,2 mph), réductible par les documents officiels de l'épreuve (le British GT impose 40 km/h sur ses circuits anglais). Aucune valeur de perte publiée trouvée. La limite BTCC propre n'a pas pu être lue (règlement BARC inaccessible).",
+   "variants": [],
+   "osmPitLength": 449,
+   "osmBypassedLength": 467,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-croft",
+   "name": "Croft Circuit",
+   "category": "Course nationale UK",
+   "pitLaneLossSeconds": 19.2,
+   "pitLaneLength": 212,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://ebooks.motorsportuk.org/motorsport-uk-ncr-2026-edition-2/0952123001742394230/p801",
+    "https://www.openstreetmap.org/way/108510889"
+   ],
+   "notes": "Estimé : 377 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~212 m au limiteur, 373 m de piste contournée, à 60 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Course nationale UK : Règlement national Motorsport UK (NCR) : vitesse maximale dans la voie des stands 60 km/h (37,2 mph), réductible par les documents officiels de l'épreuve (le British GT impose 40 km/h sur ses circuits anglais). Aucune valeur de perte publiée trouvée. La limite BTCC propre n'a pas pu être lue (règlement BARC inaccessible).",
+   "variants": [],
+   "osmPitLength": 377,
+   "osmBypassedLength": 373,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-cadwell-park",
+   "name": "Cadwell Park",
+   "category": "Course nationale UK",
+   "pitLaneLossSeconds": 17.9,
+   "pitLaneLength": 150,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://ebooks.motorsportuk.org/motorsport-uk-ncr-2026-edition-2/0952123001742394230/p801",
+    "https://www.openstreetmap.org/way/117976650"
+   ],
+   "notes": "Estimé : 267 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~150 m au limiteur, 263 m de piste contournée, à 60 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Course nationale UK : Règlement national Motorsport UK (NCR) : vitesse maximale dans la voie des stands 60 km/h (37,2 mph), réductible par les documents officiels de l'épreuve (le British GT impose 40 km/h sur ses circuits anglais). Aucune valeur de perte publiée trouvée. La limite BTCC propre n'a pas pu être lue (règlement BARC inaccessible).",
+   "variants": [],
+   "osmPitLength": 267,
+   "osmBypassedLength": 263,
+   "speedAssumed": false
+  },
+  {
+   "id": "gb-goodwood",
+   "name": "Goodwood Circuit",
+   "category": "Course nationale UK",
+   "pitLaneLossSeconds": 17.2,
+   "pitLaneLength": 120,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://ebooks.motorsportuk.org/motorsport-uk-ncr-2026-edition-2/0952123001742394230/p801",
+    "https://www.openstreetmap.org/way/344562248"
+   ],
+   "notes": "Estimé : 213 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~120 m au limiteur, 208 m de piste contournée, à 60 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Course nationale UK : Règlement national Motorsport UK (NCR) : vitesse maximale dans la voie des stands 60 km/h (37,2 mph), réductible par les documents officiels de l'épreuve (le British GT impose 40 km/h sur ses circuits anglais). Aucune valeur de perte publiée trouvée. La limite BTCC propre n'a pas pu être lue (règlement BARC inaccessible).",
+   "variants": [],
+   "osmPitLength": 213,
+   "osmBypassedLength": 208,
+   "speedAssumed": false
+  },
+  {
+   "id": "fr-le-mans",
+   "name": "Circuit des 24 Heures du Mans",
+   "category": "WEC",
+   "pitLaneLossSeconds": 32,
+   "pitLaneLength": 532,
+   "speedLimitKph": 60,
+   "confidence": 0.7,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/14_2026/03_24%20Hours%20of%20Le%20Mans/006_Doc%206%20-%20BRIEFING%20NOTES.pdf",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/13_2025/04_24%20Hours%20of%20Le%20Mans/059_Doc%2059%20-%20BRIEFING%20NOTES.pdf",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/13_2025/04_24%20Hours%20of%20Le%20Mans/063_Doc%2063%20-%20Bulletin%20no.%203.pdf",
+    "https://www.fia.com/system/files/documents/2026_fia_world_endurance_championship_sporting_regulations_mu_v1.2wmsc.pdf"
+   ],
+   "notes": "Deux outils de stratégie LMU indépendants donnent 32 s (TSR : « drive-through time », valeur identique pour Hypercar, LMP2 et LMGT3 ; StrategyMaster 3000 : « transit » 32 s hors +2 s d'arrêt). Ces valeurs valent exactement la traversée de la zone limitée officielle (532 m à 60 km/h = 31,9 s). Annexe briefing 2026 : ligne médiane 13 625,7 m, tour par les stands 13 597,27 m, limite 60 km/h jusqu'à la sortie. La perte nette réelle (traversée − temps du même tronçon en piste + freinage/relance) est probablement de 0 à 3 s inférieure. La conversion FIA d'un drive-through non purgé (35 s en 2025) est une valeur réglementaire majorée, pas une mesure. Le temps d'arrêt (≈ 2 s d'arrêt/relance + ravitaillement + pneus) n'est pas inclus : voir les entrées _arret.",
+   "variants": [],
+   "osmPitLength": 2049,
+   "osmBypassedLength": 2100
+  },
+  {
+   "id": "fr-le-mans-bugatti",
+   "name": "Circuit Bugatti",
+   "category": "WEC",
+   "pitLaneLossSeconds": 32,
+   "pitLaneLength": 532,
+   "speedLimitKph": 60,
+   "confidence": 0.4,
+   "method": "transposé du circuit des 24 Heures (même voie des stands)",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Circuit_de_la_Sarthe",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/14_2026/03_24%20Hours%20of%20Le%20Mans/006_Doc%206%20-%20BRIEFING%20NOTES.pdf"
+   ],
+   "notes": "Le circuit Bugatti n'est pas dans LMU (absent des listes TSR et StrategyMaster 3000) et n'accueille pas le WEC. Il partage les stands et la voie du circuit des 24 Heures ; estimation = traversée de 532 m à 60 km/h (limite WEC). Les points d'entrée/sortie exacts pour ce tracé et la limite des séries qui y courent (souvent 50 ou 60 km/h) ne sont pas confirmés.",
+   "variants": [],
+   "osmPitLength": 1275,
+   "osmBypassedLength": 1411
+  },
+  {
+   "id": "fr-dijon",
+   "name": "Dijon-Prenois",
+   "category": "FFSA GT",
+   "pitLaneLossSeconds": 25.8,
+   "pitLaneLength": 331,
+   "speedLimitKph": 50,
+   "confidence": 0.4,
+   "method": "estimé",
+   "sources": [
+    "https://ffsagt.gt4series.com/documents/notice/2065/2026+GT4++Dijon+V1.pdf",
+    "https://www.openstreetmap.org/way/56051451",
+    "https://www.openstreetmap.org/way/1270593062"
+   ],
+   "notes": "Estimé : zone au limiteur publiée de 331 m, ~590 m de piste contournée, à 50 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : FFSA GT : Notes de briefing officielles du Championnat de France FFSA GT (SRO, GT4) : limite 50 km/h ; « Pit IN to Pit OUT » = distance entre boucles de chronométrage ; le temps donné est la traversée à 50 km/h (« pitlane delta », base des temps d'arrêt minimaux et du drive-through). Ce n'est pas la perte nette ; par analogie avec SRO Asia (drive-through converti ≈ traversée + 3 s), la perte d'un drive-through serait ≈ traversée + 0 à 3 s. Briefing Dijon 2026 : « Pit IN to Pit OUT (loops): 331 m » (une autre page du même document indique 316 m), « Pitlane Dijon = 23 secondes », « Temps Minimum = Pitlane delta + 70 secondes = 93 secondes ».",
+   "variants": [],
+   "osmPitLength": 1026,
+   "osmBypassedLength": 1015,
+   "publishedPitLaneLength": 331,
+   "speedAssumed": false
+  },
+  {
+   "id": "fr-charade",
+   "name": "Circuit de Charade",
+   "pitLaneLossSeconds": 18.2,
+   "pitLaneLength": 213,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.openstreetmap.org/way/37073610"
+   ],
+   "notes": "Estimé : 379 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~213 m au limiteur, 424 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "osmPitLength": 379,
+   "osmBypassedLength": 424,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "fr-ledenon",
+   "name": "Circuit de Lédenon",
+   "category": "FFSA GT",
+   "pitLaneLossSeconds": 28.2,
+   "pitLaneLength": 404,
+   "speedLimitKph": 50,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://ffsagt.gt4series.com/documents/notice/1567/Driver%27s+Briefing+Presentation+Ledenon.pdf"
+   ],
+   "notes": "Estimé : zone au limiteur publiée de 404 m, ~720 m de piste contournée, à 50 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : FFSA GT : Notes de briefing officielles du Championnat de France FFSA GT (SRO, GT4) : limite 50 km/h ; « Pit IN to Pit OUT » = distance entre boucles de chronométrage ; le temps donné est la traversée à 50 km/h (« pitlane delta », base des temps d'arrêt minimaux et du drive-through). Ce n'est pas la perte nette ; par analogie avec SRO Asia (drive-through converti ≈ traversée + 3 s), la perte d'un drive-through serait ≈ traversée + 0 à 3 s. « Pit lane 404 m / 50 Km/Hr = 29 secs » ; le briefing 2021 (https://ffsagt.gt4series.com/documents/notice/661/Briefing+Team+Manager+Ledenon.pdf) écrit « 402 m / 50 Km/Hr = 29 secs = DT min time ».",
+   "variants": [],
+   "publishedPitLaneLength": 404,
+   "speedAssumed": false
+  },
+  {
+   "id": "fr-nogaro",
+   "name": "Circuit Paul Armagnac",
+   "category": "FFSA GT",
+   "pitLaneLossSeconds": 24.2,
+   "pitLaneLength": 286,
+   "speedLimitKph": 50,
+   "confidence": 0.4,
+   "method": "estimé",
+   "sources": [
+    "https://ffsagt.gt4series.com/documents/notice/1141/2023+GT+Presentation+Nogaro.pdf",
+    "https://www.openstreetmap.org/way/128495983"
+   ],
+   "notes": "Estimé : zone au limiteur publiée de 286 m, ~510 m de piste contournée, à 50 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : FFSA GT : Notes de briefing officielles du Championnat de France FFSA GT (SRO, GT4) : limite 50 km/h ; « Pit IN to Pit OUT » = distance entre boucles de chronométrage ; le temps donné est la traversée à 50 km/h (« pitlane delta », base des temps d'arrêt minimaux et du drive-through). Ce n'est pas la perte nette ; par analogie avec SRO Asia (drive-through converti ≈ traversée + 3 s), la perte d'un drive-through serait ≈ traversée + 0 à 3 s. Briefing Nogaro 2023 : « Pit IN to Pit OUT: 285,5 m », « Pit lane 286 m / 50 KPH = 20 secs ».",
+   "variants": [],
+   "osmPitLength": 595,
+   "osmBypassedLength": 620,
+   "publishedPitLaneLength": 286,
+   "speedAssumed": false
+  },
+  {
+   "id": "be-zolder",
+   "name": "Circuit Zolder",
+   "category": "GT World Challenge Europe",
+   "pitLaneLossSeconds": 24.0,
+   "pitLaneLength": 290,
+   "speedLimitKph": 50,
+   "confidence": 0.5,
+   "method": "dérivé de la traversée publiée (règle SRO : traversée + 3 s)",
+   "sources": [
+    "https://www.bgdc.be/files/2026/R1TERLAEMEN180/2026ZOLDERNOTESBRIEFINGUK.pdf"
+   ],
+   "notes": "Notes de briefing officielles SRO (GT4 European Series / GT World Challenge Europe / GT2 European Series) : limite 50 km/h (comme dans ACC), « Pit IN to Pit OUT » = distance boucle à boucle, « Pitlane delta » = traversée à 50 km/h. Ce n'est pas la perte nette ; règle observée chez SRO Asia : drive-through converti ≈ delta + 3 s. Notes de briefing BGDC Zolder 2026 (Terlaemen Cups) : voie des stands 290 m à 50 km/h = 21 s. Attention : la Supercar Challenge applique 60 km/h à Zolder (briefing 2025 : https://app-cdn.sportity.com/0146a8f6-73a2-4476-9ce8-8da0d9e4a9ef/43d4f19a-fc1c-4b7b-a0df-6d4383b1c314_Briefing SC Zolder 2025 _compressed.pdf). Perte retenue = delta + ≈3 s (estimation, à confirmer par la géométrie).",
+   "variants": [],
+   "osmPitLength": 1027,
+   "osmBypassedLength": 913
+  },
+  {
+   "id": "nl-assen",
+   "name": "TT Circuit Assen",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": null,
+   "confidence": 0,
+   "method": "",
+   "sources": [],
+   "notes": "Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "de-hockenheim-national",
+   "name": "Hockenheimring National",
+   "category": "DTM",
+   "pitLaneLossSeconds": 23,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0.6,
+   "method": "dérivé de la pénalité DTM d'arrêt non fait (moins 9 s d'arrêt supposés)",
+   "sources": [
+    "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM_2025_Sportliches_Reglement.pdf",
+    "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM-Reglement-2023.pdf",
+    "https://www.motorsport.com/all/news/red-bulls-pitstops-af-corse-ferrari/6628483/"
+   ],
+   "notes": "Règlement sportif DTM 2025, art. 39.7 : pénalité forfaitaire propre au circuit si l'arrêt obligatoire n'a pas été fait (course arrêtée et non reprise) = coût d'un arrêt obligatoire DTM (4 roues, 2 pistolets actifs max, pas de carburant). J'ai soustrait 9 s (≈7 s d'immobilisation, arrêts DTM GT3 les plus rapides 6,2-7,0 s, + ≈2 s de freinage/relance dans le box) pour approcher un drive-through. Limite DTM : 50 km/h entre les lignes d'entrée et de sortie (art. Boxengasse du même règlement). Valeur publiée pour le tracé GP (4,574 km) ; le National partage la voie des stands, la ligne droite et le stadium, la perte doit être très proche.",
+   "variants": [
+    {
+     "category": "GT World Challenge Europe",
+     "pitLaneLossSeconds": 23.0,
+     "pitLaneLength": null,
+     "speedLimitKph": 50,
+     "confidence": 0.6,
+     "method": "dérivé de la traversée publiée (règle SRO : traversée + 3 s)",
+     "sources": [
+      "https://www.gt4europeanseries.com/documents/notice/2279/Briefing+Presentation+Hockenheim.pdf"
+     ],
+     "notes": "Notes de briefing officielles SRO (GT4 European Series / GT World Challenge Europe / GT2 European Series) : limite 50 km/h (comme dans ACC), « Pit IN to Pit OUT » = distance boucle à boucle, « Pitlane delta » = traversée à 50 km/h. Ce n'est pas la perte nette ; règle observée chez SRO Asia : drive-through converti ≈ delta + 3 s. GT4 European Series Hockenheim : « Hockenheim Pit In to Pit Out time = 22 seconds » (≈306 m à 50 km/h). Publié pour le GP ; même voie pour le National. Recoupe le tableau DTM (32 s − 9 s = 23 s). Perte retenue = delta + ≈3 s (estimation, à confirmer par la géométrie)."
+    }
+   ],
+   "osmPitLength": 861,
+   "osmBypassedLength": 911
+  },
+  {
+   "id": "de-hockenheim-short",
+   "name": "Hockenheimring Short",
+   "category": "DTM",
+   "pitLaneLossSeconds": 23,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0.6,
+   "method": "dérivé de la pénalité DTM d'arrêt non fait (moins 9 s d'arrêt supposés)",
+   "sources": [
+    "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM_2025_Sportliches_Reglement.pdf",
+    "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM-Reglement-2023.pdf",
+    "https://www.motorsport.com/all/news/red-bulls-pitstops-af-corse-ferrari/6628483/"
+   ],
+   "notes": "Règlement sportif DTM 2025, art. 39.7 : pénalité forfaitaire propre au circuit si l'arrêt obligatoire n'a pas été fait (course arrêtée et non reprise) = coût d'un arrêt obligatoire DTM (4 roues, 2 pistolets actifs max, pas de carburant). J'ai soustrait 9 s (≈7 s d'immobilisation, arrêts DTM GT3 les plus rapides 6,2-7,0 s, + ≈2 s de freinage/relance dans le box) pour approcher un drive-through. Limite DTM : 50 km/h entre les lignes d'entrée et de sortie (art. Boxengasse du même règlement). Valeur publiée pour le tracé GP ; le tracé court partage la voie des stands et le stadium, transposition approximative.",
+   "variants": [],
+   "osmPitLength": 861,
+   "osmBypassedLength": 911
+  },
+  {
+   "id": "de-nurburgring-sprint",
+   "name": "Nürburgring Sprint",
+   "category": "DTM",
+   "pitLaneLossSeconds": 28,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0.6,
+   "method": "dérivé de la pénalité DTM d'arrêt non fait (moins 9 s d'arrêt supposés)",
+   "sources": [
+    "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM_2025_Sportliches_Reglement.pdf",
+    "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM-Reglement-2023.pdf",
+    "https://www.motorsport.com/all/news/red-bulls-pitstops-af-corse-ferrari/6628483/"
+   ],
+   "notes": "Règlement sportif DTM 2025, art. 39.7 : pénalité forfaitaire propre au circuit si l'arrêt obligatoire n'a pas été fait (course arrêtée et non reprise) = coût d'un arrêt obligatoire DTM (4 roues, 2 pistolets actifs max, pas de carburant). J'ai soustrait 9 s (≈7 s d'immobilisation, arrêts DTM GT3 les plus rapides 6,2-7,0 s, + ≈2 s de freinage/relance dans le box) pour approcher un drive-through. Limite DTM : 50 km/h entre les lignes d'entrée et de sortie (art. Boxengasse du même règlement). Le DTM court sur le tracé Sprint (3,6 km) du Nürburgring ; même voie des stands que le GP.",
+   "variants": [
+    {
+     "category": "GT World Challenge Europe",
+     "pitLaneLossSeconds": 28.0,
+     "pitLaneLength": 378,
+     "speedLimitKph": 50,
+     "confidence": 0.6,
+     "method": "dérivé de la traversée publiée (règle SRO : traversée + 3 s)",
+     "sources": [
+      "https://www.gt4europeanseries.com/documents/notice/745/Nurburgring+briefing+presentation.pdf"
+     ],
+     "notes": "Notes de briefing officielles SRO (GT4 European Series / GT World Challenge Europe / GT2 European Series) : limite 50 km/h (comme dans ACC), « Pit IN to Pit OUT » = distance boucle à boucle, « Pitlane delta » = traversée à 50 km/h. Ce n'est pas la perte nette ; règle observée chez SRO Asia : drive-through converti ≈ delta + 3 s. GT4 European Series Nürburgring : « Pit IN to Pit OUT: 378.2m », « Nurburgring Pitlane delta time = 27 seconds ». Publié pour le GP ; même voie pour le Sprint. Recoupe le tableau DTM (37 s − 9 s d'arrêt = 28 s). Perte retenue = delta + ≈3 s (estimation, à confirmer par la géométrie)."
+    }
+   ],
+   "osmPitLength": 949,
+   "osmBypassedLength": 982
+  },
+  {
+   "id": "de-nordschleife",
+   "name": "Nürburgring Nordschleife",
+   "pitLaneLossSeconds": 19.1,
+   "pitLaneLength": 212,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.openstreetmap.org/way/31009257",
+    "https://www.openstreetmap.org/way/32894824",
+    "https://www.openstreetmap.org/way/32894825",
+    "https://www.openstreetmap.org/way/710354617",
+    "https://www.openstreetmap.org/way/199642469",
+    "https://www.openstreetmap.org/way/199642470"
+   ],
+   "notes": "Estimé : 378 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~212 m au limiteur, 380 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit). Nordschleife seule : pas de voie des stands propre en course (les courses utilisent la combinaison avec le GP, voir de-nurburgring-24h) ; la position des stands dépend du jeu.",
+   "variants": [],
+   "osmPitLength": 378,
+   "osmBypassedLength": 380,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "de-nurburgring-24h",
+   "name": "Nürburgring 24h (Nordschleife + GP)",
+   "category": "iRacing DNLS",
+   "pitLaneLossSeconds": 25,
+   "pitLaneLength": null,
+   "speedLimitKph": 60,
+   "confidence": 0.5,
+   "method": "équivalence de l'organisateur (règlement DNLS)",
+   "sources": [
+    "https://www.nuerburgring-langstrecken-serie.de/wp-content/uploads/onb_dnls/01_Regularien/DE_Serienausschreibung-DNLS26_genehmigt.pdf"
+   ],
+   "notes": "Règlement DNLS 2025/26 (série virtuelle officielle de la VLN sur iRacing, Nordschleife + GP) : une pénalité « 60-Sekunden-Stop-and-Hold » en course équivaut à « eine Zeitstrafe von 85 Sekunden » après la course, donc l'organisateur estime le passage par les stands (avec arrêt au box, sans immobilisation) à 85 − 60 = 25 s ; le règlement ajoute aussi automatiquement 25 s d'immobilisation quand une pénalité est combinée à un arrêt. Un vrai drive-through coûte un peu moins (pas de freinage/relance au box, ≈ −2 s). Valeur arrondie d'organisateur, pas une mesure. Limite iRacing/NLS réelle : 60 km/h (non confirmée ici).",
+   "variants": [],
+   "osmPitLength": 847,
+   "osmBypassedLength": 844
+  },
+  {
+   "id": "de-sachsenring",
+   "name": "Sachsenring",
+   "category": "DTM",
+   "pitLaneLossSeconds": 20,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0.6,
+   "method": "dérivé de la pénalité DTM d'arrêt non fait (moins 9 s d'arrêt supposés)",
+   "sources": [
+    "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM_2025_Sportliches_Reglement.pdf",
+    "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM-Reglement-2023.pdf",
+    "https://www.motorsport.com/all/news/red-bulls-pitstops-af-corse-ferrari/6628483/"
+   ],
+   "notes": "Règlement sportif DTM 2025, art. 39.7 : pénalité forfaitaire propre au circuit si l'arrêt obligatoire n'a pas été fait (course arrêtée et non reprise) = coût d'un arrêt obligatoire DTM (4 roues, 2 pistolets actifs max, pas de carburant). J'ai soustrait 9 s (≈7 s d'immobilisation, arrêts DTM GT3 les plus rapides 6,2-7,0 s, + ≈2 s de freinage/relance dans le box) pour approcher un drive-through. Limite DTM : 50 km/h entre les lignes d'entrée et de sortie (art. Boxengasse du même règlement).",
+   "variants": [],
+   "osmPitLength": 725,
+   "osmBypassedLength": 716
+  },
+  {
+   "id": "de-lausitzring",
+   "name": "Lausitzring",
+   "category": "DTM",
+   "pitLaneLossSeconds": 32,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0.6,
+   "method": "dérivé de la pénalité DTM d'arrêt non fait (moins 9 s d'arrêt supposés)",
+   "sources": [
+    "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM_2025_Sportliches_Reglement.pdf",
+    "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM-Reglement-2023.pdf",
+    "https://www.motorsport.com/all/news/red-bulls-pitstops-af-corse-ferrari/6628483/"
+   ],
+   "notes": "Règlement sportif DTM 2025, art. 39.7 : pénalité forfaitaire propre au circuit si l'arrêt obligatoire n'a pas été fait (course arrêtée et non reprise) = coût d'un arrêt obligatoire DTM (4 roues, 2 pistolets actifs max, pas de carburant). J'ai soustrait 9 s (≈7 s d'immobilisation, arrêts DTM GT3 les plus rapides 6,2-7,0 s, + ≈2 s de freinage/relance dans le box) pour approcher un drive-through. Limite DTM : 50 km/h entre les lignes d'entrée et de sortie (art. Boxengasse du même règlement). Tracé DTM 3,478 km.",
+   "variants": [],
+   "osmPitLength": 800,
+   "osmBypassedLength": 802
+  },
+  {
+   "id": "de-oschersleben",
+   "name": "Motorsport Arena Oschersleben",
+   "category": "DTM",
+   "pitLaneLossSeconds": 37.6,
+   "pitLaneLength": 615,
+   "speedLimitKph": 50,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM_2025_Sportliches_Reglement.pdf",
+    "https://www.motorsport-total.com/styles/mst/reglement/adac/DTM-Reglement-2023.pdf",
+    "https://www.motorsport.com/all/news/red-bulls-pitstops-af-corse-ferrari/6628483/",
+    "https://www.openstreetmap.org/way/89254337"
+   ],
+   "notes": "Estimé : 1096 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~615 m au limiteur, 995 m de piste contournée, à 50 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : DTM : 61 s déduits de la pénalité 2025, non retenu (54 s en 2023, 70 s en 2025 avant soustraction, hausse inexpliquée).",
+   "variants": [],
+   "osmPitLength": 1096,
+   "osmBypassedLength": 995,
+   "speedAssumed": false
+  },
+  {
+   "id": "de-bilster-berg",
+   "name": "Bilster Berg",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": null,
+   "confidence": 0,
+   "method": "",
+   "sources": [],
+   "notes": "Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit). Circuit privé sans championnat publiant ces données.",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "at-red-bull-ring-national",
+   "name": "Red Bull Ring National",
+   "pitLaneLossSeconds": 23.6,
+   "pitLaneLength": 480,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.openstreetmap.org/way/289111668"
+   ],
+   "notes": "Estimé : 856 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~480 m au limiteur, 927 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit). Ne pas réutiliser la valeur DTM du tracé GP (33 s brut) : le tracé National contourne une partie du circuit, la géométrie entrée/sortie peut différer.",
+   "variants": [],
+   "osmPitLength": 856,
+   "osmBypassedLength": 927,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "at-salzburgring",
+   "name": "Salzburgring",
+   "pitLaneLossSeconds": 18.5,
+   "pitLaneLength": 175,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.openstreetmap.org/way/71295606"
+   ],
+   "notes": "Estimé : 312 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~175 m au limiteur, 303 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "osmPitLength": 312,
+   "osmBypassedLength": 303,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "cz-brno",
+   "name": "Masaryk Circuit (Brno)",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": null,
+   "confidence": 0,
+   "method": "",
+   "sources": [],
+   "notes": "Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "cz-most",
+   "name": "Autodrom Most",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": null,
+   "confidence": 0,
+   "method": "",
+   "sources": [],
+   "notes": "Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "sk-slovakia-ring",
+   "name": "Slovakia Ring",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": null,
+   "confidence": 0,
+   "method": "",
+   "sources": [],
+   "notes": "Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "it-misano",
+   "name": "Misano World Circuit Marco Simoncelli",
+   "category": "GT World Challenge Europe",
+   "pitLaneLossSeconds": 45.0,
+   "pitLaneLength": 593,
+   "speedLimitKph": 50,
+   "confidence": 0.55,
+   "method": "dérivé de la traversée publiée (règle SRO : traversée + 3 s)",
+   "sources": [
+    "https://www.gt4europeanseries.com/documents/notice/1110/Misano+briefing+presentation.pdf"
+   ],
+   "notes": "Notes de briefing officielles SRO (GT4 European Series / GT World Challenge Europe / GT2 European Series) : limite 50 km/h (comme dans ACC), « Pit IN to Pit OUT » = distance boucle à boucle, « Pitlane delta » = traversée à 50 km/h. Ce n'est pas la perte nette ; règle observée chez SRO Asia : drive-through converti ≈ delta + 3 s. GT4 European Series Misano (2022) : « Pit IN to Pit OUT: 593m », « Misano Pitlane delta time = 42 seconds », « Minimum driver change time = Pitlane delta + 50 seconds = 92 seconds ». Voie très longue : un arrêt y coûte cher (circuit ACC). Perte retenue = delta + ≈3 s (estimation, à confirmer par la géométrie).",
+   "variants": []
+  },
+  {
+   "id": "it-vallelunga",
+   "name": "Vallelunga Piero Taruffi",
+   "pitLaneLossSeconds": 23.2,
+   "pitLaneLength": 432,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.openstreetmap.org/way/624366371",
+    "https://www.openstreetmap.org/way/624366791"
+   ],
+   "notes": "Estimé : 769 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~432 m au limiteur, 809 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "osmPitLength": 769,
+   "osmBypassedLength": 809,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "it-magione",
+   "name": "Autodromo dell'Umbria (Magione)",
+   "pitLaneLossSeconds": 20.4,
+   "pitLaneLength": 259,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.openstreetmap.org/way/107403072"
+   ],
+   "notes": "Estimé : 461 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~259 m au limiteur, 449 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "osmPitLength": 461,
+   "osmBypassedLength": 449,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "es-jerez",
+   "name": "Circuito de Jerez",
+   "pitLaneLossSeconds": 22.2,
+   "pitLaneLength": 412,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.openstreetmap.org/way/2497138",
+    "https://www.openstreetmap.org/way/80864055",
+    "https://www.openstreetmap.org/way/1318772811",
+    "https://www.openstreetmap.org/way/80993862"
+   ],
+   "notes": "Estimé : 734 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~412 m au limiteur, 799 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "osmPitLength": 734,
+   "osmBypassedLength": 799,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "es-valencia",
+   "name": "Circuit Ricardo Tormo",
+   "category": "GT World Challenge Europe",
+   "pitLaneLossSeconds": 29.0,
+   "pitLaneLength": 366,
+   "speedLimitKph": 50,
+   "confidence": 0.55,
+   "method": "dérivé de la traversée publiée (règle SRO : traversée + 3 s)",
+   "sources": [
+    "https://www.gt2europeanseries.com/documents/notice/1948/undefined_bulletin-01-bop-minimum-pit-stop-time-time-penalties-access-to-parc-ferme-bwp-and-categorisations-derogations_document-number-14_68cd054987f87988396f91b6_19092025-07-24.pdf"
+   ],
+   "notes": "Notes de briefing officielles SRO (GT4 European Series / GT World Challenge Europe / GT2 European Series) : limite 50 km/h (comme dans ACC), « Pit IN to Pit OUT » = distance boucle à boucle, « Pitlane delta » = traversée à 50 km/h. Ce n'est pas la perte nette ; règle observée chez SRO Asia : drive-through converti ≈ delta + 3 s. Bulletin GT2 European Series Valencia (sept. 2025) : delta de 26 s (« all pit stop times are measured from pit in to pit out ») ; distance 366 m dans les briefings GTWC Europe Valencia 2021-2022 (https://www.gt-world-challenge-europe.com/documents/notice/6656/Team+Manager+%26+Drivers%27+Briefing+Valencia.pdf). Perte retenue = delta + ≈3 s (estimation, à confirmer par la géométrie).",
+   "variants": [],
+   "osmPitLength": 930,
+   "osmBypassedLength": 922
+  },
+  {
+   "id": "es-aragon",
+   "name": "MotorLand Aragón",
+   "pitLaneLossSeconds": 23.4,
+   "pitLaneLength": 426,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.openstreetmap.org/way/230005499"
+   ],
+   "notes": "Estimé : 759 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~426 m au limiteur, 782 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "osmPitLength": 759,
+   "osmBypassedLength": 782,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "se-anderstorp",
+   "name": "Anderstorp Raceway",
+   "category": "STCC",
+   "pitLaneLossSeconds": 37.1,
+   "pitLaneLength": 605,
+   "speedLimitKph": 50,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://sbf.se/download/18.4be4c6bd1903d8609697c149/1719424945402/Regulations%20STCC%202024%20ENG%20-%20off.pdf",
+    "https://www.openstreetmap.org/way/438314330"
+   ],
+   "notes": "Estimé : 1078 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~605 m au limiteur, 985 m de piste contournée, à 50 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : STCC : Règlement STCC 2024 : « The speed limit in the pit lane is 50 km/h during the event » ; un drive-through dans les 3 derniers tours devient une pénalité forfaitaire de 30 s (pas propre au circuit). Aucune perte publiée.",
+   "variants": [],
+   "osmPitLength": 1078,
+   "osmBypassedLength": 985,
+   "speedAssumed": false
+  },
+  {
+   "id": "se-karlskoga",
+   "name": "Gelleråsen Arena (Karlskoga)",
+   "category": "STCC",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0,
+   "method": "",
+   "sources": [
+    "https://sbf.se/download/18.4be4c6bd1903d8609697c149/1719424945402/Regulations%20STCC%202024%20ENG%20-%20off.pdf"
+   ],
+   "notes": "STCC : Règlement STCC 2024 : « The speed limit in the pit lane is 50 km/h during the event » ; un drive-through dans les 3 derniers tours devient une pénalité forfaitaire de 30 s (pas propre au circuit). Aucune perte publiée.",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "se-knutstorp",
+   "name": "Ring Knutstorp",
+   "category": "STCC",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0,
+   "method": "",
+   "sources": [
+    "https://sbf.se/download/18.4be4c6bd1903d8609697c149/1719424945402/Regulations%20STCC%202024%20ENG%20-%20off.pdf"
+   ],
+   "notes": "STCC : Règlement STCC 2024 : « The speed limit in the pit lane is 50 km/h during the event » ; un drive-through dans les 3 derniers tours devient une pénalité forfaitaire de 30 s (pas propre au circuit). Aucune perte publiée.",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "no-rudskogen",
+   "name": "Rudskogen Motorsenter",
+   "category": "STCC",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0,
+   "method": "",
+   "sources": [
+    "https://sbf.se/download/18.4be4c6bd1903d8609697c149/1719424945402/Regulations%20STCC%202024%20ENG%20-%20off.pdf"
+   ],
+   "notes": "STCC : Règlement STCC 2024 : « The speed limit in the pit lane is 50 km/h during the event » ; un drive-through dans les 3 derniers tours devient une pénalité forfaitaire de 30 s (pas propre au circuit). Aucune perte publiée. Circuit norvégien : la limite STCC ne s'y applique que si la série y court ; règlement national norvégien non vérifié.",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "dk-jyllandsringen",
+   "name": "Jyllandsringen",
+   "category": "STCC",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0,
+   "method": "",
+   "sources": [
+    "https://sbf.se/download/18.4be4c6bd1903d8609697c149/1719424945402/Regulations%20STCC%202024%20ENG%20-%20off.pdf"
+   ],
+   "notes": "STCC : Règlement STCC 2024 : « The speed limit in the pit lane is 50 km/h during the event » ; un drive-through dans les 3 derniers tours devient une pénalité forfaitaire de 30 s (pas propre au circuit). Aucune perte publiée. Circuit danois : limite STCC transposée sans vérification (séries danoises non vérifiées).",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "ru-moscow-raceway",
+   "name": "Moscow Raceway",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": null,
+   "confidence": 0,
+   "method": "",
+   "sources": [],
+   "notes": "Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "ae-dubai",
+   "name": "Dubai Autodrome",
+   "pitLaneLossSeconds": 23.5,
+   "pitLaneLength": 584,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.openstreetmap.org/way/87277444"
+   ],
+   "notes": "Estimé : 1040 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~584 m au limiteur, 1225 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "osmPitLength": 1040,
+   "osmBypassedLength": 1225,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "bh-outer",
+   "name": "Bahrain Outer Circuit",
+   "category": "WEC",
+   "pitLaneLossSeconds": 25,
+   "pitLaneLength": 441,
+   "speedLimitKph": 60,
+   "confidence": 0.55,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/"
+   ],
+   "notes": "Même voie que le GP selon les deux outils LMU (25 s). Sur un tour de ~1 min 06 (Hypercar), la perte pèse proportionnellement beaucoup plus ; l'entrée et la sortie étant sur la même ligne droite que le GP, la valeur devrait rester proche.",
+   "variants": [],
+   "osmPitLength": 771,
+   "osmBypassedLength": 768
+  },
+  {
+   "id": "bh-endurance",
+   "name": "Bahrain Endurance Circuit",
+   "category": "WEC",
+   "pitLaneLossSeconds": 25,
+   "pitLaneLength": 441,
+   "speedLimitKph": 60,
+   "confidence": 0.6,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/"
+   ],
+   "notes": "Même bâtiment et même voie des stands que le tracé GP : les deux outils LMU donnent 25 s pour toutes les variantes de Bahreïn (GP, Endurance, Outer, Paddock). Aucune mesure propre à cette variante.",
+   "variants": [],
+   "osmPitLength": 771,
+   "osmBypassedLength": 768
+  },
+  {
+   "id": "jp-fuji",
+   "name": "Fuji Speedway",
+   "category": "WEC",
+   "pitLaneLossSeconds": 29,
+   "pitLaneLength": 487,
+   "speedLimitKph": 60,
+   "confidence": 0.65,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://www.gt-world-challenge-asia.com/documents/notice/217/Fuji+Circuit+Timing+Map+v6.1.pdf",
+    "https://fiawec.alkamelsystems.com/Results_NoticeBoard/13_2025/07_6%20Hours%20of%20Fuji/004_Doc%204%20-%20Bulletin%20no.%201.pdf",
+    "https://fiawec.alkamelsystems.com/Results/14_2025/07_FUJI%20SPEEDWAY/626_FIA%20WEC/202509281100_Race/06_Hour%206/03_Classification_Race_Hour%206.PDF"
+   ],
+   "notes": "LMU : 29 / 29,5 s, égal à la traversée 487,2 m à 60 km/h donnée par la carte officielle GTWC Asia. Longueur WEC exacte non trouvée. Conversion FIA 53 s = valeur réglementaire majorée.",
+   "variants": [
+    {
+     "category": "GT World Challenge Asia",
+     "pitLaneLossSeconds": 38.0,
+     "pitLaneLength": 487,
+     "speedLimitKph": 50,
+     "confidence": 0.5,
+     "method": "dérivé de la traversée publiée (règle SRO : traversée + 3 s)",
+     "sources": [
+      "https://www.gt-world-challenge-asia.com/documents/notice/68/B8+Pit+Stops+%E3%83%94%E3%83%83%E3%83%88%E3%82%B9%E3%83%88%E3%83%83%E3%83%97+R2_.pdf"
+     ],
+     "notes": "Bulletin officiel GT World Challenge Asia « Minimum Mandatory Pit Stop Times » : « Pit Entry to Pit Exit » = distance et temps boucle à boucle à 50 km/h ; « Converted In-Race Penalties : Drive Through » = équivalent officiel d'un drive-through. Dans tous les bulletins trouvés, ce drive-through converti = temps de traversée à 50 km/h + ≈3 s (SUGO 27,0→30 ; Suzuka 29,9→33 ; Sepang 30,4→33 ; Mandalika 38,5→42 ; Beijing 50→53 à 40 km/h). Traversée publiée : 35.0 s. Hors liste (Fuji) : ligne gardée à part. 487,2 m = 35,0 s à 50 km/h ; drive-through estimé ≈ 38 s par la règle SRO Asia."
+    }
+   ],
+   "osmPitLength": 1292,
+   "osmBypassedLength": 1285
+  },
+  {
+   "id": "jp-okayama",
+   "name": "Okayama International Circuit",
+   "category": "GT World Challenge Asia",
+   "pitLaneLossSeconds": 31.5,
+   "pitLaneLength": 397,
+   "speedLimitKph": 50,
+   "confidence": 0.5,
+   "method": "dérivé de la traversée publiée (règle SRO : traversée + 3 s)",
+   "sources": [
+    "https://www.gt-world-challenge-asia.com/documents/notice/95/B1+Pit+Stops+%E3%83%94%E3%83%83%E3%83%88%E3%82%B9%E3%83%88%E3%83%83%E3%83%97+R1+-+Updated+%E6%9B%B4%E6%96%B0+21.9.2022.pdf"
+   ],
+   "notes": "Bulletin officiel GT World Challenge Asia « Minimum Mandatory Pit Stop Times » : « Pit Entry to Pit Exit » = distance et temps boucle à boucle à 50 km/h ; « Converted In-Race Penalties : Drive Through » = équivalent officiel d'un drive-through. Dans tous les bulletins trouvés, ce drive-through converti = temps de traversée à 50 km/h + ≈3 s (SUGO 27,0→30 ; Suzuka 29,9→33 ; Sepang 30,4→33 ; Mandalika 38,5→42 ; Beijing 50→53 à 40 km/h). Traversée publiée : 28.5 s. Bulletin Okayama 2022 : 397 m, 28,5 s à 50 km/h ; pas de drive-through converti publié dans ce bulletin. Valeur estimée par la règle SRO Asia (28,5 + 3 ≈ 31,5 s).",
+   "variants": []
+  },
+  {
+   "id": "jp-motegi",
+   "name": "Mobility Resort Motegi (circuit routier)",
+   "category": "Super GT",
+   "pitLaneLossSeconds": 26.4,
+   "pitLaneLength": 379,
+   "speedLimitKph": 50,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://motorsports-regulations.com/en/?p=211",
+    "https://www.gt-world-challenge-asia.com/documents/notice/95/B1+Pit+Stops+%E3%83%94%E3%83%83%E3%83%88%E3%82%B9%E3%83%88%E3%83%83%E3%83%97+R1+-+Updated+%E6%9B%B4%E6%96%B0+21.9.2022.pdf",
+    "https://www.openstreetmap.org/way/229813464"
+   ],
+   "notes": "Estimé : 675 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~379 m au limiteur, 721 m de piste contournée, à 50 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Super GT : Super GT : limite 50 km/h selon un site d'explication des règlements japonais (source unique, année non précisée) ; GT World Challenge Asia applique 50 km/h sur tous ses circuits japonais. Aucun bulletin Motegi ni perte publiée trouvés.",
+   "variants": [],
+   "osmPitLength": 675,
+   "osmBypassedLength": 721,
+   "speedAssumed": false
+  },
+  {
+   "id": "jp-sugo",
+   "name": "Sportsland Sugo",
+   "category": "GT World Challenge Asia",
+   "pitLaneLossSeconds": 30,
+   "pitLaneLength": 376,
+   "speedLimitKph": 50,
+   "confidence": 0.8,
+   "method": "publié",
+   "sources": [
+    "https://www.gt-world-challenge-asia.com/documents/notice/691/B1+Pit+Stops+%E3%83%92%E3%82%9A%E3%83%83%E3%83%88%E3%82%B9%E3%83%88%E3%83%83%E3%83%97+29.05+V1.pdf"
+   ],
+   "notes": "Bulletin officiel GT World Challenge Asia « Minimum Mandatory Pit Stop Times » : « Pit Entry to Pit Exit » = distance et temps boucle à boucle à 50 km/h ; « Converted In-Race Penalties : Drive Through » = équivalent officiel d'un drive-through. Dans tous les bulletins trouvés, ce drive-through converti = temps de traversée à 50 km/h + ≈3 s (SUGO 27,0→30 ; Suzuka 29,9→33 ; Sepang 30,4→33 ; Mandalika 38,5→42 ; Beijing 50→53 à 40 km/h). Traversée publiée : 27.0 s. Drive-through 30 s publié dans le bulletin du 29.05 (2023) dont la distance est imprimée « 5376m, 27.0sec » (coquille pour 376 m : SUGO, 27,0 s comme les bulletins SUGO 2022 https://www.gt-world-challenge-asia.com/documents/notice/92/B7+Pit+Stops+%E3%83%94%E3%83%83%E3%83%88%E3%82%B9%E3%83%88%E3%83%83%E3%83%97+R2.pdf et notice 78). La sortie des stands de SUGO a été modifiée depuis (2023-2024), valeur à revérifier.",
+   "variants": []
+  },
+  {
+   "id": "jp-tsukuba",
+   "name": "Tsukuba Circuit",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": null,
+   "confidence": 0,
+   "method": "",
+   "sources": [],
+   "notes": "Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "cn-zhuhai",
+   "name": "Zhuhai International Circuit",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": null,
+   "confidence": 0,
+   "method": "",
+   "sources": [],
+   "notes": "Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "th-chang",
+   "name": "Chang International Circuit",
+   "category": "GT World Challenge Asia",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0,
+   "method": "",
+   "sources": [
+    "https://asiaregs.sporting.gt-world-challenge.com/20.Mandatory%20Pit%20Stops/"
+   ],
+   "notes": "GT World Challenge Asia : GT World Challenge Asia court à Buriram et applique 50 km/h dans tous ses bulletins trouvés ; bulletin Buriram (distance boucle à boucle, drive-through converti) non trouvé.",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "nz-ruapuna",
+   "name": "Ruapuna Park",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": null,
+   "confidence": 0,
+   "method": "",
+   "sources": [],
+   "notes": "Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "au-winton",
+   "name": "Winton Motor Raceway",
+   "category": "Supercars",
+   "pitLaneLossSeconds": 28,
+   "pitLaneLength": null,
+   "speedLimitKph": 40,
+   "confidence": 0.55,
+   "method": "dérivé d'un drive-through",
+   "sources": [
+    "https://speedcafe.com/?p=361152",
+    "https://speedcafe.com/kostecki-dirty-with-himself-for-speeding-penalty/",
+    "https://speedcafe.com/supercars-eases-penalties-for-pit-infringements/"
+   ],
+   "notes": "Winton SuperSprint 2017, course 10 : Dale Wood reçoit « a 28-second penalty for spinning his wheels while on jacks during a pit stop ». Jusqu'en 2018, Supercars punissait les infractions au stand d'un drive-through ou de « l'équivalent en temps » ajouté en fin de course ; 28 s est donc très probablement l'équivalent drive-through de Winton, mais l'article ne le dit pas explicitement. Limite 40 km/h confirmée à Winton (Kostecki, 2022).",
+   "variants": [],
+   "osmPitLength": 682,
+   "osmBypassedLength": 592
+  },
+  {
+   "id": "au-phillip-island",
+   "name": "Phillip Island Grand Prix Circuit",
+   "category": "GT World Challenge Australia",
+   "pitLaneLossSeconds": 40,
+   "pitLaneLength": 438,
+   "speedLimitKph": 40,
+   "confidence": 0.85,
+   "method": "publié",
+   "sources": [
+    "https://www.gt-world-challenge-australia.com/documents/notice/60/GT3+Bulletin+1.pdf"
+   ],
+   "notes": "Bulletin n°1 des commissaires du 12 avril 2024 (manche 1 GTWC Australia, Phillip Island) : « Pit Speed Limit is 40kph », « Pit Entry/Exit Loop at 40kph = 39 seconds = 438 meters », « Drive-Through Penalty; will be converted to 40 seconds added to the elapsed time ». Arrêt obligatoire minimal 90 s (boucle à boucle). Cohérent avec l'équivalent Supercars de 2018 (38 s, même limite 40 km/h).",
+   "variants": [
+    {
+     "category": "Supercars",
+     "pitLaneLossSeconds": 38,
+     "pitLaneLength": null,
+     "speedLimitKph": 40,
+     "confidence": 0.75,
+     "method": "publié",
+     "sources": [
+      "https://www.supercars.com/news/whincup-stripped-of-second-by-post-race-penalty",
+      "https://speedcafe.com/dutton-explains-whincup-post-race-penalty/",
+      "https://www.supercars.com/news/supercars-news-2025-craig-lowndes-fined-the-bend-500-pit-lane-speed-incident-triple-eight"
+     ],
+     "notes": "Phillip Island 500, course 9, avril 2018 : les commissaires ont infligé une « post-Race Pit Lane Penalty (38 seconds) », présentée comme l'équivalent en temps d'un drive-through sur ce circuit (Supercars convertit le drive-through en temps par circuit). Limite Supercars : 40 km/h pour tous les véhicules dans la voie (règle générale, ex. The Bend 2025, Winton, Townsville) ; le GTWC Australia applique aussi 40 km/h à Phillip Island."
+    }
+   ],
+   "osmPitLength": 1212,
+   "osmBypassedLength": 1267
+  },
+  {
+   "id": "au-sandown",
+   "name": "Sandown Raceway",
+   "category": "Supercars",
+   "pitLaneLossSeconds": 26,
+   "pitLaneLength": null,
+   "speedLimitKph": 40,
+   "confidence": 0.45,
+   "method": "dérivé d'un drive-through",
+   "sources": [
+    "https://speedcafe.com/stewards-confirm-sandown-penalties/"
+   ],
+   "notes": "Sandown 500, septembre 2017 : la Ford n°56 (Bright/Jacobson) reçoit « a 26 second post race penalty for failing to adhere to the black flag ». Un résumé de recherche la qualifiait d'« equivalent of a drive-through », formule que je n'ai pas retrouvée dans l'article : valeur plausible (Supercars convertissait alors le drive-through en temps propre au circuit) mais non confirmée. Limite Supercars 40 km/h (règle générale).",
+   "variants": [],
+   "osmPitLength": 625,
+   "osmBypassedLength": 610
+  },
+  {
+   "id": "us-laguna-seca",
+   "name": "WeatherTech Raceway Laguna Seca",
+   "category": "IMSA",
+   "pitLaneLossSeconds": 23.89,
+   "pitLaneLength": 393,
+   "speedLimitKph": 60,
+   "confidence": 0.6,
+   "method": "traversée mesurée (drive-through IMSA, fiches officielles)",
+   "sources": [
+    "https://imsa.results.alkamelcloud.com/Results/26_2026/09_Weathertech%20Raceway%20Laguna%20Seca/01_IMSA%20WeatherTech%20SportsCar%20Championship/202605031310_Race/20_Pit%20Stops%20Time%20Cards_Race.PDF",
+    "https://imsa.results.alkamelcloud.com/Results_NoticeBoard/25_2025/10_WeatherTech%20Raceway%20Laguna%20Seca/09_Briefing%20Photos/03_LST%20DRIVER%20BRIEFING.pdf",
+    "https://help.hhtiming.com/series-specific-info/indycar/recommended-settings/"
+   ],
+   "notes": "IMSA : limite 60 km/h (briefings pilotes officiels, « driving slower than 60kph in the fast lane may be penalized » / « Pit Lane speed - 60 kph »). pitLaneTransitSeconds = temps boucle d'entrée → boucle de sortie des passages les plus courts dans la fiche officielle « Pit Stops Time Cards » (grappe nette = drive-throughs), ce n'est PAS la perte : perte ≈ ce temps + entrée/sortie hors boucles − temps en piste sur le même tronçon. Distance de stand publiée 15 474 pouces = 393 m (briefing LST 2025 : https://imsa.results.alkamelcloud.com/Results_NoticeBoard/25_2025/10_WeatherTech%20Raceway%20Laguna%20Seca/09_Briefing%20Photos/03_LST%20DRIVER%20BRIEFING.pdf), soit 23,6 s à 60 km/h ; passages observés 23,885-23,967 s (course 2026). Retenu comme perte : temps de traversée boucle à boucle des drive-through ; la perte nette serait de 0 à 3 s plus faible (même base que les valeurs des outils LMU). | IndyCar : 19.0 s, non retenu (vitesse limite inconnue, plus haute que celle des GT).",
+   "variants": [],
+   "osmPitLength": 995,
+   "osmBypassedLength": 1097
+  },
+  {
+   "id": "us-sonoma",
+   "name": "Sonoma Raceway",
+   "category": "GT World Challenge America",
+   "pitLaneLossSeconds": 42,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0.75,
+   "method": "publié",
+   "sources": [
+    "https://sportscar365.com/?p=90546",
+    "https://www.gt-world-challenge-america.com/news/1456/chat-gt3-what-are-the-elements-of-a-pit-stop",
+    "https://www.ovalinsider.com/nascar-news/nascar-pit-road-speed-limits-1076702/"
+   ],
+   "notes": "Bulletin des commissaires SRO America « Drive Thru Penalty Equivalent Time » : temps officiel jugé équivalent à un drive-through pour l'épreuve (utilisé pour convertir un drive-through en pénalité de temps). Limite SRO America : 50 km/h dans toute la voie (48 km/h mini dans la voie rapide), comme ACC. Valeur fixée par épreuve, pas de méthode publiée ; le bulletin Road Atlanta 2026 précise que ses temps sont mesurés « loop to loop » (ligne de chrono d'entrée → de sortie), ce qui vaut au moins pour les temps d'arrêt minimaux. Épreuve : août 2020. Arrêt minimal imposé (boucle à boucle) : non publié. Drive-through annulé après coup : la voiture a été « credited post-race for 42 seconds, the time calculated for a drive-through penalty » (Sportscar365). Tracé SRO de Sonoma. | Autres séries : NASCAR : Oval Insider, « NASCAR 2026: Pit road speed limits for every Cup, O'Reilly and Truck Series track » (citant l'art. 8.5.1 du règlement NASCAR) : 40 mph. Aucune perte de passage publiée. Tracé NASCAR de Sonoma (peut différer du tracé SRO/IndyCar).",
+   "variants": [],
+   "osmPitLength": 922,
+   "osmBypassedLength": 893
+  },
+  {
+   "id": "us-road-america",
+   "name": "Road America",
+   "category": "IMSA",
+   "pitLaneLossSeconds": 38.3,
+   "pitLaneLength": 638,
+   "speedLimitKph": 60,
+   "confidence": 0.6,
+   "method": "traversée mesurée (drive-through IMSA, fiches officielles)",
+   "sources": [
+    "https://imsa.results.alkamelcloud.com/Results/25_2025/16_Road%20America/01_IMSA%20WeatherTech%20SportsCar%20Championship/202508031310_Race/20_Pit%20Stops%20Time%20Cards_Race.PDF",
+    "https://help.hhtiming.com/series-specific-info/indycar/recommended-settings/"
+   ],
+   "notes": "IMSA : limite 60 km/h (briefings pilotes officiels, « driving slower than 60kph in the fast lane may be penalized » / « Pit Lane speed - 60 kph »). pitLaneTransitSeconds = temps boucle d'entrée → boucle de sortie des passages les plus courts dans la fiche officielle « Pit Stops Time Cards » (grappe nette = drive-throughs), ce n'est PAS la perte : perte ≈ ce temps + entrée/sortie hors boucles − temps en piste sur le même tronçon. Passages les plus courts : 38,299-38,921 s (5 passages) ; course 2025. Voie longue (entrée avant le virage 14 en montée). Retenu comme perte : temps de traversée boucle à boucle des drive-through ; la perte nette serait de 0 à 3 s plus faible (même base que les valeurs des outils LMU). | IndyCar : 29.5 s, non retenu (vitesse limite inconnue, plus haute que celle des GT).",
+   "variants": [
+    {
+     "category": "GT World Challenge America",
+     "pitLaneLossSeconds": 46,
+     "pitLaneLength": null,
+     "speedLimitKph": 50,
+     "confidence": 0.85,
+     "method": "publié",
+     "sources": [
+      "https://www.gt-world-challenge-america.com/documents/notice/871/Stewards+Bulletin+No.+2+-+Drive+Thru+Equivalent+Time%2C+Minimum+Pit+Stop+Times+for+GTWCA+and+GT4+-+Signed.pdf",
+      "https://www.gt-world-challenge-america.com/news/1456/chat-gt3-what-are-the-elements-of-a-pit-stop"
+     ],
+     "notes": "Bulletin des commissaires SRO America « Drive Thru Penalty Equivalent Time » : temps officiel jugé équivalent à un drive-through pour l'épreuve (utilisé pour convertir un drive-through en pénalité de temps). Limite SRO America : 50 km/h dans toute la voie (48 km/h mini dans la voie rapide), comme ACC. Valeur fixée par épreuve, pas de méthode publiée ; le bulletin Road Atlanta 2026 précise que ses temps sont mesurés « loop to loop » (ligne de chrono d'entrée → de sortie), ce qui vaut au moins pour les temps d'arrêt minimaux. Épreuve : août 2022. Arrêt minimal imposé (boucle à boucle) : 86 s."
+    }
+   ],
+   "osmPitLength": 961,
+   "osmBypassedLength": 958
+  },
+  {
+   "id": "us-road-atlanta",
+   "name": "Michelin Raceway Road Atlanta",
+   "category": "GT World Challenge America",
+   "pitLaneLossSeconds": 43,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0.85,
+   "method": "publié",
+   "sources": [
+    "https://www.tcamerica.us/documents/notice/1177/4a4c0d2284ebcafe6b1948f339fef7.pdf",
+    "https://www.gt-world-challenge-america.com/news/1456/chat-gt3-what-are-the-elements-of-a-pit-stop"
+   ],
+   "notes": "Bulletin des commissaires SRO America « Drive Thru Penalty Equivalent Time » : temps officiel jugé équivalent à un drive-through pour l'épreuve (utilisé pour convertir un drive-through en pénalité de temps). Limite SRO America : 50 km/h dans toute la voie (48 km/h mini dans la voie rapide), comme ACC. Valeur fixée par épreuve, pas de méthode publiée ; le bulletin Road Atlanta 2026 précise que ses temps sont mesurés « loop to loop » (ligne de chrono d'entrée → de sortie), ce qui vaut au moins pour les temps d'arrêt minimaux. Épreuve : juin 2026. Arrêt minimal imposé (boucle à boucle) : 78 s. 47 s pour McLaren Trophy/TC America qui passent par la voie annexe (« support pit lane »).",
+   "variants": [],
+   "osmPitLength": 966,
+   "osmBypassedLength": 1017
+  },
+  {
+   "id": "us-sebring",
+   "name": "Sebring International Raceway",
+   "category": "WEC",
+   "pitLaneLossSeconds": 33,
+   "pitLaneLength": null,
+   "speedLimitKph": 60,
+   "confidence": 0.55,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/",
+    "https://en.wikipedia.org/wiki/1000_Miles_of_Sebring",
+    "https://en.wikipedia.org/wiki/2019_1000_Miles_of_Sebring",
+    "https://www.dailysportscar.com/2023/03/14/fia-wec-1000m-sebring-tuesday-paddock-notes.html",
+    "https://lemansultimate.com/patch-2-26th-march-2024-public-notes/"
+   ],
+   "notes": "LMU : 33 s (TSR) / 34 s (StrategyMaster). En WEC, 60 km/h (pénalités 2019 pour 66,2 km/h). Le WEC utilisait une voie temporaire sur la ligne droite Ullman, distincte de la voie IMSA ; LMU a repris l'entrée des stands de 2023 (notes du patch 2), mais je n'ai pas pu confirmer quelle voie le jeu modélise. Longueur WEC non trouvée.",
+   "variants": [
+    {
+     "category": "GT World Challenge America",
+     "pitLaneLossSeconds": 44,
+     "pitLaneLength": null,
+     "speedLimitKph": 50,
+     "confidence": 0.85,
+     "method": "publié",
+     "sources": [
+      "https://www.gt-world-challenge-america.com/documents/notice/1461/5d40c17e64f61a076a41002fea3b40.pdf",
+      "https://www.gt-world-challenge-america.com/news/1456/chat-gt3-what-are-the-elements-of-a-pit-stop"
+     ],
+     "notes": "Bulletin des commissaires SRO America « Drive Thru Penalty Equivalent Time » : temps officiel jugé équivalent à un drive-through pour l'épreuve (utilisé pour convertir un drive-through en pénalité de temps). Limite SRO America : 50 km/h dans toute la voie (48 km/h mini dans la voie rapide), comme ACC. Valeur fixée par épreuve, pas de méthode publiée ; le bulletin Road Atlanta 2026 précise que ses temps sont mesurés « loop to loop » (ligne de chrono d'entrée → de sortie), ce qui vaut au moins pour les temps d'arrêt minimaux. Épreuve : mai 2025. Arrêt minimal imposé (boucle à boucle) : 79 s. Hors liste (Sebring) : ligne gardée à part. NB : NOLA 2022 avait aussi 44 s."
+    },
+    {
+     "category": "IMSA",
+     "pitLaneLossSeconds": 32,
+     "pitLaneLength": 541,
+     "speedLimitKph": 60,
+     "confidence": 0.4,
+     "method": "estimé (traversée de la voie publiée à 60 km/h)",
+     "sources": [
+      "https://www.imsa.com/wp-content/uploads/sites/32/2026/01/28/2026-IMSA-Provisional-Schedule-and-SR-Sebring-12H-012826.pdf",
+      "https://imsa.results.alkamelcloud.com/Results_NoticeBoard/26-2026/06_Sebring%20International%20Raceway/09_Briefing%20Photos/05_MC%20DRIVER%20BRIEFING.pdf"
+     ],
+     "notes": "À Sebring, la limite IMSA est aussi de 60 km/h (briefing IMSA Sebring 2026, série Michelin Pilot Challenge ; non vérifié pour le briefing WeatherTech). La différence avec le WEC est donc la voie (voie principale IMSA vs voie temporaire WEC), pas la vitesse. Estimation = traversée de 541,3 m à 60 km/h, perte nette probablement 30-33 s. La distance a varié selon les années (21 980 in en 2020)."
+    }
+   ],
+   "osmPitLength": 535,
+   "osmBypassedLength": 535
+  },
+  {
+   "id": "us-daytona-road",
+   "name": "Daytona International Speedway (circuit routier)",
+   "category": "IMSA",
+   "pitLaneLossSeconds": 38.87,
+   "pitLaneLength": 648,
+   "speedLimitKph": 60,
+   "confidence": 0.45,
+   "method": "traversée mesurée (drive-through IMSA, fiches officielles)",
+   "sources": [
+    "https://imsa.results.alkamelcloud.com/Results/20_2020/04_Daytona%20International%20Speedway/01_IMSA%20WeatherTech%20SportsCar%20Championship/202007041810_Race/20_Pit%20Stops%20Time%20Cards_Race_Official.PDF"
+   ],
+   "notes": "IMSA : limite 60 km/h (briefings pilotes officiels, « driving slower than 60kph in the fast lane may be penalized » / « Pit Lane speed - 60 kph »). pitLaneTransitSeconds = temps boucle d'entrée → boucle de sortie des passages les plus courts dans la fiche officielle « Pit Stops Time Cards » (grappe nette = drive-throughs), ce n'est PAS la perte : perte ≈ ce temps + entrée/sortie hors boucles − temps en piste sur le même tronçon. Passages les plus courts : 38,871 s (UN seul passage court, les suivants ≥ 47 s) ; course de juillet 2020 (2 h 40) ; valeur isolée, à recouper. Retenu comme perte : temps de traversée boucle à boucle des drive-through ; la perte nette serait de 0 à 3 s plus faible (même base que les valeurs des outils LMU).",
+   "variants": [],
+   "osmPitLength": 1134,
+   "osmBypassedLength": 1192
+  },
+  {
+   "id": "us-daytona-oval",
+   "name": "Daytona International Speedway (ovale)",
+   "category": "NASCAR",
+   "pitLaneLossSeconds": 15.0,
+   "pitLaneLength": 376,
+   "speedLimitKph": 88.5,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.ovalinsider.com/nascar-news/nascar-pit-road-speed-limits-1076702/",
+    "https://www.openstreetmap.org/way/198465570",
+    "https://www.openstreetmap.org/way/352067003"
+   ],
+   "notes": "Estimé : 670 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~376 m au limiteur, 694 m de piste contournée, à 88 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : NASCAR : Oval Insider, « NASCAR 2026: Pit road speed limits for every Cup, O'Reilly and Truck Series track » (citant l'art. 8.5.1 du règlement NASCAR) : 55 mph. Aucune perte de passage publiée. Limite publiée pour Daytona International Speedway (ovale).",
+   "variants": [],
+   "osmPitLength": 670,
+   "osmBypassedLength": 694,
+   "speedAssumed": false
+  },
+  {
+   "id": "us-indianapolis-road",
+   "name": "Indianapolis Motor Speedway (circuit routier)",
+   "category": "IMSA",
+   "pitLaneLossSeconds": 51.45,
+   "pitLaneLength": 859,
+   "speedLimitKph": 60,
+   "confidence": 0.6,
+   "method": "traversée mesurée (drive-through IMSA, fiches officielles)",
+   "sources": [
+    "https://imsa.results.alkamelcloud.com/Results/23_2023/19_Indianapolis%20Motor%20Speedway%20RC/01_IMSA%20WeatherTech%20SportsCar%20Championship/202309171310_Race/20_Pit%20Stops%20Time%20Cards_Race.PDF",
+    "https://imsa.results.alkamelcloud.com/Results_NoticeBoard/25_2025/19_Indianapolis%20Motor%20Speedway/09_Briefing%20Photos/03_LST%20DRIVER%20BRIEFING.pdf",
+    "https://help.hhtiming.com/series-specific-info/indycar/recommended-settings/"
+   ],
+   "notes": "IMSA : limite 60 km/h (briefings pilotes officiels, « driving slower than 60kph in the fast lane may be penalized » / « Pit Lane speed - 60 kph »). pitLaneTransitSeconds = temps boucle d'entrée → boucle de sortie des passages les plus courts dans la fiche officielle « Pit Stops Time Cards » (grappe nette = drive-throughs), ce n'est PAS la perte : perte ≈ ce temps + entrée/sortie hors boucles − temps en piste sur le même tronçon. Distance publiée 33 820 pouces = 859 m (briefing LST 2025 : https://imsa.results.alkamelcloud.com/Results_NoticeBoard/25_2025/19_Indianapolis%20Motor%20Speedway/09_Briefing%20Photos/03_LST%20DRIVER%20BRIEFING.pdf), soit 51,5 s à 60 km/h ; passages observés 51,45-52,12 s (course 2023). Voie très longue (commune avec l'ovale). Retenu comme perte : temps de traversée boucle à boucle des drive-through ; la perte nette serait de 0 à 3 s plus faible (même base que les valeurs des outils LMU). | IndyCar : 30.2 s, non retenu (vitesse limite inconnue, plus haute que celle des GT).",
+   "variants": [
+    {
+     "category": "GT World Challenge America",
+     "pitLaneLossSeconds": 68,
+     "pitLaneLength": null,
+     "speedLimitKph": 50,
+     "confidence": 0.85,
+     "method": "publié",
+     "sources": [
+      "https://www.gtamerica.us/documents/notice/1384/704aa7de604cf65ff342699cfa4f65.pdf",
+      "https://www.gt-world-challenge-america.com/news/1456/chat-gt3-what-are-the-elements-of-a-pit-stop"
+     ],
+     "notes": "Bulletin des commissaires SRO America « Drive Thru Penalty Equivalent Time » : temps officiel jugé équivalent à un drive-through pour l'épreuve (utilisé pour convertir un drive-through en pénalité de temps). Limite SRO America : 50 km/h dans toute la voie (48 km/h mini dans la voie rapide), comme ACC. Valeur fixée par épreuve, pas de méthode publiée ; le bulletin Road Atlanta 2026 précise que ses temps sont mesurés « loop to loop » (ligne de chrono d'entrée → de sortie), ce qui vaut au moins pour les temps d'arrêt minimaux. Épreuve : octobre 2023 et octobre 2025 (identique). Arrêt minimal imposé (boucle à boucle) : 112 s. Bulletin 2023 : https://www.gt-world-challenge-america.com/documents/notice/1212/Indy+-+Stewards+Bulletin+SRO-02+-+Drive+Thru+Penalty+Equivalent%2C+Minimum+Pit+Stop+Time+-+Amended+-+2.pdf . Voie très longue (859 m selon l'IMSA)."
+    }
+   ],
+   "osmPitLength": 1384,
+   "osmBypassedLength": 1576
+  },
+  {
+   "id": "us-indianapolis-oval",
+   "name": "Indianapolis Motor Speedway (ovale)",
+   "category": "NASCAR",
+   "pitLaneLossSeconds": 24.2,
+   "pitLaneLength": 889,
+   "speedLimitKph": 72.4,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://help.hhtiming.com/series-specific-info/indycar/recommended-settings/",
+    "https://www.ovalinsider.com/nascar-news/nascar-pit-road-speed-limits-1076702/",
+    "https://www.openstreetmap.org/way/317832611",
+    "https://www.openstreetmap.org/way/588780287",
+    "https://www.openstreetmap.org/way/588780266",
+    "https://www.openstreetmap.org/way/1176980820",
+    "https://www.openstreetmap.org/way/588780264",
+    "https://www.openstreetmap.org/way/588780328",
+    "https://www.openstreetmap.org/way/588780327"
+   ],
+   "notes": "Estimé : 1584 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~889 m au limiteur, 1622 m de piste contournée, à 72 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : NASCAR : Oval Insider, « NASCAR 2026: Pit road speed limits for every Cup, O'Reilly and Truck Series track » (citant l'art. 8.5.1 du règlement NASCAR) : 45 mph. Aucune perte de passage publiée. Limite publiée pour Indianapolis Motor Speedway (la source ne distingue pas ovale et routier). | IndyCar : 29.5 s, non retenu (vitesse limite inconnue, plus haute que celle des GT).",
+   "variants": [],
+   "osmPitLength": 1584,
+   "osmBypassedLength": 1622,
+   "speedAssumed": false
+  },
+  {
+   "id": "us-watkins-glen-short",
+   "name": "Watkins Glen International (court)",
+   "category": "GT World Challenge America",
+   "pitLaneLossSeconds": 31,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0.75,
+   "method": "publié",
+   "sources": [
+    "https://www.gt4-america.com/documents/notice/1059/Stewards+Bulletin+No.+5+-+Drive+Through+Penalty+Equivalent%2C+Minimum+Pit+Stop+Times+for+GT3+and+GT4.pdf",
+    "https://www.gt-world-challenge-america.com/news/1456/chat-gt3-what-are-the-elements-of-a-pit-stop",
+    "https://imsa.results.alkamelcloud.com/Results_NoticeBoard/25_2025/14_Watkins%20Glen%20International/09_Briefing%20Photos/03_LST%20DRIVER%20BRIEFING.pdf",
+    "https://www.ovalinsider.com/nascar-news/nascar-pit-road-speed-limits-1076702/"
+   ],
+   "notes": "Bulletin des commissaires SRO America « Drive Thru Penalty Equivalent Time » : temps officiel jugé équivalent à un drive-through pour l'épreuve (utilisé pour convertir un drive-through en pénalité de temps). Limite SRO America : 50 km/h dans toute la voie (48 km/h mini dans la voie rapide), comme ACC. Valeur fixée par épreuve, pas de méthode publiée ; le bulletin Road Atlanta 2026 précise que ses temps sont mesurés « loop to loop » (ligne de chrono d'entrée → de sortie), ce qui vaut au moins pour les temps d'arrêt minimaux. Épreuve : juillet 2022. Arrêt minimal imposé (boucle à boucle) : 71 s. Publié pour le grand tracé de Watkins Glen (SRO) ; voie des stands commune avec le tracé court, transposition raisonnable mais les virages contournés diffèrent un peu. | Autres séries : IMSA : IMSA : limite 60 km/h (briefings pilotes officiels, « driving slower than 60kph in the fast lane may be penalized » / « Pit Lane speed - 60 kph »). pitLaneTransitSeconds = temps boucle d'entrée → boucle de sortie des passages les plus courts dans la fiche officielle « Pit Stops Time Cards » (grappe nette = drive-throughs), ce n'est PAS la perte : perte ≈ ce temps + entrée/sortie hors boucles − temps en piste sur le même tronçon. Distance publiée 19 533 pouces = 496 m (briefing LST 2025 : https://imsa.results.alkamelcloud.com/Results_NoticeBoard/25_2025/14_Watkins%20Glen%20International/09_Briefing%20Photos/03_LST%20DRIVER%20BRIEFING.pdf), soit 29,8 s à 60 km/h. Publié pour le grand tracé (IMSA) ; la voie est la même pour le tracé court (ligne droite des stands commune). NASCAR : Oval Insider, « NASCAR 2026: Pit road speed limits for every Cup, O'Reilly and Truck Series track » (citant l'art. 8.5.1 du règlement NASCAR) : 40 mph. Aucune perte de passage publiée. La NASCAR court sur le tracé court de Watkins Glen (2,45 mi), celui de cette fiche.",
+   "variants": [],
+   "osmPitLength": 754,
+   "osmBypassedLength": 798
+  },
+  {
+   "id": "us-lime-rock",
+   "name": "Lime Rock Park",
+   "category": "IMSA",
+   "pitLaneLossSeconds": 19.9,
+   "pitLaneLength": 236,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://imsa.results.alkamelcloud.com/Results_NoticeBoard/26-2026/12_Mid-Ohio%20Sports%20Car%20Course/09_Briefing%20Photos/02_IMPC%20DRIVER%20BRIEFING.pdf",
+    "https://www.openstreetmap.org/way/35341695"
+   ],
+   "notes": "Estimé : 421 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~236 m au limiteur, 410 m de piste contournée, à 60 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : IMSA : 60 km/h = limite IMSA observée dans tous les briefings trouvés (Watkins Glen, Laguna Seca, Indianapolis, Mid-Ohio) ; pas de document Lime Rock trouvé. Voie des stands courte.",
+   "variants": [],
+   "osmPitLength": 421,
+   "osmBypassedLength": 410,
+   "speedAssumed": false
+  },
+  {
+   "id": "us-mid-ohio",
+   "name": "Mid-Ohio Sports Car Course",
+   "category": "IMSA",
+   "pitLaneLossSeconds": 23.48,
+   "pitLaneLength": 391,
+   "speedLimitKph": 60,
+   "confidence": 0.6,
+   "method": "traversée mesurée (drive-through IMSA, fiches officielles)",
+   "sources": [
+    "https://imsa.results.alkamelcloud.com/Results/22_2022/08_Mid-Ohio%20Sports%20Car%20Course/01_IMSA%20WeatherTech%20SportsCar%20Championship/202205151410_Race/20_Pit%20Stops%20Time%20Cards_Race.PDF",
+    "https://help.hhtiming.com/series-specific-info/indycar/recommended-settings/"
+   ],
+   "notes": "IMSA : limite 60 km/h (briefings pilotes officiels, « driving slower than 60kph in the fast lane may be penalized » / « Pit Lane speed - 60 kph »). pitLaneTransitSeconds = temps boucle d'entrée → boucle de sortie des passages les plus courts dans la fiche officielle « Pit Stops Time Cards » (grappe nette = drive-throughs), ce n'est PAS la perte : perte ≈ ce temps + entrée/sortie hors boucles − temps en piste sur le même tronçon. Passages les plus courts : 23,480-23,617 s (3 passages) ; course 2022 ; 60 kph confirmé par le briefing IMPC 2026 (https://imsa.results.alkamelcloud.com/Results_NoticeBoard/26-2026/12_Mid-Ohio%20Sports%20Car%20Course/09_Briefing%20Photos/02_IMPC%20DRIVER%20BRIEFING.pdf). Retenu comme perte : temps de traversée boucle à boucle des drive-through ; la perte nette serait de 0 à 3 s plus faible (même base que les valeurs des outils LMU). | IndyCar : 20.2 s, non retenu (vitesse limite inconnue, plus haute que celle des GT).",
+   "variants": [],
+   "osmPitLength": 631,
+   "osmBypassedLength": 647
+  },
+  {
+   "id": "us-barber",
+   "name": "Barber Motorsports Park",
+   "category": "GT World Challenge America",
+   "pitLaneLossSeconds": 39,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0.85,
+   "method": "publié",
+   "sources": [
+    "https://www.tcamerica.us/documents/notice/1081/Barber+-+Stewards+Bulletin+SRO+-+03+-+Drive+Thru+Penalty+Equivalent%2C+Minimum+Pit+Stop+Times.pdf",
+    "https://www.gt-world-challenge-america.com/news/1456/chat-gt3-what-are-the-elements-of-a-pit-stop",
+    "https://help.hhtiming.com/series-specific-info/indycar/recommended-settings/"
+   ],
+   "notes": "Bulletin des commissaires SRO America « Drive Thru Penalty Equivalent Time » : temps officiel jugé équivalent à un drive-through pour l'épreuve (utilisé pour convertir un drive-through en pénalité de temps). Limite SRO America : 50 km/h dans toute la voie (48 km/h mini dans la voie rapide), comme ACC. Valeur fixée par épreuve, pas de méthode publiée ; le bulletin Road Atlanta 2026 précise que ses temps sont mesurés « loop to loop » (ligne de chrono d'entrée → de sortie), ce qui vaut au moins pour les temps d'arrêt minimaux. Épreuve : septembre 2024. Arrêt minimal imposé (boucle à boucle) : 74 s. | IndyCar : 22.5 s, non retenu (vitesse limite inconnue, plus haute que celle des GT).",
+   "variants": [],
+   "osmPitLength": 854,
+   "osmBypassedLength": 878
+  },
+  {
+   "id": "us-vir",
+   "name": "Virginia International Raceway",
+   "category": "IMSA",
+   "pitLaneLossSeconds": 21.46,
+   "pitLaneLength": 358,
+   "speedLimitKph": 60,
+   "confidence": 0.6,
+   "method": "traversée mesurée (drive-through IMSA, fiches officielles)",
+   "sources": [
+    "https://imsa.results.alkamelcloud.com/Results/25_2025/17_VIRginia%20International%20Raceway/01_IMSA%20WeatherTech%20SportsCar%20Championship/202508241410_Race/20_Pit%20Stops%20Time%20Cards_Race.PDF"
+   ],
+   "notes": "IMSA : limite 60 km/h (briefings pilotes officiels, « driving slower than 60kph in the fast lane may be penalized » / « Pit Lane speed - 60 kph »). pitLaneTransitSeconds = temps boucle d'entrée → boucle de sortie des passages les plus courts dans la fiche officielle « Pit Stops Time Cards » (grappe nette = drive-throughs), ce n'est PAS la perte : perte ≈ ce temps + entrée/sortie hors boucles − temps en piste sur le même tronçon. Passages les plus courts : 21,457-21,729 s (5 passages) ; course 2025. Retenu comme perte : temps de traversée boucle à boucle des drive-through ; la perte nette serait de 0 à 3 s plus faible (même base que les valeurs des outils LMU).",
+   "variants": [
+    {
+     "category": "GT World Challenge America",
+     "pitLaneLossSeconds": 30,
+     "pitLaneLength": null,
+     "speedLimitKph": 50,
+     "confidence": 0.8,
+     "method": "publié",
+     "sources": [
+      "https://sportscar365.com/sro/world-challenge-america/vir-weekend-notebook-7/",
+      "https://www.gt-world-challenge-america.com/news/1456/chat-gt3-what-are-the-elements-of-a-pit-stop"
+     ],
+     "notes": "Bulletin des commissaires SRO America « Drive Thru Penalty Equivalent Time » : temps officiel jugé équivalent à un drive-through pour l'épreuve (utilisé pour convertir un drive-through en pénalité de temps). Limite SRO America : 50 km/h dans toute la voie (48 km/h mini dans la voie rapide), comme ACC. Valeur fixée par épreuve, pas de méthode publiée ; le bulletin Road Atlanta 2026 précise que ses temps sont mesurés « loop to loop » (ligne de chrono d'entrée → de sortie), ce qui vaut au moins pour les temps d'arrêt minimaux. Épreuve : juin 2023. Arrêt minimal imposé (boucle à boucle) : 65 s. Source secondaire (Sportscar365 citant les commissaires : « The driver-through penalty equivalent has been declared as 30 seconds for this weekend »)."
+    }
+   ],
+   "osmPitLength": 663,
+   "osmBypassedLength": 671
+  },
+  {
+   "id": "us-summit-point",
+   "name": "Summit Point Raceway",
+   "pitLaneLossSeconds": 19.6,
+   "pitLaneLength": 246,
+   "speedLimitKph": 60,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://www.openstreetmap.org/way/572443703"
+   ],
+   "notes": "Estimé : 438 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~246 m au limiteur, 454 m de piste contournée, à 60 km/h (vitesse supposée) ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "osmPitLength": 438,
+   "osmBypassedLength": 454,
+   "category": "générique",
+   "speedAssumed": true
+  },
+  {
+   "id": "us-willow-springs",
+   "name": "Willow Springs International Raceway",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": null,
+   "confidence": 0,
+   "method": "",
+   "sources": [],
+   "notes": "Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "us-cota-national",
+   "name": "Circuit of the Americas National",
+   "category": "WEC",
+   "pitLaneLossSeconds": 25,
+   "pitLaneLength": 413,
+   "speedLimitKph": 60,
+   "confidence": 0.55,
+   "method": "mesuré par la communauté",
+   "sources": [
+    "https://tsracing.club/race-strategy",
+    "https://strategymaster3000.com/"
+   ],
+   "notes": "Les deux outils LMU utilisent la même valeur que le GP (25 s) : même voie. Aucune mesure propre à cette variante.",
+   "variants": [],
+   "osmPitLength": 948,
+   "osmBypassedLength": 1009
+  },
+  {
+   "id": "ca-mosport",
+   "name": "Canadian Tire Motorsport Park",
+   "category": "IMSA",
+   "pitLaneLossSeconds": 23.62,
+   "pitLaneLength": 394,
+   "speedLimitKph": 60,
+   "confidence": 0.6,
+   "method": "traversée mesurée (drive-through IMSA, fiches officielles)",
+   "sources": [
+    "https://imsa.results.alkamelcloud.com/Results/24_2024/13_Canadian%20Tire%20Motorsport%20Park/01_IMSA%20WeatherTech%20SportsCar%20Championship/202407141105_Race/20_Pit%20Stops%20Time%20Cards_Race.PDF"
+   ],
+   "notes": "IMSA : limite 60 km/h (briefings pilotes officiels, « driving slower than 60kph in the fast lane may be penalized » / « Pit Lane speed - 60 kph »). pitLaneTransitSeconds = temps boucle d'entrée → boucle de sortie des passages les plus courts dans la fiche officielle « Pit Stops Time Cards » (grappe nette = drive-throughs), ce n'est PAS la perte : perte ≈ ce temps + entrée/sortie hors boucles − temps en piste sur le même tronçon. Passages les plus courts : 23,619-23,900 s (5 passages) ; course 2024. Retenu comme perte : temps de traversée boucle à boucle des drive-through ; la perte nette serait de 0 à 3 s plus faible (même base que les valeurs des outils LMU).",
+   "variants": [],
+   "osmPitLength": 695,
+   "osmBypassedLength": 733
+  },
+  {
+   "id": "ar-termas",
+   "name": "Autódromo Termas de Río Hondo",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": null,
+   "confidence": 0,
+   "method": "",
+   "sources": [],
+   "notes": "Recherche : Rien de publié trouvé (2 recherches au plus pour ce circuit).",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "br-curitiba",
+   "name": "Autódromo Internacional de Curitiba",
+   "category": "Stock Car Pro Series",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0,
+   "method": "",
+   "sources": [
+    "https://cba.org.br/upload/downloads/722/stock-car-pro-series-regulamento-desportivo-2024-.pdf"
+   ],
+   "notes": "Stock Car Pro Series : Règlement sportif Stock Car Pro Series 2024 (CBA), art. 5.18 : « da faixa ... da entrada do pit lane até a faixa da saída do pit a velocidade máxima permitida será de 50 Km/h ». Aucune perte de stand publiée trouvée ; les autres séries brésiliennes peuvent appliquer une autre limite.",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "br-cascavel",
+   "name": "Autódromo Zilmar Beux (Cascavel)",
+   "category": "Stock Car Pro Series",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0,
+   "method": "",
+   "sources": [
+    "https://cba.org.br/upload/downloads/722/stock-car-pro-series-regulamento-desportivo-2024-.pdf"
+   ],
+   "notes": "Stock Car Pro Series : Règlement sportif Stock Car Pro Series 2024 (CBA), art. 5.18 : « da faixa ... da entrada do pit lane até a faixa da saída do pit a velocidade máxima permitida será de 50 Km/h ». Aucune perte de stand publiée trouvée ; les autres séries brésiliennes peuvent appliquer une autre limite.",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "br-goiania",
+   "name": "Autódromo Internacional Ayrton Senna (Goiânia)",
+   "category": "Stock Car Pro Series",
+   "pitLaneLossSeconds": 25.7,
+   "pitLaneLength": 390,
+   "speedLimitKph": 50,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://cba.org.br/upload/downloads/722/stock-car-pro-series-regulamento-desportivo-2024-.pdf",
+    "https://www.openstreetmap.org/way/879890871"
+   ],
+   "notes": "Estimé : 694 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~390 m au limiteur, 790 m de piste contournée, à 50 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Stock Car Pro Series : Règlement sportif Stock Car Pro Series 2024 (CBA), art. 5.18 : « da faixa ... da entrada do pit lane até a faixa da saída do pit a velocidade máxima permitida será de 50 Km/h ». Aucune perte de stand publiée trouvée ; les autres séries brésiliennes peuvent appliquer une autre limite.",
+   "variants": [],
+   "osmPitLength": 694,
+   "osmBypassedLength": 790,
+   "speedAssumed": false
+  },
+  {
+   "id": "br-taruma",
+   "name": "Autódromo Internacional de Tarumã",
+   "category": "Stock Car Pro Series",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0,
+   "method": "",
+   "sources": [
+    "https://cba.org.br/upload/downloads/722/stock-car-pro-series-regulamento-desportivo-2024-.pdf"
+   ],
+   "notes": "Stock Car Pro Series : Règlement sportif Stock Car Pro Series 2024 (CBA), art. 5.18 : « da faixa ... da entrada do pit lane até a faixa da saída do pit a velocidade máxima permitida será de 50 Km/h ». Aucune perte de stand publiée trouvée ; les autres séries brésiliennes peuvent appliquer une autre limite.",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "br-santa-cruz",
+   "name": "Autódromo Internacional de Santa Cruz do Sul",
+   "category": "Stock Car Pro Series",
+   "pitLaneLossSeconds": 26.1,
+   "pitLaneLength": 354,
+   "speedLimitKph": 50,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://cba.org.br/upload/downloads/722/stock-car-pro-series-regulamento-desportivo-2024-.pdf",
+    "https://www.openstreetmap.org/way/563034487"
+   ],
+   "notes": "Estimé : 630 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~354 m au limiteur, 648 m de piste contournée, à 50 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Stock Car Pro Series : Règlement sportif Stock Car Pro Series 2024 (CBA), art. 5.18 : « da faixa ... da entrada do pit lane até a faixa da saída do pit a velocidade máxima permitida será de 50 Km/h ». Aucune perte de stand publiée trouvée ; les autres séries brésiliennes peuvent appliquer une autre limite.",
+   "variants": [],
+   "osmPitLength": 630,
+   "osmBypassedLength": 648,
+   "speedAssumed": false
+  },
+  {
+   "id": "br-londrina",
+   "name": "Autódromo Internacional Ayrton Senna (Londrina)",
+   "category": "Stock Car Pro Series",
+   "pitLaneLossSeconds": 27.6,
+   "pitLaneLength": 405,
+   "speedLimitKph": 50,
+   "confidence": 0.35,
+   "method": "estimé",
+   "sources": [
+    "https://cba.org.br/upload/downloads/722/stock-car-pro-series-regulamento-desportivo-2024-.pdf",
+    "https://www.openstreetmap.org/way/541388522",
+    "https://www.openstreetmap.org/way/541388523",
+    "https://www.openstreetmap.org/way/541388524"
+   ],
+   "notes": "Estimé : 722 m de voie entre l'entrée et la sortie dans OpenStreetMap (jonctions OSM), soit ~405 m au limiteur, 754 m de piste contournée, à 50 km/h ; formule calée sur 28 pertes publiées (F1) (écart type 2.4 s). | Recherche : Stock Car Pro Series : Règlement sportif Stock Car Pro Series 2024 (CBA), art. 5.18 : « da faixa ... da entrada do pit lane até a faixa da saída do pit a velocidade máxima permitida será de 50 Km/h ». Aucune perte de stand publiée trouvée ; les autres séries brésiliennes peuvent appliquer une autre limite.",
+   "variants": [],
+   "osmPitLength": 722,
+   "osmBypassedLength": 754,
+   "speedAssumed": false
+  },
+  {
+   "id": "br-guapore",
+   "name": "Autódromo Internacional de Guaporé",
+   "category": "Stock Car Pro Series",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0,
+   "method": "",
+   "sources": [
+    "https://cba.org.br/upload/downloads/722/stock-car-pro-series-regulamento-desportivo-2024-.pdf"
+   ],
+   "notes": "Stock Car Pro Series : Règlement sportif Stock Car Pro Series 2024 (CBA), art. 5.18 : « da faixa ... da entrada do pit lane até a faixa da saída do pit a velocidade máxima permitida será de 50 Km/h ». Aucune perte de stand publiée trouvée ; les autres séries brésiliennes peuvent appliquer une autre limite.",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  },
+  {
+   "id": "br-velopark",
+   "name": "Velopark",
+   "category": "Stock Car Pro Series",
+   "pitLaneLossSeconds": null,
+   "pitLaneLength": null,
+   "speedLimitKph": 50,
+   "confidence": 0,
+   "method": "",
+   "sources": [
+    "https://cba.org.br/upload/downloads/722/stock-car-pro-series-regulamento-desportivo-2024-.pdf"
+   ],
+   "notes": "Stock Car Pro Series : Règlement sportif Stock Car Pro Series 2024 (CBA), art. 5.18 : « da faixa ... da entrada do pit lane até a faixa da saída do pit a velocidade máxima permitida será de 50 Km/h ». Aucune perte de stand publiée trouvée ; les autres séries brésiliennes peuvent appliquer une autre limite.",
+   "variants": [],
+   "reason": "rien de publié, ni longueur de voie, ni voie des stands exploitable dans OpenStreetMap (aucune voie des stands dans OSM)"
+  }
+ ]
+}

@@ -1,4 +1,5 @@
 import { allBlocks, getBlock } from './registry';
+import { readPref, writePref } from '../../prefs';
 
 /** Un bloc placé : largeur en colonnes, hauteur en rangées. L'ordre de la liste est l'ordre d'affichage. */
 export interface LayoutItem {
@@ -17,6 +18,7 @@ interface Stored {
   medium?: LayoutItem[];
 }
 
+// Propre à chaque fenêtre (prefs.ts) : un écran peut montrer d'autres blocs que l'autre.
 const KEY = 'smhub-accueil-disposition';
 export const ROW = 36;
 export const GAP = 4;
@@ -37,7 +39,7 @@ export function defaultLayout(mode: LayoutMode): LayoutItem[] {
 
 function read(): Stored {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = readPref(KEY, '');
     if (raw) {
       const s = JSON.parse(raw) as Stored;
       if (s && s.v === 1) return s;
@@ -62,13 +64,13 @@ export function loadLayout(mode: LayoutMode): LayoutItem[] {
 export function saveLayout(mode: LayoutMode, items: LayoutItem[]) {
   const s = read();
   s[mode] = items;
-  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* stockage indisponible */ }
+  writePref(KEY, JSON.stringify(s));
 }
 
 export function resetLayout(mode: LayoutMode): LayoutItem[] {
   const s = read();
   delete s[mode];
-  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* stockage indisponible */ }
+  writePref(KEY, JSON.stringify(s));
   return defaultLayout(mode);
 }
 

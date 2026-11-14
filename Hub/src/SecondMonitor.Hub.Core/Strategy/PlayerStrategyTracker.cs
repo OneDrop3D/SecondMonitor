@@ -22,6 +22,10 @@ namespace SecondMonitor.Hub.Core.Strategy
         private double[] _wearAtLapStart;
         private readonly List<LapConsumption> _history = new();
         private readonly HybridTracker _hybrid = new();
+        private readonly EnergyLapTrace _trace = new();
+
+        /// <summary>Virages et lignes droites nommés du circuit (pour dire où la batterie se vide et se recharge).</summary>
+        public IReadOnlyList<TrackSegment> Segments { get; set; }
 
         public IReadOnlyList<LapConsumption> History => _history;
 
@@ -33,6 +37,7 @@ namespace SecondMonitor.Hub.Core.Strategy
             _wearAtLapStart = null;
             _history.Clear();
             _hybrid.Reset();
+            _trace.Reset();
         }
 
         public void Update(DriverInfo player, DriverTracker tracker)
@@ -47,6 +52,9 @@ namespace SecondMonitor.Hub.Core.Strategy
             double fuelNow = fuel?.FuelRemaining?.InLiters ?? 0;
             double? energyNow = fuel?.HasVirtualTank == true ? fuel.VirtualTank.InRatio * 100 : null;
             double[] wearNow = ReadWear(player.CarInfo.WheelsInfo);
+            HybridSystem hs = player.CarInfo.HybridSystem;
+            double? batteryNow = hs != null && HybridTracker.HasHybrid(hs) ? Math.Clamp(hs.RemainingChargePercentage, 0, 1) * 100 : null;
+            _trace.Update(player.CompletedLaps, player.LapDistance, batteryNow, energyNow, fuel?.FuelCapacity?.InLiters > 0 ? fuelNow : null, player.InPits);
 
             if (_lastLap < 0)
             {
@@ -131,6 +139,22 @@ namespace SecondMonitor.Hub.Core.Strategy
             double? lapsRemaining = EstimateLapsRemaining(data.SessionInfo, player, avgLap, lapLength);
             result.LapsRemaining = lapsRemaining;
 
+            // En direct : ce tour comparé au précédent au même endroit, et une estimation du tour entier.
+            result.Live = _trace.Build(lapLength, Segments);
+            bool fuelEstimated = false;
+            bool energyEstimated = false;
+            if (fuelPerLap == null && result.Live?.Fuel?.ProjectedLapChange is double pf && pf < -0.05)
+            {
+                fuelPerLap = -pf; // pas encore de tour bouclé : estimation sur le tour en cours
+                fuelEstimated = true;
+            }
+
+            if (energyPerLap == null && result.Live?.VirtualEnergy?.ProjectedLapChange is double pe && pe < -0.05)
+            {
+                energyPerLap = -pe;
+                energyEstimated = true;
+            }
+
             FuelInfo fuel = player.CarInfo.FuelSystemInfo;
             if (fuel != null && fuel.FuelCapacity.InLiters > 0)
             {
@@ -140,6 +164,7 @@ namespace SecondMonitor.Hub.Core.Strategy
                     Remaining = remaining,
                     Capacity = fuel.FuelCapacity.InLiters,
                     PerLap = fuelPerLap,
+                    PerLapEstimated = fuelEstimated,
                     LapsLeft = fuelPerLap > 0 ? remaining / fuelPerLap : null,
                 };
 
@@ -165,6 +190,7 @@ namespace SecondMonitor.Hub.Core.Strategy
                 {
                     RemainingPct = remainingPct,
                     PerLapPct = energyPerLap,
+                    PerLapEstimated = energyEstimated,
                     LapsLeft = energyPerLap > 0 ? remainingPct / energyPerLap : null,
                 };
 

@@ -12,6 +12,12 @@ export interface MusicSettings {
   volumeStepPct: number;
   mediaKeys: boolean;
   accessibilityAsked: boolean;
+  /** « ordinateur » : Deezer de l'ordinateur de SecondMonitor ; « pc » : Deezer du PC de jeu (collecteur, casque du pilote). */
+  output?: 'ordinateur' | 'pc';
+  /** Playlist (ou album, artiste) préférée, lancée par « Lecture » et « mets ma playlist ». */
+  favorite?: { kind: string; id: number; title: string; picture?: string | null } | null;
+  /** Lancer la playlist préférée au début de chaque session où la musique est permise. */
+  favoriteAutoPlay?: boolean;
 }
 
 export interface MusicPlayerState {
@@ -27,7 +33,7 @@ export interface MusicPlayerState {
 export interface MusicStatus {
   enabled: boolean;
   settings: MusicSettings;
-  platform: 'mac' | 'windows' | 'linux';
+  platform: 'mac' | 'windows' | 'linux' | 'pc';
   appInstalled: boolean;
   appRunning: boolean;
   state: MusicPlayerState | null;
@@ -39,6 +45,9 @@ export interface MusicStatus {
   sessionReason: string | null;
   lastOpened: string | null;
   lastMessage: string | null;
+  output?: 'ordinateur' | 'pc';
+  /** Un collecteur propose la musique sur le PC de jeu. */
+  pcConnected?: boolean;
 }
 
 export interface MusicItem {
@@ -60,11 +69,14 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 export const musicApi = {
   status: () => call<MusicStatus>('/api/music'),
   saveSettings: (s: MusicSettings) => call<MusicSettings>('/api/music/settings', { method: 'PUT', body: JSON.stringify(s) }),
-  command: (action: 'play' | 'pause' | 'next' | 'previous' | 'volumeUp' | 'volumeDown' | 'flow' | 'nowPlaying') =>
+  command: (action: 'play' | 'pause' | 'next' | 'previous' | 'volumeUp' | 'volumeDown' | 'flow' | 'nowPlaying' | 'favorite') =>
     call<{ message: string | null }>('/api/music/command', { method: 'POST', body: JSON.stringify({ action }) }),
   search: (q: string, kind: MusicKind) => call<MusicItem[]>(`/api/music/search?q=${encodeURIComponent(q)}&kind=${kind}`),
   open: (item: MusicItem, kind: MusicKind) =>
     call<{ message: string }>('/api/music/open', { method: 'POST', body: JSON.stringify({ kind, id: item.id, title: item.title }) }),
+  setFavorite: (item: MusicItem, kind: MusicKind) =>
+    call<MusicSettings>('/api/music/favorite', { method: 'POST', body: JSON.stringify({ kind, id: item.id, title: item.title, picture: item.picture }) }),
+  clearFavorite: () => call<MusicSettings>('/api/music/favorite', { method: 'DELETE' }),
   askPermission: () => call<{ granted: boolean }>('/api/music/permission', { method: 'POST' }),
   openPermissionSettings: () => fetch('/api/music/permission?action=reglages', { method: 'POST' }),
 };

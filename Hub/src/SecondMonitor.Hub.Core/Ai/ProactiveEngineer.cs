@@ -79,7 +79,7 @@ namespace SecondMonitor.Hub.Core.Ai
             // ── Pluie ──
             if (rainStarted && !onWets && me.Laps >= 1)
             {
-                candidates.Add(Q("rain-start", "pluie", $"Il commence à pleuvoir, intensité {rain} %. Comment est la piste de votre côté ? On peut rester en pneus secs ?", 600));
+                candidates.Add(Q("rain-start", "pluie", $"Il commence à pleuvoir, intensité {rain} %. Comment est la piste de ton côté ? On peut rester en pneus secs ?", 600));
             }
 
             if (!onWets && snap.Weather.Wetness >= threshold)
@@ -113,8 +113,17 @@ namespace SecondMonitor.Hub.Core.Ai
                 double n = Math.Max(1, Math.Ceiling(b.LapsToContact.Value));
                 string laps = n <= 1 ? "un tour" : $"{N(n, 0)} tours";
                 candidates.Add(b.Side == "behind"
-                    ? Info($"threat-{b.Id}", "duel", $"Attention, le numéro {b.Number} revient de {pace} seconde par tour. Il sera dans vos roues dans environ {laps}.", 360)
-                    : Info($"chance-{b.Id}", "duel", $"Vous reprenez {pace} seconde par tour au numéro {b.Number}. Contact dans environ {laps}, continuez comme ça.", 360));
+                    ? Info("threat", "duel", $"Attention, le numéro {b.Number} revient de {pace} seconde par tour. Il sera dans tes roues dans environ {laps}.", 600)
+                    : Info("chance", "duel", $"Tu reprends {pace} seconde par tour au numéro {b.Number}. Contact dans environ {laps}, continue comme ça.", 600));
+            }
+
+            // ── Temps perdu par l'arrêt qui vient d'avoir lieu (une fois le tour de sortie bouclé) ──
+            if (race && p.PitPlan?.PlayerLastStopLoss is double stopLoss && p.PitPlan.PlayerLastStopLap is int outLap && me.Laps - outLap is >= 0 and <= 1)
+            {
+                string vs = p.PitPlan.PitLoss > 0 && Math.Abs(stopLoss - p.PitPlan.PitLoss) >= 3
+                    ? stopLoss > p.PitPlan.PitLoss ? $", {N(stopLoss - p.PitPlan.PitLoss, 0)} de plus que prévu" : $", {N(p.PitPlan.PitLoss - stopLoss, 0)} de moins que prévu"
+                    : string.Empty;
+                candidates.Add(Info($"stop-loss-{outLap}", "stand", $"Ton arrêt t'a coûté {N(stopLoss, 0)} secondes{vs}.", 100000));
             }
 
             // ── Surchauffe (au moins 30 s d'affilée) ──
@@ -123,14 +132,14 @@ namespace SecondMonitor.Hub.Core.Ai
             {
                 if (Hot("water", e.WaterTemp, e.WaterIdeal, e.WaterWindow, nowUtc) || Hot("oil", e.OilTemp, e.OilIdeal, e.OilWindow, nowUtc))
                 {
-                    candidates.Add(Info("engine-hot", "moteur", $"Le moteur chauffe : eau {N(e.WaterTemp ?? 0, 0)} degrés, huile {N(e.OilTemp ?? 0, 0)} degrés. Sortez de l'aspiration quand vous pouvez.", 600));
+                    candidates.Add(Info("engine-hot", "moteur", $"Le moteur chauffe : eau {N(e.WaterTemp ?? 0, 0)} degrés, huile {N(e.OilTemp ?? 0, 0)} degrés. Sors de l'aspiration quand tu peux.", 600));
                 }
             }
 
             WheelStatus hottestBrake = p.Wheels.Where(w => w.Brake.HasValue && w.BrakeIdeal.HasValue).OrderByDescending(w => w.Brake - (w.BrakeIdeal + (w.BrakeWindow ?? 0))).FirstOrDefault();
             if (hottestBrake != null && Hot("brake", hottestBrake.Brake, hottestBrake.BrakeIdeal, hottestBrake.BrakeWindow, nowUtc))
             {
-                candidates.Add(Info("brake-hot", "freins", $"Les freins chauffent, {N(hottestBrake.Brake.Value, 0)} degrés à l'{WheelName(hottestBrake.Position)}. Freinez un peu plus tôt et plus progressivement.", 600));
+                candidates.Add(Info("brake-hot", "freins", $"Les freins chauffent, {N(hottestBrake.Brake.Value, 0)} degrés à l'{WheelName(hottestBrake.Position)}. Freine un peu plus tôt et plus progressivement.", 600));
             }
 
             foreach (ProactiveMessage m in candidates.OrderByDescending(c => c.Urgent))
@@ -194,7 +203,7 @@ namespace SecondMonitor.Hub.Core.Ai
                     candidates.Add(Info(
                         "tyre-cold",
                         "pneus",
-                        $"Pneus encore froids : {N(cold.Surface.Value, 0)} degrés à l'{TyreThermalWatch.WheelName(cold.Position)}, il en faut au moins {N(cold.Min.Value, 0)}. Faites-les chauffer : zigzags et freinages appuyés.",
+                        $"Pneus encore froids : {N(cold.Surface.Value, 0)} degrés à l'{TyreThermalWatch.WheelName(cold.Position)}, il en faut au moins {N(cold.Min.Value, 0)}. Fais-les chauffer : zigzags et freinages appuyés.",
                         600));
                 }
             }
@@ -217,7 +226,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 string verdict = loss < 0.1 ? "C'est négligeable, on continue."
                     : left > 0 && loss * left > pitLoss + 5 ? $"Sur la fin de course ça fait {N(loss * left, 0)} secondes, plus qu'un arrêt : on peut réparer au prochain passage."
                     : "Moins qu'un arrêt d'ici l'arrivée : on continue.";
-                candidates.Add(Info($"damage-loss-{id}", "dégâts", $"Le dégât vous coûte {N(Math.Max(0, loss), 2)} seconde par tour. {verdict}", 100000, urgent: true));
+                candidates.Add(Info($"damage-loss-{id}", "dégâts", $"Le dégât te coûte {N(Math.Max(0, loss), 2)} seconde par tour. {verdict}", 100000, urgent: true));
             }
         }
 
@@ -304,12 +313,12 @@ namespace SecondMonitor.Hub.Core.Ai
             bool rear = hot.Any(t => t.Position is "RL" or "RR");
             if (front && rear)
             {
-                return "Rythme à calmer un tour, et vérifiez les pressions au prochain arrêt.";
+                return "Rythme à calmer un tour, et vérifie les pressions au prochain arrêt.";
             }
 
             return front
-                ? "Moins de glisse en entrée de virage, n'attaquez pas le train avant."
-                : "Doucement sur l'accélérateur en sortie de virage, évitez le patinage.";
+                ? "Moins de glisse en entrée de virage, n'attaque pas le train avant."
+                : "Doucement sur l'accélérateur en sortie de virage, évite le patinage.";
         }
 
         /// <summary>Réponse du pilote à une question de l'IA : décision, réponse radio et note pour la mémoire.</summary>
@@ -322,21 +331,23 @@ namespace SecondMonitor.Hub.Core.Ai
                 case "relais" when yes == true && q.ProposedLap == int.MaxValue:
                     memory.NoStopPlanned = true;
                     memory.PlannedStopLap = null;
-                    return ("Bien reçu, on va au bout sans s'arrêter. Dites-moi si les pneus lâchent.", $"décision : finir sans s'arrêter (accord du pilote : {quoted})");
+                    return ("Bien reçu, on va au bout sans s'arrêter. Dis-moi si les pneus lâchent.", $"décision : finir sans s'arrêter (accord du pilote : {quoted})");
                 case "relais" when yes == true && q.ProposedLap.HasValue:
                     memory.PlannedStopLap = q.ProposedLap;
-                    return ($"Bien reçu, on allonge le relais : arrêt au tour {q.ProposedLap}. Dites-moi si les pneus lâchent.", $"relais allongé jusqu'au tour {q.ProposedLap} (accord du pilote : {quoted})");
+                    return ($"Bien reçu, on allonge le relais : arrêt au tour {q.ProposedLap}. Dis-moi si les pneus lâchent.", $"relais allongé jusqu'au tour {q.ProposedLap} (accord du pilote : {quoted})");
                 case "relais" when yes == false:
                     memory.PlannedStopLap = q.PlannedLap;
                     return ($"Reçu, on garde l'arrêt au tour {q.PlannedLap}.", $"relais non allongé, pneus jugés limites ({quoted})");
                 case "relais":
                     return ($"Reçu, je note. On garde l'arrêt au tour {q.PlannedLap} pour l'instant.", $"sur les pneus : {quoted}");
                 case "pluie" when yes == false:
-                    return ("Reçu. On prépare les pneus pluie, je vous dis quand rentrer.", $"pluie : le pilote veut des pneus pluie ou trouve la piste difficile ({quoted})");
+                    return ("Reçu. On prépare les pneus pluie, je te dis quand rentrer.", $"pluie : le pilote veut des pneus pluie ou trouve la piste difficile ({quoted})");
                 case "pluie" when yes == true:
                     return ("Bien reçu, on reste dehors. Je surveille l'humidité de la piste.", $"pluie : le pilote peut continuer avec ses pneus actuels ({quoted})");
+                case "usure":
+                    return ("Copy, c'est noté.", $"usure anormale, explication du pilote : {quoted}");
                 default:
-                    return ("Reçu, c'est noté.", $"{q.Topic} : {quoted}");
+                    return ("Copy, c'est noté.", $"{q.Topic} : {quoted}");
             }
         }
 
@@ -386,8 +397,8 @@ namespace SecondMonitor.Hub.Core.Ai
 
             string gain = finish ? "on pourrait finir sans s'arrêter" : "on économiserait un arrêt";
             string text = finish
-                ? $"Côté essence on peut aller au bout : {gain}. Les pneus finiraient vers {N(Math.Min(100, wearAtProposed), 0)} % d'usure. Comment vous les sentez ? On tente ?"
-                : $"Côté essence on peut aller jusqu'au tour {proposed} au lieu du {tyreStop} : {gain}. Les pneus seraient vers {N(wearAtProposed, 0)} % d'usure. Comment vous les sentez ? On allonge le relais ?";
+                ? $"Côté essence on peut aller au bout : {gain}. Les pneus finiraient vers {N(Math.Min(100, wearAtProposed), 0)} % d'usure. Comment tu les sens ? On tente ?"
+                : $"Côté essence on peut aller jusqu'au tour {proposed} au lieu du {tyreStop} : {gain}. Les pneus seraient vers {N(wearAtProposed, 0)} % d'usure. Comment tu les sens ? On allonge le relais ?";
             ProactiveMessage m = Q($"extend-{me.Laps - p.StintLaps}", "relais", text, 100000);
             m.PlannedLap = tyreStop;
             m.ProposedLap = finish ? null : proposed;

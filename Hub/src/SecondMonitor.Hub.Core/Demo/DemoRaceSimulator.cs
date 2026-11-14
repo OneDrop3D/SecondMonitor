@@ -263,6 +263,7 @@ namespace SecondMonitor.Hub.Core.Demo
                 if (c.IsPlayer)
                 {
                     FillPlayer(d, c);
+                    data.InputInfo = _input;
                 }
 
                 drivers.Add(d);
@@ -328,7 +329,37 @@ namespace SecondMonitor.Hub.Core.Demo
             d.CarInfo.OilSystemInfo.OilPressure = Pressure.FromKiloPascals(280 + (load * 220));
             d.CarInfo.EngineRpm = c.InPits ? 3500 : (int)(4500 + (load * 4000));
             d.CarInfo.CurrentGear = c.InPits ? "2" : Math.Clamp((int)(v / 13) + 1, 1, 7).ToString();
+
+            // Pédales, volant et réglages en roulant (comme une hypercar de LMU) pour tester l'analyse du pilotage sans jeu.
+            double accel = (c.Speed - c.PreviousSpeed) / dt;
+            _input = new SecondMonitor.DataModel.BasicProperties.InputInfo
+            {
+                ThrottlePedalPosition = c.InPits ? 0.2 : decel > 1 ? 0 : Math.Clamp(0.35 + (accel * 0.12) + (Math.Abs(curvature) < 0.002 ? 0.65 : 0), 0, 1),
+                BrakePedalPosition = c.InPits ? 0 : Math.Clamp(decel / 25, 0, 1),
+                SteeringInput = Math.Clamp(curvature * 40, -1, 1),
+            };
+            CarControls controls = d.CarInfo.Controls;
+            controls.Available = true;
+            controls.FrontBrakeBiasPct = 54.5;
+            controls.Migration = 3;
+            controls.MigrationMax = 6;
+            controls.Tc = 4;
+            controls.TcMax = 11;
+            controls.TcCut = 3;
+            controls.TcCutMax = 11;
+            controls.MotorMap = 2;
+            controls.MotorMapMax = 4;
+            controls.RegenKw = 200;
+            controls.ElectricMotorState = c.InPits ? 1 : decel > 1 ? 3 : v > 52 ? 2 : 1;
+            controls.BatteryPct = 60;
+            controls.VirtualEnergyPct = Math.Round(c.Energy, 1);
+            controls.Ignition = 2;
+            controls.TrackLimitsPoints = 0;
+            controls.TrackLimitsPointsPerPenalty = 3;
+            controls.Penalties = 0;
         }
+
+        private SecondMonitor.DataModel.BasicProperties.InputInfo _input = new();
 
         /// <summary>Averse de démonstration entre la 35e et la 52e minute (intensité 0..1).</summary>
         private double Rain()

@@ -53,6 +53,12 @@ namespace SecondMonitor.Hub.Core.Ai
 
         public string SessionType { get; set; }
 
+        /// <summary>Catégorie précise (« Hypercar LMDh », « LMGT3 »…), voir <see cref="CarKnowledge"/>.</summary>
+        public string Category { get; set; } = "autre";
+
+        /// <summary>Réglages réels de la voiture si le jeu les donne.</summary>
+        public ControlsDto Controls { get; set; }
+
         public static CarContext From(RaceSnapshot snap, int wetThresholdPct = 25)
         {
             var c = new CarContext();
@@ -93,6 +99,19 @@ namespace SecondMonitor.Hub.Core.Ai
             c.HasDiffInRace = c.Game == "F1";
             c.IsHybrid = snap.Player?.Hybrid != null || c.CarClass == "Hypercar" || c.CarClass == "F1";
 
+            // Le jeu donne les réglages réels de la voiture : ils l'emportent sur ce que l'on suppose de la catégorie.
+            ControlsDto controls = snap.Player?.Controls;
+            c.Controls = controls;
+            if (controls != null)
+            {
+                c.HasAbs = controls.AbsMax > 0 || (controls.Abs > 0 && controls.AbsMax == null && c.Game != "LMU");
+                c.HasTc = controls.TcMax > 0 || controls.TcCutMax > 0 || controls.TcSlipMax > 0 || (controls.Tc > 0 && controls.TcMax == null && c.Game != "LMU");
+                c.HasEngineMap = controls.MotorMapMax > 0 || (controls.MotorMap.HasValue && controls.MotorMapMax == null && c.Game != "LMU");
+                c.IsHybrid |= controls.ElectricMotor != null;
+            }
+
+            c.Category = CarKnowledge.Category(c);
+
             c.WetnessPct = snap.Weather?.Wetness ?? 0;
             c.RainPct = snap.Weather?.Rain ?? 0;
             c.Wet = c.WetnessPct >= Math.Max(5, wetThresholdPct / 2) || c.RainPct >= 20;
@@ -123,6 +142,11 @@ namespace SecondMonitor.Hub.Core.Ai
         public string InRaceControls()
         {
             var list = new List<string> { "répartition de freinage" };
+            if (Controls?.MigrationMax > 0)
+            {
+                list.Add("migration de freinage");
+            }
+
             if (HasAbs)
             {
                 list.Add("ABS");
@@ -133,9 +157,24 @@ namespace SecondMonitor.Hub.Core.Ai
                 list.Add("TC");
             }
 
+            if (Controls?.TcCutMax > 0)
+            {
+                list.Add("coupure TC");
+            }
+
+            if (Controls?.TcSlipMax > 0)
+            {
+                list.Add("glissement TC");
+            }
+
             if (HasEngineMap)
             {
-                list.Add("cartographie moteur");
+                list.Add(CarClass == "Hypercar" ? "cartographie du moteur électrique" : "cartographie moteur");
+            }
+
+            if (Controls?.FrontAntiRollMax > 0 || Controls?.RearAntiRollMax > 0)
+            {
+                list.Add("barres antiroulis");
             }
 
             if (HasDiffInRace)
@@ -147,16 +186,23 @@ namespace SecondMonitor.Hub.Core.Ai
             {
                 list.Add("mode de déploiement ERS");
             }
-            else if (CarClass == "Hypercar")
+            else if (CarClass == "Hypercar" || Controls?.RegenKw > 0)
             {
-                list.Add("récupération d'énergie (regen) selon la voiture");
+                list.Add("récupération d'énergie (regen)");
             }
 
             return string.Join(", ", list);
         }
 
-        public string Describe() =>
-            $"Réglable en roulant sur cette voiture ({(CarClass == "autre" ? CarName ?? "voiture inconnue" : CarClass)}, {Game}) : {InRaceControls()}. " +
-            "Au stand seulement : barres antiroulis, ressorts, amortisseurs, hauteurs, carrossage, pressions des pneus, ailerons, différentiel (précharge), écopes de freins.";
+        public string Describe()
+        {
+            string how = CarKnowledge.HowItWorks(Category);
+            string now = CarKnowledge.CurrentSettings(Controls);
+            return (how != null ? how + " " : string.Empty) +
+                $"Réglable en roulant sur cette voiture ({(Category == "autre" ? CarName ?? "voiture inconnue" : Category)}{(CarName != null && Category != "autre" ? ", " + CarName : string.Empty)}, {Game}) : {InRaceControls()}." +
+                (now != null ? $" Réglages actuels : {now}" : string.Empty) +
+                " Au stand seulement : ressorts, amortisseurs, hauteurs, carrossage, pressions des pneus, ailerons, différentiel (précharge), écopes de freins" +
+                (Controls?.FrontAntiRollMax > 0 ? "." : ", barres antiroulis.");
+        }
     }
 }

@@ -2,6 +2,7 @@ namespace SecondMonitor.Hub.Music;
 
 using SecondMonitor.Hub.Core.Music;
 using SecondMonitor.Hub.Core.Race;
+using SecondMonitor.Hub.Services;
 
 /// <summary>
 /// Musique Deezer pilotée par SecondMonitor : la lecture se fait dans l'application Deezer de l'ordinateur (ou le lecteur
@@ -27,18 +28,27 @@ public sealed class MusicService
 
     private (DateTime At, PlayerState State) _cache = (DateTime.MinValue, new PlayerState());
     private string? _lastSessionType;
+    private readonly IMusicPlayer _local;
+    private readonly RemoteMusicPlayer _remote;
 
-    public MusicService(string dataDir, RaceEngine engine, ILogger logger)
+    public MusicService(string dataDir, RaceEngine engine, ILogger logger, LiveHub hub)
     {
         _engine = engine;
         _logger = logger;
         Settings = new MusicSettingsStore(dataDir);
-        Player = CreatePlayer(dataDir, () => Settings.Current);
+        _local = CreatePlayer(dataDir, () => Settings.Current);
+        _remote = new RemoteMusicPlayer(hub, () => Settings.Current);
+        // La voix de l'ingénieur dans le casque du PC de jeu : la musique s'efface aussi.
+        hub.StationVoice += playing => SetVoice(playing);
     }
 
     public MusicSettingsStore Settings { get; }
 
-    public IMusicPlayer Player { get; }
+    /// <summary>Deezer de cet ordinateur, ou celui du PC de jeu (réglage « Musique sur »).</summary>
+    public IMusicPlayer Player => OnGamingPc ? _remote : _local;
+
+    /// <summary>La musique joue sur le PC de jeu (réglage), par le collecteur.</summary>
+    public bool OnGamingPc => Settings.Current.Output == "pc";
 
     /// <summary>Ce qui a été lancé en dernier (« la playlist Rock Essentials »), pour « c'est quoi ce morceau ? ».</summary>
     public string? LastOpened { get; private set; }
@@ -69,7 +79,7 @@ public sealed class MusicService
 
         if (OperatingSystem.IsWindows())
         {
-            return new WindowsMusicPlayer(dataDir, settings);
+            return new WindowsMusicPlayer(dataDir, () => settings().Player == "web");
         }
 
         return new LinuxMusicPlayer();
@@ -184,8 +194,27 @@ public sealed class MusicService
         }
 
         _lastSessionType = session;
-        if (!Settings.Current.Enabled || SessionAllowed(out string? reason))
+        if (!Settings.Current.Enabled)
         {
+            return;
+        }
+
+        if (SessionAllowed(out string? reason))
+        {
+            // Nouvelle session où la musique est permise : la playlist préférée démarre toute seule (si rien ne joue).
+            if (session != null && Settings.Current.FavoriteAutoPlay && Settings.Current.Favorite is { } fav)
+            {
+                await WithGateAsync(async () =>
+                {
+                    PlayerState state = await StateAsync(ct, fresh: true);
+                    if (state.Playing != true)
+                    {
+                        string label = MusicCommands.Describe(new DeezerItem { Kind = Kind(fav), Id = fav.Id, Title = fav.Title });
+                        LastMessage = await OpenOrQueueAsync(FavoriteLink(fav), label, _planner.Ducked, ct, $"Début de session : {label}.");
+                    }
+                }, ct);
+            }
+
             return;
         }
 
@@ -225,7 +254,7 @@ public sealed class MusicService
 
         if (!Settings.Current.Enabled)
         {
-            return intent.Explicit ? "La musique Deezer est désactivée. Activez-la dans les réglages, carte Musique." : null;
+            return intent.Explicit ? "La musique Deezer est désactivée. Active-la dans les réglages, carte Musique." : null;
         }
 
         if (test)
@@ -249,7 +278,7 @@ public sealed class MusicService
     {
         if (!Settings.Current.Enabled)
         {
-            return Remember("La musique Deezer est désactivée. Activez-la dans les réglages, carte Musique.");
+            return Remember("La musique Deezer est désactivée. Active-la dans les réglages, carte Musique.");
         }
 
         if ((intent.Action is MusicAction.Play or MusicAction.Flow or MusicAction.Open) && !SessionAllowed(out string? reason))
@@ -310,7 +339,12 @@ public sealed class MusicService
             {
                 if (NeedsLaunch(out string flowLink))
                 {
-                    return await OpenOrQueueAsync(flowLink, "Flow", ducked, ct, "Je lance Deezer avec votre Flow.");
+                    if (s.Favorite is { } fav)
+                    {
+                        return await OpenFavoriteAsync(fav, ducked, ct);
+                    }
+
+                    return await OpenOrQueueAsync(flowLink, "Flow", ducked, ct, "Je lance Deezer avec ton Flow.");
                 }
 
                 if (ducked)
@@ -331,14 +365,16 @@ public sealed class MusicService
                 PlayerState after = await StateAsync(ct, fresh: true);
                 if (after.Playing == false && state.Title == null)
                 {
-                    // Rien à reprendre dans Deezer : on lance le Flow.
-                    return await OpenOrQueueAsync(FlowLink(), "votre Flow", false, ct, "Je lance votre Flow.");
+                    // Rien à reprendre dans Deezer : la playlist préférée, sinon le Flow.
+                    return s.Favorite is { } fav
+                        ? await OpenFavoriteAsync(fav, false, ct)
+                        : await OpenOrQueueAsync(FlowLink(), "ton Flow", false, ct, "Je lance ton Flow.");
                 }
 
                 if (after.Playing == false)
                 {
                     return Player.Platform == "mac" && !s.MediaKeys
-                        ? "Deezer ne répond pas à la commande. Essayez les touches multimédia dans la carte Musique."
+                        ? "Deezer ne répond pas à la commande. Essaie les touches multimédia dans la carte Musique."
                         : "Deezer ne répond pas à la commande.";
                 }
 
@@ -366,7 +402,7 @@ public sealed class MusicService
             {
                 if (!Player.CanSetVolume)
                 {
-                    return "Sur Mac, je ne peux pas régler le volume de Deezer seul : utilisez le curseur de Deezer. Le volume de l'ordinateur changerait aussi ma voix.";
+                    return "Sur Mac, je ne peux pas régler le volume de Deezer seul : utilise le curseur de Deezer. Le volume de l'ordinateur changerait aussi ma voix.";
                 }
 
                 PlayerState state = await StateAsync(ct, fresh: true);
@@ -393,12 +429,17 @@ public sealed class MusicService
                 }
 
                 return LastOpened != null
-                    ? $"Je ne vois pas le titre exact sur cet ordinateur. Vous écoutez {LastOpened}."
+                    ? $"Je ne vois pas le titre exact sur cet ordinateur. Tu écoutes {LastOpened}."
                     : "Je ne vois pas le titre en cours sur cet ordinateur.";
             }
 
             case MusicAction.Flow:
-                return await OpenOrQueueAsync(FlowLink(), "votre Flow", ducked, ct, "Je lance votre Flow.");
+                return await OpenOrQueueAsync(FlowLink(), "ton Flow", ducked, ct, "Je lance ton Flow.");
+
+            case MusicAction.Favorite:
+                return s.Favorite is { } favorite
+                    ? await OpenFavoriteAsync(favorite, ducked, ct)
+                    : "Pas encore de playlist préférée : choisis-la avec l'étoile dans la carte Musique.";
 
             case MusicAction.Open when item != null:
             {
@@ -448,11 +489,64 @@ public sealed class MusicService
             return reply;
         }
 
+        if (OnGamingPc && !_remote.Connected)
+        {
+            return "La musique est réglée sur le PC de jeu, mais le collecteur ne la propose pas : ouvre le collecteur, case « Musique Deezer sur ce PC ».";
+        }
+
         await Player.OpenAsync(link, ct);
         _cache = (DateTime.MinValue, _cache.State);
         bool web = !link.StartsWith("deezer:", StringComparison.Ordinal);
+        WatchStart(link, web);
         return web && Settings.Current.Player == "app" ? reply + " Deezer n'est pas installé : je l'ouvre dans le navigateur." : reply;
     }
+
+    /// <summary>
+    /// Après l'ouverture : la lecture a-t-elle vraiment démarré ? Le lecteur web ignore souvent la lecture automatique
+    /// (le navigateur la bloque) : on envoie « lecture » une fois, puis on le dit dans la carte Musique si rien ne joue.
+    /// </summary>
+    private void WatchStart(string link, bool web)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(7));
+                if ((await Player.GetStateAsync(CancellationToken.None)).Playing == true || _planner.Ducked)
+                {
+                    return;
+                }
+
+                if (web)
+                {
+                    await WithGateAsync(() => Player.SendAsync(TransportCommand.Play, new PlayerState { Playing = false }, CancellationToken.None), CancellationToken.None);
+                    await Task.Delay(TimeSpan.FromSeconds(3));
+                    if ((await Player.GetStateAsync(CancellationToken.None)).Playing == true)
+                    {
+                        return;
+                    }
+                }
+
+                LastMessage = web
+                    ? "Deezer s'est ouvert dans le navigateur mais ne joue pas : le navigateur bloque la lecture automatique. Cliquez sur lecture dans Deezer, ou installez l'application Deezer (elle démarre toute seule)."
+                    : "Deezer s'est ouvert mais ne joue pas encore : vérifiez que l'application Deezer est connectée à votre compte.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Musique : vérification du démarrage");
+            }
+        });
+    }
+
+    private Task<string> OpenFavoriteAsync(MusicFavorite fav, bool ducked, CancellationToken ct)
+    {
+        string label = MusicCommands.Describe(new DeezerItem { Kind = Kind(fav), Id = fav.Id, Title = fav.Title });
+        return OpenOrQueueAsync(FavoriteLink(fav), label, ducked, ct, $"C'est parti : {label}.");
+    }
+
+    private string FavoriteLink(MusicFavorite fav) => UseApp() ? DeezerCatalog.AppLink(Kind(fav), fav.Id) : DeezerCatalog.WebLink(Kind(fav), fav.Id);
+
+    private static MusicKind Kind(MusicFavorite fav) => DeezerCatalog.TryParseKind(fav.Kind, out MusicKind k) && k != MusicKind.Any ? k : MusicKind.Playlist;
 
     private bool UseApp() => Settings.Current.Player == "app" && Player.AppInstalled();
 
@@ -503,6 +597,8 @@ public sealed class MusicService
             sessionReason = reason,
             lastOpened = LastOpened,
             lastMessage = LastMessage,
+            output = s.Output,
+            pcConnected = _remote.Connected,
         };
     }
 
@@ -544,6 +640,7 @@ public sealed class MusicService
         MusicAction.VolumeDown => "moins fort",
         MusicAction.NowPlaying => "titre en cours",
         MusicAction.Flow => "Flow",
+        MusicAction.Favorite => "playlist préférée",
         _ => "ouvrir",
     };
 }

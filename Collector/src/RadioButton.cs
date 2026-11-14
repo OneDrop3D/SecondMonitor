@@ -9,7 +9,8 @@ namespace SecondMonitor.Collector
     /// <summary>
     /// Bouton radio sur le PC de jeu : une touche du clavier ou un bouton du volant, lu même quand le jeu est au premier plan.
     /// Un appui est transmis à SecondMonitor (POST /api/radio/press) : le poste radio démarre ou envoie la dictée,
-    /// ou coupe l'ingénieur s'il parle. Windows uniquement (lecture du clavier et des manettes par l'API système,
+    /// ou coupe l'ingénieur s'il parle. Avec « Parler avec le micro de ce PC », c'est la fenêtre du collecteur
+    /// qui enregistre (voir EngineerLink). Windows uniquement (lecture du clavier et des manettes par l'API système,
     /// 50 fois par seconde, seulement quand un bouton est choisi).
     /// </summary>
     internal sealed class RadioButton : IDisposable
@@ -160,6 +161,12 @@ namespace SecondMonitor.Collector
 
         private async Task SendPressAsync()
         {
+            // « Parler avec le micro de ce PC » : la fenêtre du collecteur enregistre elle-même (ou coupe l'ingénieur).
+            if (_runtime.Engineer?.TryHandlePress() == true)
+            {
+                return;
+            }
+
             string[] hubs = _runtime.Hubs;
             if (hubs.Length == 0)
             {

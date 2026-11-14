@@ -1,4 +1,5 @@
 // Miroir des DTO C# (SecondMonitor.Hub.Core.Race.RaceSnapshot). Durées en s, distances en m, litres, kPa, °C.
+import type { AudioStation, VoiceOutput } from './stations';
 
 export interface RaceSnapshot {
   sequence: number;
@@ -141,6 +142,46 @@ export interface PlayerStrategy {
   deltaBest: number | null;
   deltaLast: number | null;
   speed: number;
+  /** Réglages en roulant, hybride, limites de piste et pénalités (si le jeu les donne). */
+  controls?: CarControls | null;
+  /** Pédales et volant à l'instant (%, volant de -100 à 100). */
+  inputs?: DriverInputs | null;
+}
+
+export interface CarControls {
+  frontBrakeBiasPct: number | null;
+  motorMap: number | null; motorMapMax: number | null;
+  tc: number | null; tcMax: number | null;
+  tcCut: number | null; tcCutMax: number | null;
+  tcSlip: number | null; tcSlipMax: number | null;
+  abs: number | null; absMax: number | null;
+  migration: number | null; migrationMax: number | null;
+  frontAntiRoll: number | null; frontAntiRollMax: number | null;
+  rearAntiRoll: number | null; rearAntiRollMax: number | null;
+  regenKw: number | null;
+  electricMotor: string | null;
+  batteryPct: number | null;
+  virtualEnergyPct: number | null;
+  trackLimitsPoints: number | null;
+  trackLimitsPointsPerPenalty: number | null;
+  penalties: number | null;
+  lapInvalidated: boolean;
+  engineRunning: boolean;
+  pitRequested: boolean;
+}
+
+export interface DriverInputs { throttle: number; brake: number; clutch: number; steering: number; gear: string; rpm: number }
+
+/** Trace pédales / volant d'un tour (GET /api/analysis/inputs?lap=last|best|current|n), pas de `step` mètres. */
+export interface InputTrace {
+  lap: number;
+  time: number | null;
+  step: number;
+  throttle: (number | null)[];
+  brake: (number | null)[];
+  steering: (number | null)[];
+  speed: (number | null)[];
+  laps: number[];
 }
 
 export interface DamagePart {
@@ -275,10 +316,19 @@ export interface HubSettings {
   gameHosts: string[];
   demoMode: boolean;
   demoSpeed: number;
+  /** Fenêtre sans accélération graphique (Windows). */
+  fenetreSansGpu?: boolean;
+  /** Voix de l'ingénieur quand le PC de jeu la demande : « pc », « ecrans » ou « deux ». */
+  voiceOutput?: VoiceOutput;
+  /** Usage de cet ordinateur (changé par /api/mode, pas par l'enregistrement des réglages). */
+  mode?: string;
+  /** Serveur de calcul : identifiant de ce SecondMonitor, nom annoncé, port UDP des annonces. */
+  calcul?: { id: string; name: string; discoveryPort: number };
   ai: {
     ollamaUrl: string;
     localNodeName: string;
-    nodes: { name: string; url: string }[];
+    /** token : « relié » pour un serveur de calcul relié (le vrai jeton ne quitte jamais SecondMonitor). */
+    nodes: { name: string; url: string; token?: string; serverId?: string }[];
     aliases: Record<string, string>;
     listenModel: string;
     thinkModel: string;
@@ -286,6 +336,26 @@ export interface HubSettings {
     voice: string;
     language: string;
     proactiveRadio: boolean;
+    /** Alertes de pilotage dites tout de suite (limites de piste, temps annulé, pénalité, usure brutale, départ). */
+    drivingAlerts?: boolean;
+    /** Mode « thinking » des modèles qui l'ont (raisonnement avant de répondre, plus lent). */
+    thinkingMode?: boolean;
+    /** Annonces de limites de piste et de temps annulé (aussi à la voix : « coupe les limites de piste »). */
+    trackLimitAlerts?: boolean;
+    /** L'ingénieur règle le menu des stands de Le Mans Ultimate (par le collecteur du PC de jeu). */
+    lmuPitMenu?: boolean;
+    /** « Copy », « Copy that » : accusés de réception en anglais. */
+    englishCalls?: boolean;
+    /** Modèle par spécialiste (« pneus », « stratégie », « voiture », « course ») ; vide = modèle « réflexion ». */
+    specialists?: Record<string, string>;
+    /** Au-delà (s), « Copy, je regarde ça et je reviens vers vous » et la réponse arrive ensuite. */
+    ackAfterSeconds?: number;
+    /** Lexique de piste : corrections du pilote pour la dictée (« ce qu'elle entend » → « ce que j'ai dit »). */
+    lexicon?: { heard: string; meant: string }[];
+    /** Durée maximale (s) d'un morceau d'audio envoyé au modèle « écoute » (découpé sur un silence au-delà). */
+    listenChunkSeconds?: number;
+    /** Modèle pour les questions difficiles (vide : le spécialiste du domaine). */
+    hardModel?: string;
     proactiveMinIntervalSec: number;
     strictAnswers: boolean;
     wetThresholdPct: number;
@@ -356,6 +426,11 @@ export interface HubStatus {
   dataDir: string;
   webPort: number;
   httpsPort: number | null;
+  /** Postes audio du PC de jeu (collecteur : voix de l'ingénieur, micro). */
+  stations?: AudioStation[];
+  voiceOutput?: VoiceOutput;
+  /** Usage de cet ordinateur : « affichage », « calcul » (serveur de calcul) ou vide (premier lancement : à choisir). */
+  mode?: string;
 }
 
 // ───── Analyses (API /api/analysis/*, /api/telemetry, /api/weather) ─────
@@ -396,7 +471,88 @@ export interface SpeedTraces {
 
 export interface Trajectories {
   segment: TrackSegment | null;
-  drivers: { id: string; lap: number; time: number | null; sampleHz: number; points: [number, number, number][] }[];
+  /** Points : [x, z, vitesse km/h, distance depuis la ligne en m], un tous les ~10 m. */
+  drivers: { id: string; lap: number; time: number | null; sampleHz: number; points: [number, number, number, number][] }[];
+}
+
+/** Micro-secteurs de chaque tour bouclé (GET /api/analysis/microsectors/laps?ids=…). */
+export interface MicroSectorLaps {
+  count: number;
+  lapLength: number;
+  drivers: {
+    id: string;
+    name: string | null;
+    number: number | null;
+    classId: string;
+    className: string | null;
+    car: string | null;
+    isPlayer: boolean;
+    sampleHz: number;
+    laps: MicroSectorLapRow[];
+  }[];
+}
+
+export interface MicroSectorLapRow {
+  lap: number;
+  time: number | null;
+  /** 1 = stand, 2 = tour de sortie, 4 = invalide, 8 = micro-secteur dans la voie des stands. */
+  flags: number;
+  compound: string | null;
+  stint: number | null;
+  tyreLaps: number | null;
+  ms: (number | null)[] | null;
+}
+
+/** Comparaison des tours du joueur (GET /api/analysis/lapcompare?laps=best,last,12,current). */
+export interface LapComparison {
+  step: number;
+  lapLength: number;
+  laps: LapChoice[];
+  traces: LapDetail[];
+}
+
+export interface LapChoice {
+  lap: number;
+  time: number | null;
+  complete: boolean;
+  current: boolean;
+  valid: boolean;
+  pit: boolean;
+  outLap: boolean;
+  best: boolean;
+  compound: string | null;
+  tyreLaps: number | null;
+}
+
+export interface ShiftPoint { distance: number; speed: number; rpmBefore: number; rpmAfter: number; from: number; to: number }
+
+export interface ControlChange { key: string; distance: number; from: number; to: number }
+
+export interface LapDetail {
+  lap: number;
+  time: number | null;
+  complete: boolean;
+  current: boolean;
+  valid: boolean;
+  pit: boolean;
+  outLap: boolean;
+  compound: string | null;
+  tyreLaps: number | null;
+  fuel: number | null;
+  topSpeed: number | null;
+  maxRpm: number | null;
+  speed: (number | null)[];
+  throttle: (number | null)[];
+  brake: (number | null)[];
+  steering: (number | null)[];
+  gear: (number | null)[];
+  rpm: (number | null)[];
+  /** Temps écoulé depuis la ligne (s), case par case. */
+  elapsed: (number | null)[];
+  shifts: ShiftPoint[];
+  /** Réglages en roulant au départ du tour (« bias », « tc », « tcCut », « tcSlip », « abs », « map », « migration », « arbFront », « arbRear »). */
+  controls: Record<string, number>;
+  controlChanges: ControlChange[];
 }
 
 export interface MicroSectorReport {

@@ -15,26 +15,26 @@ namespace SecondMonitor.Hub.Core.Ai
         // ───── Propositions ─────
         private static readonly Dictionary<string, Proposal> P = new[]
         {
-            Course("bias-back", "reculer la répartition de freinage d'un cran", "reculez la répartition de freinage d'un cran", "répartition de freinage reculée"),
-            Course("bias-fwd", "avancer la répartition de freinage d'un cran", "avancez la répartition de freinage d'un cran", "répartition de freinage avancée"),
-            Course("abs-up", "monter l'ABS d'un cran", "montez l'ABS d'un cran", "ABS plus haut"),
-            Course("tc-up", "monter le TC d'un cran", "montez le TC d'un cran", "TC plus haut"),
-            Course("map-soft", "passer sur une cartographie moteur plus douce", "passez sur une cartographie moteur plus douce", "cartographie moteur plus douce"),
-            Course("diff-open", "baisser le différentiel à l'accélération de quelques points", "baissez le différentiel à l'accélération de quelques points", "différentiel à l'accélération plus ouvert"),
-            Course("diff-lock", "monter le différentiel à l'accélération de quelques points", "montez le différentiel à l'accélération de quelques points", "différentiel à l'accélération plus bloqué"),
-            Drive("trail-brake", "relâcher le frein plus progressivement en tournant", "relâchez le frein plus progressivement en tournant", "freinage dégressif en entrée"),
-            Drive("inside-release", "relâcher le frein plus tôt quand vous braquez, la roue intérieure se déleste", "relâchez le frein plus tôt quand vous braquez, la roue intérieure se déleste", "relâcher le frein plus tôt en braquant"),
-            Drive("brake-straight", "freiner un peu plus tôt et plus droit", "freinez un peu plus tôt et plus droit", "freiner plus tôt et en ligne droite"),
-            Drive("entry-slower", "entrer un peu moins vite pour garder l'avant", "entrez un peu moins vite pour garder l'avant", "vitesse d'entrée plus basse"),
-            Drive("throttle-smooth", "accélérer plus progressivement, volant plus ouvert", "accélérez plus progressivement, volant plus ouvert", "accélération plus progressive"),
-            Drive("throttle-later", "attendre que la voiture soit en ligne pour accélérer à fond", "attendez que la voiture soit en ligne pour accélérer à fond", "accélérer plus tard"),
-            Drive("downshift-slow", "rétrograder moins vite au freinage", "rétrogradez moins vite au freinage", "rétrogradages plus lents"),
-            Drive("short-shift", "passer un rapport plus haut en sortie des virages lents", "passez un rapport plus haut en sortie des virages lents", "rapport plus haut en sortie"),
-            Drive("kerbs-avoid", "éviter les vibreurs hauts", "évitez les vibreurs hauts", "éviter les vibreurs"),
+            Course("bias-back", "reculer la répartition de freinage d'un cran", "recule la répartition de freinage d'un cran", "répartition de freinage reculée"),
+            Course("bias-fwd", "avancer la répartition de freinage d'un cran", "avance la répartition de freinage d'un cran", "répartition de freinage avancée"),
+            Course("abs-up", "monter l'ABS d'un cran", "monte l'ABS d'un cran", "ABS plus haut"),
+            Course("tc-up", "monter le TC d'un cran", "monte le TC d'un cran", "TC plus haut"),
+            Course("map-soft", "passer sur une cartographie moteur plus douce", "passe sur une cartographie moteur plus douce", "cartographie moteur plus douce"),
+            Course("diff-open", "baisser le différentiel à l'accélération de quelques points", "baisse le différentiel à l'accélération de quelques points", "différentiel à l'accélération plus ouvert"),
+            Course("diff-lock", "monter le différentiel à l'accélération de quelques points", "monte le différentiel à l'accélération de quelques points", "différentiel à l'accélération plus bloqué"),
+            Drive("trail-brake", "relâcher le frein plus progressivement en tournant", "relâche le frein plus progressivement en tournant", "freinage dégressif en entrée"),
+            Drive("inside-release", "relâcher le frein plus tôt quand tu braques, la roue intérieure se déleste", "relâche le frein plus tôt quand tu braques, la roue intérieure se déleste", "relâcher le frein plus tôt en braquant"),
+            Drive("brake-straight", "freiner un peu plus tôt et plus droit", "freine un peu plus tôt et plus droit", "freiner plus tôt et en ligne droite"),
+            Drive("entry-slower", "entrer un peu moins vite pour garder l'avant", "entre un peu moins vite pour garder l'avant", "vitesse d'entrée plus basse"),
+            Drive("throttle-smooth", "accélérer plus progressivement, volant plus ouvert", "accélère plus progressivement, volant plus ouvert", "accélération plus progressive"),
+            Drive("throttle-later", "attendre que la voiture soit en ligne pour accélérer à fond", "attends que la voiture soit en ligne pour accélérer à fond", "accélérer plus tard"),
+            Drive("downshift-slow", "rétrograder moins vite au freinage", "rétrograde moins vite au freinage", "rétrogradages plus lents"),
+            Drive("short-shift", "passer un rapport plus haut en sortie des virages lents", "passe un rapport plus haut en sortie des virages lents", "rapport plus haut en sortie"),
+            Drive("kerbs-avoid", "éviter les vibreurs hauts", "évite les vibreurs hauts", "éviter les vibreurs"),
             Drive("less-slide", "moins faire glisser la voiture, surtout en entrée", "faites moins glisser la voiture, surtout en entrée", "moins de glisse"),
-            Drive("warm-tyres", "attaquer les freinages et faire des zigzags pour chauffer les pneus", "attaquez les freinages et faites des zigzags pour chauffer les pneus", "chauffer les pneus"),
-            Drive("brake-cool", "freiner un peu plus tôt et sortir de l'aspiration pour refroidir les freins", "freinez un peu plus tôt et sortez de l'aspiration pour refroidir les freins", "freins à refroidir"),
-            Drive("wet-line", "quitter la trajectoire sèche : sous la pluie, l'extérieur accroche mieux", "quittez la trajectoire sèche : sous la pluie, l'extérieur accroche mieux", "trajectoire pluie"),
+            Drive("warm-tyres", "attaquer les freinages et faire des zigzags pour chauffer les pneus", "attaque les freinages et faites des zigzags pour chauffer les pneus", "chauffer les pneus"),
+            Drive("brake-cool", "freiner un peu plus tôt et sortir de l'aspiration pour refroidir les freins", "freine un peu plus tôt et sors de l'aspiration pour refroidir les freins", "freins à refroidir"),
+            Drive("wet-line", "quitter la trajectoire sèche : sous la pluie, l'extérieur accroche mieux", "quitte la trajectoire sèche : sous la pluie, l'extérieur accroche mieux", "trajectoire pluie"),
             Setup("arb-front-soft", "barre antiroulis avant plus souple"),
             Setup("arb-front-stiff", "barre antiroulis avant plus raide"),
             Setup("arb-rear-soft", "barre antiroulis arrière plus souple"),
@@ -260,11 +260,11 @@ namespace SecondMonitor.Hub.Core.Ai
             string tip = null;
             if (key == "lock-inside")
             {
-                tip = "relâchez le frein plus tôt quand vous braquez, la roue intérieure se déleste";
+                tip = "relâche le frein plus tôt quand tu braques, la roue intérieure se déleste";
             }
             else if (key == "lock-front" && corner != null && corner != "partout")
             {
-                tip = "freinez un peu plus tôt et relâchez progressivement en tournant";
+                tip = "freine un peu plus tôt et relâche progressivement en tournant";
             }
 
             // Manque de grip général : la cause est souvent ailleurs (pneus usés, froids, pluie).
@@ -283,7 +283,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 if (ctx.WornTyres)
                 {
                     advice.Category = ExchangeCategorizer.Strategy;
-                    advice.Text = $"Pneus usés à {RadioFormat.N(ctx.WorstWearPct ?? 0, 0)} % ({RadioFormat.Wheel(ctx.WorstWearWheel)}) : c'est l'usure. Ménagez-les, je regarde pour avancer l'arrêt.";
+                    advice.Text = $"Pneus usés à {RadioFormat.N(ctx.WorstWearPct ?? 0, 0)} % ({RadioFormat.Wheel(ctx.WorstWearWheel)}) : c'est l'usure. Ménage-les, je regarde pour avancer l'arrêt.";
                     advice.Main = null;
                     return advice;
                 }
@@ -318,7 +318,7 @@ namespace SecondMonitor.Hub.Core.Ai
             return p.Kind switch
             {
                 "setup" => alternative ? $"Sinon, au stand : {p.Note}. Je le note pour le setup ?" : $"Au stand : {p.Note}. Je le note pour le setup ?",
-                "pilotage" => alternative ? $"Sinon, {p.Infinitive}. Vous essayez ?" : $"Essayez {De(p.Infinitive)}.",
+                "pilotage" => alternative ? $"Sinon, {p.Infinitive}. Tu essaies ?" : $"Essaie {De(p.Infinitive)}.",
                 _ => alternative ? $"Sinon : {p.Infinitive}. On essaie ?" : $"{head} {De(p.Infinitive)}. On essaie ?",
             };
         }
@@ -327,9 +327,9 @@ namespace SecondMonitor.Hub.Core.Ai
         public static string Accepted(Proposal p) => p?.Kind switch
         {
             "setup" => $"Noté pour le prochain arrêt : {p.Note}.",
-            "pilotage" => "Bien reçu. Dites-moi si ça va mieux.",
+            "pilotage" => "Bien reçu. Dis-moi si ça va mieux.",
             null => "Bien reçu.",
-            _ => $"Bien reçu : {p.Imperative}. Dites-moi si ça va mieux.",
+            _ => $"Bien reçu : {p.Imperative}. Dis-moi si ça va mieux.",
         };
 
         private static string Compose(Advice a, string tip, CarContext ctx, bool askPhase)
@@ -439,6 +439,6 @@ namespace SecondMonitor.Hub.Core.Ai
 
         private static Proposal Drive(string key, string inf, string imp, string note) => new() { Key = key, Kind = "pilotage", Infinitive = inf, Imperative = imp, Note = note };
 
-        private static Proposal Setup(string key, string noun) => new() { Key = key, Kind = "setup", Infinitive = "mettre " + noun, Imperative = "mettez " + noun, Note = noun };
+        private static Proposal Setup(string key, string noun) => new() { Key = key, Kind = "setup", Infinitive = "mettre " + noun, Imperative = "mets " + noun, Note = noun };
     }
 }

@@ -47,7 +47,7 @@ public class BriefingTests
     {
         BriefingResult r = RaceBriefing.Prepare(_snap, "Écart avec la voiture derrière ?");
         Assert.That(r.Suggestion, Does.Contain("derrière"));
-        Assert.That(r.Suggestion, Does.Not.Contain("devant vous,"));
+        Assert.That(r.Suggestion, Does.Not.Contain("devant toi,"));
     }
 
     [Test]
@@ -62,7 +62,7 @@ public class BriefingTests
     {
         BriefingResult r = RaceBriefing.Prepare(_snap, "Raconte-moi une blague");
         Assert.That(r.Suggestion, Is.Null);
-        Assert.That(r.Facts, Does.Contain("Vous êtes P"));
+        Assert.That(r.Facts, Does.Contain("Tu es P"));
     }
 
     [Test]
@@ -79,16 +79,16 @@ public class BriefingTests
     public void Pace_IsComputed_WithTargetToCatchOrToStayAhead()
     {
         BriefingResult r = RaceBriefing.Prepare(_snap, "Quel rythme dois-je faire pour gagner la course ?");
-        Assert.That(r.Suggestion, Does.Contain("Votre rythme est de"));
+        Assert.That(r.Suggestion, Does.Contain("Ton rythme est de"));
         Assert.That(r.Suggestion, Does.Match(@"\d:\d\d\.\d")); // temps au tour « 2:01.5 », lu « deux minutes, une seconde cinq »
-        Assert.That(r.Facts, Does.Contain("Pour rattraper").Or.Contain("Vous menez"));
+        Assert.That(r.Facts, Does.Contain("Pour rattraper").Or.Contain("Tu mènes"));
     }
 
     [Test]
     public void SeveralQuestions_AreAllAnswered()
     {
         BriefingResult r = RaceBriefing.Prepare(_snap, "Quelle est ma position, quelle est la météo, quelles sont les prévisions météo pour la course ?");
-        Assert.That(r.Suggestion, Does.Contain("Vous êtes P"));
+        Assert.That(r.Suggestion, Does.Contain("Tu es P"));
         Assert.That(r.Suggestion, Does.Contain("Air "));
     }
 
@@ -152,7 +152,7 @@ public class BriefingTests
     public void BestAndWorstLap_GiveLapNumberAndGap()
     {
         Assert.That(RaceBriefing.Prepare(_snap, "Mon meilleur tour", _extras).Suggestion, Does.Match(@"^Meilleur tour \d:\d\d\.\d{3} au tour \d+"));
-        Assert.That(RaceBriefing.Prepare(_snap, "pire tour", _extras).Suggestion, Does.Match(@"^Pire tour \d:\d\d\.\d{3} au tour \d+, à [\d,]+ s de votre meilleur"));
+        Assert.That(RaceBriefing.Prepare(_snap, "pire tour", _extras).Suggestion, Does.Match(@"^Pire tour \d:\d\d\.\d{3} au tour \d+, à [\d,]+ s de ton meilleur"));
     }
 
     [Test]
@@ -189,7 +189,7 @@ public class BriefingTests
         BriefingResult r = RaceBriefing.Prepare(snap, "quelle est ma vmax comparée aux autres", new BriefingExtras { Speeds = speeds });
         TestContext.Out.WriteLine(r.Suggestion);
         Assert.That(r.Suggestion, Does.StartWith("Vitesse max 200 km/h au tour 4, en moyenne 198 km/h ; le plus rapide de la catégorie est le numéro"));
-        Assert.That(r.Suggestion, Does.Contain("sortie du virage 6").Or.Contain("sortez moins vite du virage 6"));
+        Assert.That(r.Suggestion, Does.Contain("sortie du virage 6").Or.Contain("sors moins vite du virage 6"));
         Assert.That(r.Proposal?.Kind, Is.EqualTo("pilotage"));
     }
 
@@ -236,7 +236,7 @@ public class BriefingTests
         TestContext.Out.WriteLine(r.Text);
         Assert.That(r.Kind, Is.EqualTo("conseil"));
         Assert.That(r.Text, Does.Contain("roue intérieure au virage 1"));
-        Assert.That(r.Text, Does.Contain("relâchez le frein plus tôt"));
+        Assert.That(r.Text, Does.Contain("relâche le frein plus tôt"));
         Assert.That(r.Category, Is.EqualTo(ExchangeCategorizer.RaceSettings));
     }
 
@@ -264,7 +264,7 @@ public class BriefingTests
         var memory = new RaceMemory();
         RadioDialog.Feedback("l'arrière glisse en sortie", memory, Gt3(), _snap, 3);
         DialogReply yes = RadioDialog.FollowUp("vas-y", memory, Gt3(), 3);
-        Assert.That(yes.Text, Does.StartWith("Bien reçu : montez le TC"));
+        Assert.That(yes.Text, Does.StartWith("Bien reçu : monte le TC"));
         DialogReply more = RadioDialog.FollowUp("autre chose ?", memory, Gt3(), 3);
         TestContext.Out.WriteLine(more.Text);
         Assert.That(more.Text, Does.StartWith("Sinon"));
@@ -372,7 +372,7 @@ public class BriefingTests
 
         string where = RaceBriefing.Prepare(snap, "je déploie où ?", _extras).Suggestion;
         TestContext.Out.WriteLine(where);
-        Assert.That(where, Does.StartWith("Déployez dans").Or.StartWith("Je n'ai pas encore le profil"));
+        Assert.That(where, Does.StartWith("Déploie dans").Or.StartWith("Je n'ai pas encore le profil"));
 
         RaceSnapshot noHybrid = Clone(_snap);
         noHybrid.Player.Hybrid = null;
@@ -389,7 +389,7 @@ public class BriefingTests
         snap.SessionType = "Race";
         snap.Player.LapsRemaining = 0.8;
         snap.Player.Hybrid = new HybridDto { ChargePct = 60, Mode = "Attack", System = "F1" };
-        Assert.That(HybridAdvisor.Proactive(snap, me)?.Text, Does.StartWith("Dernier tour : videz la batterie"));
+        Assert.That(HybridAdvisor.Proactive(snap, me)?.Text, Does.StartWith("Dernier tour : vide la batterie"));
     }
 
     [Test]

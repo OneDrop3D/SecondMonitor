@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { usePoll } from '../../live';
 import { clock, compass, delta, lapTime, num } from '../../format';
 import { playBase64Wav } from '../../audio';
+import { readPref, writePref } from '../../prefs';
 import type { MicroSectorReport, RaceEvent, WeatherReport } from '../../types';
 import type { RadioMessage } from '../../radio';
 import { TrackMap } from '../TrackMap';
@@ -16,12 +17,6 @@ import { registerBlock, type BlockProps } from './registry';
  * la taille par défaut est en colonnes (sur 12, ou 6 sur tablette) et en rangées de 36 px.
  */
 
-function readPref(key: string, fallback: string) {
-  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
-}
-function writePref(key: string, value: string) {
-  try { localStorage.setItem(key, value); } catch { /* stockage indisponible */ }
-}
 
 // ───────────────────────────── Classement ─────────────────────────────
 
@@ -67,7 +62,7 @@ const timeOf = (iso: string) => {
   const d = new Date(iso);
   return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 };
-const roleLabel = (from: string | null | undefined) => (from === 'pilote' ? 'Pilote' : from?.startsWith('ingénieur IA') ? 'Ingénieur IA' : 'Ingénieur');
+const roleLabel = (from: string | null | undefined) => (from?.startsWith('pilote') ? 'Pilote' : from?.startsWith('ingénieur IA') ? 'Ingénieur IA' : 'Ingénieur');
 
 function speakLocally(text: string) {
   try {
@@ -90,7 +85,7 @@ export function RadioFeed({ messages, limit = 30 }: { messages: RadioMessage[]; 
         return (
           <li key={`${m.at}-${i}`} className={`rd-item ${m.proactive ? 'proactive' : ''}`}>
             <div className="rd-head">
-              <span className={`rd-avatar ${said ? (m.from === 'pilote' ? 'pilot' : 'eng') : 'ai'}`} aria-hidden>{said ? (m.from === 'pilote' ? 'P' : 'I') : 'IA'}</span>
+              <span className={`rd-avatar ${said ? (m.from?.startsWith('pilote') ? 'pilot' : 'eng') : 'ai'}`} aria-hidden>{said ? (m.from?.startsWith('pilote') ? 'P' : 'I') : 'IA'}</span>
               <span className="rd-who">{said ? `${roleLabel(m.from)} → ingénieur IA` : m.proactive ? 'Ingénieur IA (spontané)' : roleLabel(m.from)}</span>
               <span className="rd-time tnum">{timeOf(m.at)}</span>
               {m.audioBase64

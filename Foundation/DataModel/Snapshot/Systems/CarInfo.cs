@@ -90,5 +90,9 @@
 
         [ProtoMember(26)]
         public HybridSystem HybridSystem { get; set; } = new();
+
+        /// <summary>Réglages en roulant, état du moteur et règlement (SecondMonitor multiplateforme).</summary>
+        [ProtoMember(27)]
+        public CarControls Controls { get; set; } = new();
     }
 }

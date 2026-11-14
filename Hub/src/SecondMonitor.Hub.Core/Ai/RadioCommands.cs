@@ -91,6 +91,57 @@ namespace SecondMonitor.Hub.Core.Ai
             return new ModelSwitch(role, scored[0].Model.Id, close.Count > 1 ? close : Array.Empty<string>());
         }
 
+        /// <summary>Interrupteur dit à la radio : « coupe les limites de piste », « remets les alertes », « active le menu des stands ».</summary>
+        public sealed record Toggle(string Key, bool On);
+
+        private static readonly Regex OffVerb = new(@"\b(coupe|couper|coupes|desactive|desactiver|desactives|arrete|arreter|stop|stoppe|enleve|enlever|retire|retirer|supprime|plus de|mute|eteins|eteindre)\b", RegexOptions.Compiled);
+        private static readonly Regex OnVerb = new(@"\b(remets|remet|remettre|reactive|reactiver|active|activer|actives|rallume|rallumer|allume|allumer|redonne|relance)\b", RegexOptions.Compiled);
+
+        /// <summary>
+        /// « Coupe les alertes de limites de piste », « plus de track limits », « remets les limites de piste », « coupe les alertes de pilotage »,
+        /// « active le menu des stands automatique », « désactive le menu des stands ». Null si ce n'est pas un interrupteur.
+        /// </summary>
+        public static Toggle ParseToggle(string text)
+        {
+            string t = Normalize(text);
+            if (t.Split(' ').Length > 14)
+            {
+                return null;
+            }
+
+            // Mode « thinking » : « active le mode thinking », « coupe le raisonnement », « réfléchis plus », « réponds plus vite ».
+            if (Regex.IsMatch(t, @"\breflechis (plus|davantage|a fond|bien|mieux)\b|\bprends le temps de reflechir\b"))
+            {
+                return new Toggle("thinking", true);
+            }
+
+            if (Regex.IsMatch(t, @"\b(reflechis moins|reponds plus vite|reponses? (plus )?rapides?|plus vite les reponses)\b"))
+            {
+                return new Toggle("thinking", false);
+            }
+
+            bool off = OffVerb.IsMatch(t);
+            bool on = !off && OnVerb.IsMatch(t);
+            if (!off && !on)
+            {
+                return null;
+            }
+
+            string key = Regex.IsMatch(t, @"\b(thinking|think|thinkin|raisonnement|mode (de )?reflexion|reflexion approfondie|mode reflechi)\b") ? "thinking"
+                : Regex.IsMatch(t, @"\b(limites? de piste|limites?|tracks? limits?|track limit)\b") ? "limites"
+                : Regex.IsMatch(t, @"\bmenu (des|du|de) stands?\b|\bstands? auto\w*|\bmenu stand\b") ? "stand"
+                : Regex.IsMatch(t, @"\b(alertes?|annonces?)\b") ? "alertes"
+                : null;
+            return key == null ? null : new Toggle(key, on);
+        }
+
+        /// <summary>« Teste le menu des stands », « essaie l'API » : lecture seule du menu des stands par le collecteur.</summary>
+        public static bool IsPitMenuTest(string text)
+        {
+            string t = Normalize(text);
+            return Regex.IsMatch(t, @"\b(teste|tester|essaie|essaye|essayer|verifie|verifier|lis|lire)\b.*\b(api|menu (des|du) stands?)\b");
+        }
+
         public static string RoleLabel(string role) => role switch
         {
             "speak" => "la voix",
@@ -109,20 +160,47 @@ namespace SecondMonitor.Hub.Core.Ai
 
             if (Regex.IsMatch(t, @"^(merci|merci beaucoup|merci bien|thanks|top merci|super merci)\b"))
             {
-                return "Avec plaisir, je reste à l'écoute.";
+                return "Copy, je reste à l'écoute.";
             }
 
             if (Regex.IsMatch(t, @"^(ok|okay|d accord|recu|bien recu|compris|c est note|parfait|super|top|nickel|ca marche)$"))
             {
-                return "Reçu.";
+                return "Copy.";
             }
 
             if (Regex.IsMatch(t, @"^(radio check|test radio|tu m entends|vous m entendez|allo)\b"))
             {
-                return "Je vous reçois cinq sur cinq.";
+                return "Radio check : je te reçois cinq sur cinq.";
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// « Quelle heure il est ? » : l'heure de l'ordinateur, jamais celle inventée par le modèle. Null si ce n'est pas la question.
+        /// La phrase peut contenir autre chose (« … Quelle heure il est ? … ») : seule la question de l'heure est reconnue.
+        /// </summary>
+        public static string TimeAnswer(string text, DateTime now)
+        {
+            string t = Normalize(text);
+            if (!Regex.IsMatch(t, @"\b(quelle heure|il est quelle heure|l heure qu il est|t as l heure|tu as l heure|vous avez l heure|donne moi l heure|c est quelle heure)\b"))
+            {
+                return null;
+            }
+
+            return now.Minute == 0 ? $"Il est {now.Hour} h." : $"Il est {now.Hour} h {now.Minute:00}.";
+        }
+
+        /// <summary>Dictée ratée (« C'est une cause pour. ») : ni sujet de course, ni question, ni retour sur la voiture, quelques mots seulement.</summary>
+        public static bool IsUnclear(string question)
+        {
+            string t = Normalize(question);
+            int words = t.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+            return words is > 0 and <= 8
+                && RaceBriefing.DetectTopics(question).Count == 0
+                && !IsQuestion(question)
+                && !IsFeedback(question)
+                && SetupAdvisor.DetectSymptom(question) == null;
         }
 
         /// <summary>Réponse oui / non du pilote à une question de l'IA : true, false ou null (ni l'un ni l'autre).</summary>

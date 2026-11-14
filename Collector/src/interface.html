@@ -14,7 +14,7 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--page); color: var(--text); font: 13px/1.45 var(--font); height: 100%; }
-  body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; height: 100vh; overflow: hidden; }
+  body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; height: 100vh; overflow-x: hidden; overflow-y: auto; }
   header { display: flex; align-items: center; gap: 10px; }
   .logo { width: 30px; height: 30px; border-radius: var(--radius); display: grid; place-items: center; font-weight: 800; font-size: 12px;
           background: linear-gradient(135deg, #2f80d8, #174a85); color: #fff; flex: none; }
@@ -79,6 +79,16 @@
   .maj-bar { height: 4px; border-radius: 2px; background: var(--panel-2); margin-top: 5px; overflow: hidden; display: none; }
   .maj-bar > i { display: block; height: 100%; width: 0; background: var(--accent); }
   pre { margin: 0; padding: 8px 10px; font: 12px/1.5 var(--mono); color: #cfcfcf; white-space: pre-wrap; overflow-y: auto; height: 100%; }
+  .sum-detail { font-weight: 400; color: var(--muted); margin-left: 6px; }
+  .select { flex: 1; min-width: 0; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 5px 6px; font: inherit; }
+  .select:disabled, .btn:disabled { opacity: .5; cursor: default; }
+  .ri-ligne { margin: 2px 0 2px 27px; flex-wrap: nowrap; }
+  .ri-ligne + .hint, .niveau { margin-left: 27px; }
+  .niveau { height: 5px; border-radius: 3px; background: var(--panel-2); overflow: hidden; margin-top: 4px; display: none; }
+  .niveau.show { display: block; }
+  .niveau > i { display: block; height: 100%; width: 0; background: var(--good); transition: width .08s linear; }
+  .ri-etat { margin-top: 6px; }
+  .ri-etat.rec { color: var(--bad); font-weight: 650; }
 </style>
 </head>
 <body>
@@ -126,6 +136,38 @@
       <div class="hint">SecondMonitor trouve ce PC tout seul sur le réseau local. Sinon, saisissez cette adresse dans SecondMonitor (bouton « Connexion »).</div>
     </div>
   </section>
+
+  <details id="radio-ing">
+    <summary>Radio de l'ingénieur<span class="sum-detail" id="ri-resume"></span></summary>
+    <div class="body">
+      <label class="switch"><input type="checkbox" id="ri-entendre"><span>Entendre l'ingénieur sur ce PC</span></label>
+      <div class="row ri-ligne">
+        <select class="select" id="ri-sortie" aria-label="Sortie audio"></select>
+        <button class="btn" id="ri-tester-sortie">Tester</button>
+      </div>
+      <div class="hint" id="ri-sortie-aide"></div>
+      <label class="switch" style="margin-top:4px"><input type="checkbox" id="ri-parler"><span>Parler avec le micro de ce PC (bouton radio)</span></label>
+      <div class="row ri-ligne">
+        <select class="select" id="ri-micro" aria-label="Micro"></select>
+        <button class="btn" id="ri-tester-micro">Tester</button>
+      </div>
+      <div class="niveau" id="ri-niveau"><i id="ri-niveau-barre"></i></div>
+      <div class="hint" id="ri-micro-aide"></div>
+      <div class="row" style="margin-top:6px">
+        <button class="btn" id="ri-appui">Appuyer pour parler</button>
+        <button class="btn" id="ri-noms">Afficher les noms des appareils</button>
+      </div>
+      <div class="hint ri-etat" id="ri-etat"></div>
+      <label class="switch" style="margin-top:8px"><input type="checkbox" id="stand-autoriser"><span>Laisser SecondMonitor régler le menu des stands de Le Mans Ultimate</span></label>
+      <div class="row ri-ligne">
+        <button class="btn" id="stand-tester">Tester l'API du menu des stands</button>
+      </div>
+      <div class="hint" id="stand-aide">Quand l'ingénieur l'a activé et que vous demandez « softs neufs » ou « la réparation », il règle le menu des stands du jeu (API locale de LMU, port 6397). Le test lit seulement le menu, sans rien changer : faites-le en piste, il affiche toutes les lignes du menu et leurs choix. Les réponses complètes du jeu sont gardées dans le fichier menu-stands-lmu.txt du dossier du collecteur.</div>
+      <div class="hint" id="stand-resultat" style="white-space:pre-line;user-select:text;max-height:320px;overflow:auto"></div>
+      <label class="switch" style="margin-top:8px"><input type="checkbox" id="musique-deezer"><span>Musique Deezer de SecondMonitor sur ce PC (dans le casque)</span></label>
+      <div class="hint" id="musique-aide">SecondMonitor cherche et commande ; la playlist joue dans l'application Deezer de ce PC, et se met en pause quand l'ingénieur parle. Dans SecondMonitor : Réglages › Musique › « Musique sur : le PC de jeu ».</div>
+    </div>
+  </details>
 
   <details id="options">
     <summary>Réglages</summary>
@@ -224,6 +266,13 @@
     $('autostart-label').textContent = e.systeme === 'windows' ? 'Lancer avec Windows (fenêtre réduite)' : 'Lancer à l\'ouverture de session (fenêtre réduite)';
     $('demo').checked = e.demo;
     $('diagnostic').checked = e.diagnostic;
+    $('stand-autoriser').checked = !!e.menuStands;
+    if (e.musique) {
+      $('musique-deezer').checked = !!e.musique.active;
+      $('musique-deezer').disabled = !e.musique.possible;
+      if (!e.musique.possible) $('musique-aide').textContent = 'Musique Deezer pilotable seulement sous Windows pour l\'instant.';
+    }
+    if (e.menuStandsDernier && !$('stand-resultat').textContent) $('stand-resultat').textContent = e.menuStandsDernier;
     $('mesures').classList.toggle('show', !!e.mesures);
     $('mesures').textContent = e.mesures || '';
     $('btn-visualiseur').style.display = e.visualiseur ? '' : 'none';
@@ -237,6 +286,7 @@
       $('btn-radio-retirer').style.display = r.bouton === 'aucun' ? 'none' : '';
       if (r.apprentissage) $('options').open = true;
     }
+    if (e.radioIng) radioEtat(e.radioIng);
   }
 
   // Mise à jour : un seul bouton « Installer » (téléchargement vérifié, puis le collecteur se ferme et se rouvre tout seul).
@@ -290,18 +340,444 @@
     else if (m.type === 'journal') { lignes.push(m.ligne); if (lignes.length > 300) lignes.shift(); journal(); }
     else if (m.type === 'maj') majVue(m.maj);
     else if (m.type === 'relancer') { $('relancer').classList.toggle('show', m.necessaire); $('options').open = true; }
+    else if (m.type.startsWith('radio-')) radioMessage(m);
+    else if (m.type === 'stand-resultat') { $('stand-resultat').textContent = (m.ok ? '✓ ' : '✗ ') + m.texte; }
   });
 
   document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => send('qualite', b.dataset.q)));
   $('autostart').addEventListener('change', (e) => send('autostart', e.target.checked));
   $('demo').addEventListener('change', (e) => send('demo', e.target.checked));
   $('diagnostic').addEventListener('change', (e) => send('diagnostic', e.target.checked));
+  $('stand-autoriser').addEventListener('change', (e) => send('stand-autoriser', e.target.checked));
+  $('musique-deezer').addEventListener('change', (e) => send('musique-deezer', e.target.checked));
+  $('stand-tester').addEventListener('click', () => { $('stand-resultat').textContent = 'Lecture du menu des stands…'; send('stand-tester'); });
   $('btn-relancer').addEventListener('click', () => send('relancer'));
   $('btn-dossier').addEventListener('click', () => send('dossier'));
   $('btn-visualiseur').addEventListener('click', () => send('visualiseur'));
   $('btn-radio-choisir').addEventListener('click', () => send('radio-choisir'));
   $('btn-radio-retirer').addEventListener('click', () => send('radio-retirer'));
   $('advice-btn').addEventListener('click', (e) => { const a = e.target.dataset.action; if (a) send(a); });
+
+  // ───── Radio de l'ingénieur sur ce PC : sa voix dans le casque du pilote, le micro de ce PC ─────
+  // La voix, l'ordre de la couper et les appuis radio arrivent de SecondMonitor par le collecteur (EngineerLink.cs) ;
+  // le son passe par cette page (sortie et micro choisis). Le micro exige une page sûre (servie sur http://127.0.0.1).
+  const media = navigator.mediaDevices;
+  const micOk = !!(media && media.getUserMedia) && window.isSecureContext && typeof MediaRecorder !== 'undefined';
+  const sortieOk = typeof HTMLMediaElement.prototype.setSinkId === 'function';
+  const ri = { reglage: null, cle: '', voixSur: 'pc', relie: false, lien: '', message: '', phase: 'idle', rec: null, courant: null, parleJusqua: 0, sorties: [], micros: [], nommes: false, test: null };
+  const cleReglage = (r) => [r.entendre, r.sortie, r.sortieNom, r.parler, r.micro, r.microNom].join('|');
+
+  /** Appareil choisi : par son identifiant, sinon par son nom (l'identifiant peut changer), sinon tel quel. */
+  function retrouver(liste, id, nom) {
+    if (!id) return '';
+    if (liste.some((d) => d.deviceId === id)) return id;
+    const d = nom && liste.find((x) => x.label === nom);
+    return d ? d.deviceId : id;
+  }
+
+  function remplir(sel, liste, id, nom, defaut, prefixe) {
+    const choisi = retrouver(liste, id, nom);
+    sel.textContent = '';
+    const option = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
+    option('', defaut);
+    liste.forEach((d, i) => option(d.deviceId, d.label || `${prefixe} ${i + 1}`));
+    if (choisi && !liste.some((d) => d.deviceId === choisi)) option(choisi, nom || `${prefixe} choisi (débranché ?)`);
+    sel.value = choisi;
+  }
+
+  function riRemplir() {
+    const r = ri.reglage || {};
+    remplir($('ri-sortie'), ri.sorties, r.sortie, r.sortieNom, 'Sortie par défaut du système', 'Sortie');
+    remplir($('ri-micro'), ri.micros, r.micro, r.microNom, 'Micro par défaut du système', 'Micro');
+    riAffiche();
+  }
+
+  /** Micros et sorties de ce PC. Leurs noms n'apparaissent qu'une fois le micro autorisé (demander = true). */
+  async function appareils(demander) {
+    if (!media || !media.enumerateDevices) { riAffiche(); return; }
+    if (demander && micOk) {
+      try { const s = await media.getUserMedia({ audio: true }); s.getTracks().forEach((t) => t.stop()); }
+      catch (err) { riInfo('Micro refusé ou absent : ' + err.message); }
+    }
+    try {
+      const tous = await media.enumerateDevices();
+      ri.micros = tous.filter((d) => d.kind === 'audioinput' && d.deviceId && d.deviceId !== 'default');
+      ri.sorties = tous.filter((d) => d.kind === 'audiooutput' && d.deviceId && d.deviceId !== 'default');
+      ri.nommes = tous.some((d) => d.kind === 'audioinput' && d.label);
+    } catch (err) {
+      riInfo('Appareils audio illisibles : ' + err.message);
+    }
+    riRemplir();
+  }
+
+  function riReglage() {
+    const s = $('ri-sortie').value, m = $('ri-micro').value, r = ri.reglage || {};
+    const nom = (liste, id, ancien) => { const d = liste.find((x) => x.deviceId === id); return !id ? '' : d && d.label ? d.label : ancien || ''; };
+    return {
+      entendre: $('ri-entendre').checked, sortie: s, sortieNom: nom(ri.sorties, s, r.sortieNom),
+      parler: $('ri-parler').checked, micro: m, microNom: nom(ri.micros, m, r.microNom),
+    };
+  }
+
+  function riEnvoyerReglage() {
+    const r = riReglage();
+    ri.reglage = Object.assign({}, ri.reglage || {}, r);
+    ri.cle = cleReglage(ri.reglage);
+    send('radio-reglage', r);
+    riAffiche();
+  }
+
+  /** État envoyé par le collecteur (réglage enregistré, liaison avec SecondMonitor). */
+  function radioEtat(r) {
+    ri.relie = r.relie;
+    ri.lien = r.lien || '';
+    ri.voixSur = r.voixSur || ri.voixSur;
+    if (cleReglage(r) !== ri.cle) {
+      const premier = !ri.reglage;
+      ri.reglage = r;
+      ri.cle = cleReglage(r);
+      $('ri-entendre').checked = r.entendre;
+      $('ri-parler').checked = r.parler;
+      riRemplir();
+      // Un appareil est choisi : sans autorisation du micro, la vue web ne donne ni leurs noms ni leurs identifiants.
+      if (premier && micOk && (r.parler || r.sortie || r.micro)) appareils(true);
+      if (premier && (r.entendre || r.parler)) $('radio-ing').open = true;
+    }
+    riAffiche();
+  }
+
+  function riAffiche() {
+    const r = ri.reglage || {};
+    $('ri-sortie').disabled = !sortieOk;
+    $('ri-micro').disabled = !micOk;
+    $('ri-tester-micro').disabled = !micOk;
+    $('ri-parler').disabled = !micOk && !r.parler;
+    $('ri-appui').style.display = r.parler && micOk ? '' : 'none';
+    $('ri-appui').textContent = ri.phase === 'recording' ? '■ Envoyer' : ri.phase === 'thinking' ? 'Couper' : 'Appuyer pour parler';
+    $('ri-noms').style.display = micOk && !ri.nommes ? '' : 'none';
+    $('ri-sortie-aide').textContent = !sortieOk
+      ? 'Sur ce système, la fenêtre ne peut pas choisir la sortie : la voix sort sur la sortie par défaut (à régler dans les réglages du son).'
+      : r.entendre && ri.voixSur === 'ecrans' ? 'SecondMonitor garde la voix sur ses écrans (Réglages › Voix de l\'ingénieur) : rien ne sort ici pour l\'instant.' : '';
+    $('ri-micro-aide').textContent = !micOk
+      ? 'Micro indisponible dans cette fenêtre : le bouton radio continue d\'utiliser le micro de l\'écran de SecondMonitor.'
+      : r.parler ? 'Bouton radio (Réglages ci-dessous) ou ClickDeck : un appui pour parler, un second pour envoyer ; un appui pendant que l\'ingénieur parle le coupe.' : '';
+    const quoi = [r.entendre && 'voix', r.parler && micOk && 'micro'].filter(Boolean).join(' et ');
+    $('ri-resume').textContent = quoi ? `— ${quoi} sur ce PC${ri.relie ? '' : ' (en attente de SecondMonitor)'}` : '— sur l\'ordinateur de SecondMonitor';
+    $('ri-etat').textContent = ri.phase === 'recording' ? '● Je vous écoute… appuyez de nouveau pour envoyer.'
+      : ri.phase === 'thinking' ? 'Envoyé à l\'ingénieur, il réfléchit…' : ri.message || ri.lien;
+    $('ri-etat').classList.toggle('rec', ri.phase === 'recording');
+  }
+
+  function riInfo(texte) {
+    ri.message = texte;
+    riAffiche();
+    clearTimeout(ri.infoMinuterie);
+    ri.infoMinuterie = setTimeout(() => { ri.message = ''; riAffiche(); }, 8000);
+  }
+
+  function riErreur(texte) {
+    riInfo(texte);
+    send('radio-journal', texte);
+  }
+
+  // ── Voix de l'ingénieur ──
+  const sortieChoisie = () => { const r = ri.reglage || {}; return sortieOk ? retrouver(ri.sorties, r.sortie, r.sortieNom) : ''; };
+  async function versSortie(el) {
+    const id = sortieChoisie();
+    if (id) { try { await el.setSinkId(id); } catch (err) { /* sortie débranchée : sortie par défaut */ } }
+  }
+
+  const parle = () => !!ri.courant && !ri.courant.paused && !ri.courant.ended;
+
+  function arreterVoix() {
+    if (ri.courant) ri.courant.pause();
+    ri.courant = null;
+    ri.parleJusqua = 0;
+  }
+
+  async function jouerVoix(b64) {
+    arreterVoix();
+    const a = new Audio('data:audio/wav;base64,' + b64);
+    ri.courant = a;
+    // Musique Deezer sur ce PC : SecondMonitor la met en pause pendant la voix, puis la relance.
+    a.addEventListener('playing', () => send('voix-joue', true));
+    for (const ev of ['ended', 'pause', 'error']) a.addEventListener(ev, () => send('voix-joue', false));
+    await versSortie(a);
+    if (ri.courant !== a) return;
+    try { await a.play(); } catch (err) { riErreur('lecture de la voix impossible (' + err.message + ').'); }
+  }
+
+  /** Durée d'un WAV en base64 (pour savoir que l'ingénieur parle encore quand sa voix sort ailleurs). */
+  function dureeWav(b64) {
+    try {
+      const t = atob(b64.slice(0, 64));
+      const debit = t.charCodeAt(28) | t.charCodeAt(29) << 8 | t.charCodeAt(30) << 16 | t.charCodeAt(31) << 24;
+      return debit > 0 ? (b64.length * 3 / 4 - 44) / debit : 5;
+    } catch (err) {
+      return 5;
+    }
+  }
+
+  let bipCtx = null;
+  /** Bips radio (début et fin d'enregistrement, test) sur la sortie choisie. */
+  async function bip(frequences, ms) {
+    try {
+      bipCtx = bipCtx || new AudioContext();
+      if (bipCtx.state === 'suspended') await bipCtx.resume();
+      let sortie = bipCtx.destination, el = null;
+      if (sortieOk && sortieChoisie()) {
+        const dest = bipCtx.createMediaStreamDestination();
+        el = new Audio();
+        el.srcObject = dest.stream;
+        await versSortie(el);
+        await el.play().catch(() => {});
+        sortie = dest;
+      }
+      let t = bipCtx.currentTime + 0.05;
+      for (const f of frequences) {
+        const o = bipCtx.createOscillator(), g = bipCtx.createGain();
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.2, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
+        o.connect(g).connect(sortie);
+        o.start(t);
+        o.stop(t + ms / 1000 + 0.02);
+        t += ms / 1000 + 0.07;
+      }
+      if (el) setTimeout(() => el.pause(), (t - bipCtx.currentTime) * 1000 + 300);
+    } catch (err) {
+      /* audio indisponible */
+    }
+  }
+
+  // ── Micro de ce PC : un appui pour parler, un second pour envoyer (comme l'écran de SecondMonitor) ──
+  function phase(p) {
+    ri.phase = p;
+    send('radio-phase', p);
+    riAffiche();
+  }
+
+  async function ouvrirMicro() {
+    const r = ri.reglage || {};
+    const id = retrouver(ri.micros, r.micro, r.microNom);
+    const c = { echoCancellation: true, noiseSuppression: true, channelCount: 1 };
+    if (id) c.deviceId = { exact: id };
+    try {
+      return await media.getUserMedia({ audio: c });
+    } catch (err) {
+      if (!id) throw err;
+      delete c.deviceId; // micro choisi débranché : micro par défaut
+      return await media.getUserMedia({ audio: c });
+    }
+  }
+
+  async function demarrer() {
+    if (ri.phase !== 'idle' || !micOk) return;
+    ri.phase = 'opening';
+    let flux;
+    try {
+      flux = await ouvrirMicro();
+    } catch (err) {
+      ri.phase = 'idle';
+      riErreur('micro indisponible (' + err.message + ').');
+      return;
+    }
+    const rec = { flux, morceaux: [], debut: Date.now(), voix: 0, fond: 1, ctx: null, minuterie: 0, mr: new MediaRecorder(flux) };
+    rec.mr.ondataavailable = (ev) => { if (ev.data.size > 0) rec.morceaux.push(ev.data); };
+    rec.mr.start();
+    detecterVoix(rec);
+    ri.rec = rec;
+    phase('recording');
+    bip([880], 90);
+    setTimeout(() => { if (ri.rec === rec && rec.voix < 3) annuler(); }, 6000); // rien dit : c'était pour couper la radio
+    setTimeout(() => { if (ri.rec === rec) envoyer(); }, 30000); // sécurité
+  }
+
+  /** Détection de voix très simple : énergie du signal comparée au bruit de fond mesuré au début. */
+  function detecterVoix(rec) {
+    try {
+      rec.ctx = new AudioContext();
+      const an = rec.ctx.createAnalyser();
+      an.fftSize = 1024;
+      rec.ctx.createMediaStreamSource(rec.flux).connect(an);
+      const buf = new Float32Array(an.fftSize);
+      let n = 0;
+      rec.minuterie = setInterval(() => {
+        an.getFloatTimeDomainData(buf);
+        let s = 0;
+        for (const v of buf) s += v * v;
+        const rms = Math.sqrt(s / buf.length);
+        if (++n <= 3) { rec.fond = Math.min(rec.fond, rms); return; }
+        if (rms > Math.max(0.015, rec.fond * 3.5)) rec.voix++;
+      }, 80);
+    } catch (err) {
+      rec.voix = 99; // pas d'analyse possible : on considère qu'il y a de la voix
+    }
+  }
+
+  function fermer(rec) {
+    clearInterval(rec.minuterie);
+    if (rec.ctx) rec.ctx.close().catch(() => {});
+    rec.flux.getTracks().forEach((t) => t.stop());
+  }
+
+  /** Rien n'a été dit : on referme sans rien envoyer. */
+  function annuler() {
+    const rec = ri.rec;
+    if (!rec) return;
+    ri.rec = null;
+    try { rec.mr.stop(); } catch (err) { /* déjà arrêté */ }
+    fermer(rec);
+    phase('idle');
+    bip([440], 70);
+  }
+
+  async function envoyer() {
+    const rec = ri.rec;
+    if (!rec) return;
+    if (Date.now() - rec.debut < 700 || rec.voix < 3) { annuler(); return; }
+    ri.rec = null;
+    phase('thinking');
+    bip([660], 90);
+    try {
+      await new Promise((ok) => { rec.mr.onstop = ok; rec.mr.stop(); });
+      fermer(rec);
+      const wav = await versWav16k(new Blob(rec.morceaux, { type: rec.mr.mimeType }));
+      if (wav.size < 44 + 16000 * 2 * 0.25) { phase('idle'); return; }
+      send('radio-envoyer', await enBase64(wav));
+      clearTimeout(ri.attente);
+      ri.attente = setTimeout(() => { if (ri.phase === 'thinking') phase('idle'); }, 95000);
+    } catch (err) {
+      fermer(rec);
+      riErreur('enregistrement illisible (' + err.message + ').');
+      phase('idle');
+    }
+  }
+
+  /** Coupe l'ingénieur : ici tout de suite, et partout via SecondMonitor (y compris une réponse en préparation). */
+  function couper() {
+    arreterVoix();
+    send('radio-couper');
+  }
+
+  /** Appui radio (bouton du PC de jeu, ClickDeck, ou le bouton de cette carte). */
+  function appui() {
+    if (ri.phase === 'recording') { envoyer(); return; }
+    if (parle() || Date.now() < ri.parleJusqua || ri.phase === 'thinking') couper();
+    if (ri.phase === 'idle') demarrer();
+  }
+
+  /** WAV mono 16 kHz (format attendu par la transcription d'Ollama). */
+  async function versWav16k(blob) {
+    const ctx = new AudioContext();
+    const decode = await ctx.decodeAudioData(await blob.arrayBuffer());
+    await ctx.close();
+    const rate = 16000;
+    const hors = new OfflineAudioContext(1, Math.max(1, Math.ceil(decode.duration * rate)), rate);
+    const src = hors.createBufferSource();
+    src.buffer = decode;
+    src.connect(hors.destination);
+    src.start();
+    const rendu = await hors.startRendering();
+    const ech = rendu.getChannelData(0);
+    const buffer = new ArrayBuffer(44 + ech.length * 2);
+    const v = new DataView(buffer);
+    const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    str(0, 'RIFF'); v.setUint32(4, 36 + ech.length * 2, true); str(8, 'WAVE'); str(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true);
+    v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, 'data');
+    v.setUint32(40, ech.length * 2, true);
+    for (let i = 0; i < ech.length; i++) {
+      const s = Math.max(-1, Math.min(1, ech[i]));
+      v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    return new Blob([buffer], { type: 'audio/wav' });
+  }
+
+  const enBase64 = (blob) => new Promise((ok, ko) => {
+    const lecteur = new FileReader();
+    lecteur.onload = () => ok(String(lecteur.result).split(',')[1] || '');
+    lecteur.onerror = () => ko(lecteur.error);
+    lecteur.readAsDataURL(blob);
+  });
+
+  // ── Tests ──
+  function finTestMicro() {
+    const t = ri.test;
+    if (!t) return;
+    ri.test = null;
+    clearInterval(t.minuterie);
+    clearTimeout(t.fin);
+    t.ctx.close().catch(() => {});
+    t.flux.getTracks().forEach((p) => p.stop());
+    $('ri-niveau').classList.remove('show');
+    $('ri-tester-micro').textContent = 'Tester';
+  }
+
+  async function testerMicro() {
+    if (ri.test) { finTestMicro(); return; }
+    try {
+      const flux = await ouvrirMicro();
+      const ctx = new AudioContext();
+      const an = ctx.createAnalyser();
+      an.fftSize = 1024;
+      ctx.createMediaStreamSource(flux).connect(an);
+      const buf = new Float32Array(an.fftSize);
+      const t = { flux, ctx };
+      t.minuterie = setInterval(() => {
+        an.getFloatTimeDomainData(buf);
+        let s = 0;
+        for (const v of buf) s += v * v;
+        $('ri-niveau-barre').style.width = Math.min(100, Math.sqrt(s / buf.length) * 500) + '%';
+      }, 60);
+      t.fin = setTimeout(finTestMicro, 8000);
+      ri.test = t;
+      $('ri-niveau').classList.add('show');
+      $('ri-tester-micro').textContent = 'Arrêter';
+      const nom = flux.getAudioTracks()[0] ? flux.getAudioTracks()[0].label : '';
+      riInfo(`Parlez : la barre verte doit bouger${nom ? ` (micro « ${nom} »)` : ''}.`);
+      if (!ri.nommes) appareils(false);
+    } catch (err) {
+      riErreur('micro indisponible (' + err.message + ').');
+    }
+  }
+
+  $('ri-tester-sortie').addEventListener('click', () => {
+    const sel = $('ri-sortie');
+    bip([660, 880, 660], 140);
+    riInfo(`Trois bips sur « ${sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : 'la sortie par défaut'} ».`);
+  });
+  $('ri-tester-micro').addEventListener('click', testerMicro);
+  $('ri-entendre').addEventListener('change', riEnvoyerReglage);
+  $('ri-parler').addEventListener('change', (e) => { riEnvoyerReglage(); if (e.target.checked && !ri.nommes) appareils(true); });
+  $('ri-sortie').addEventListener('change', riEnvoyerReglage);
+  $('ri-micro').addEventListener('change', () => { riEnvoyerReglage(); if (ri.test) { finTestMicro(); testerMicro(); } });
+  $('ri-noms').addEventListener('click', () => appareils(true));
+  $('ri-appui').addEventListener('click', appui);
+  if (media && media.addEventListener) media.addEventListener('devicechange', () => appareils(false));
+
+  function radioMessage(m) {
+    if (m.type === 'radio-voix') {
+      const r = ri.reglage || {};
+      if (r.entendre && ri.voixSur !== 'ecrans') jouerVoix(m.audio);
+      else ri.parleJusqua = Date.now() + dureeWav(m.audio) * 1000;
+    } else if (m.type === 'radio-stop') {
+      arreterVoix();
+    } else if (m.type === 'radio-appui') {
+      appui();
+    } else if (m.type === 'radio-hub') {
+      ri.voixSur = m.voixSur;
+      riAffiche();
+    } else if (m.type === 'radio-envoye') {
+      clearTimeout(ri.attente);
+      if (ri.phase === 'thinking') phase('idle');
+      if (m.erreur) riInfo('L\'ingénieur n\'a pas pu répondre : ' + m.erreur);
+    }
+  }
+
+  send('radio-capacites', { micro: micOk, sortie: sortieOk });
+  appareils(false);
   send('pret');
 </script>
 </body>

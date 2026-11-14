@@ -37,5 +37,7 @@
   <!-- Tracés de circuits (sources libres, voir tools/circuits.py). -->
   <ItemGroup>
     <EmbeddedResource Include="Track\Library\circuits.json" LogicalName="SecondMonitor.Hub.Core.Track.circuits.json" />
+    <!-- Temps perdu dans la voie des stands, circuit par circuit (sources publiées, estimations OSM : tools/circuits_stands.py). -->
+    <EmbeddedResource Include="Track\Library\pitlane.json" LogicalName="SecondMonitor.Hub.Core.Track.pitlane.json" />
   </ItemGroup>
 </Project>

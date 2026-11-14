@@ -117,9 +117,18 @@ export function MusicCard({ compact = false }: { compact?: boolean }) {
                 </>
               )}
               <span className="spacer" />
+              {status.settings.favorite && (
+                <button className="btn" disabled={busy || !status.sessionAllowed} onClick={() => run(musicApi.command('favorite'))} title={`Lancer ${status.settings.favorite.title}`}>Ma playlist</button>
+              )}
               <button className="btn" disabled={busy || !status.sessionAllowed} onClick={() => run(musicApi.command('flow'))}>Mon Flow</button>
             </div>
-            <MusicSearch disabled={!status.sessionAllowed} onPlayed={(m) => { setMessage(m); window.setTimeout(load, 400); }} />
+            {status.output === 'pc' && !status.pcConnected && (
+              <div className="callout warn music-callout">
+                <span>La musique est réglée sur le PC de jeu, mais aucun collecteur ne la propose : dans la fenêtre du collecteur, cochez « Musique Deezer sur ce PC ».</span>
+              </div>
+            )}
+            {!compact && <FavoriteBox status={status} save={save} onChanged={load} />}
+            <MusicSearch disabled={!status.sessionAllowed} favoriteId={status.settings.favorite?.id ?? null} onFavorite={load} onPlayed={(m) => { setMessage(m); window.setTimeout(load, 400); }} />
             {(message ?? status.lastMessage) && <div className="music-msg secondary">{message ?? status.lastMessage}</div>}
             {!status.sessionAllowed && status.sessionReason && <div className="music-msg secondary">{status.sessionReason}</div>}
           </>
@@ -152,7 +161,32 @@ function NowPlaying({ status }: { status: MusicStatus }) {
   );
 }
 
-function MusicSearch({ disabled, onPlayed }: { disabled: boolean; onPlayed: (message: string) => void }) {
+/** Playlist préférée : lancée par « Lecture » quand rien n'est en cours, à la voix (« mets ma playlist ») et, si coché, au début de chaque session. */
+function FavoriteBox({ status, save, onChanged }: { status: MusicStatus; save: (p: Partial<MusicSettings>) => void; onChanged: () => void }) {
+  const fav = status.settings.favorite;
+  if (!fav) {
+    return <div className="muted small">Astuce : l'étoile ☆ d'un résultat de recherche en fait votre playlist préférée, lancée toute seule.</div>;
+  }
+  return (
+    <div className="music-fav stack-sm">
+      <div className="row">
+        {fav.picture ? <img src={fav.picture} alt="" className="music-fav-img" /> : <span className="music-noimg" />}
+        <span className="music-result-text">
+          <span className="music-result-title">★ {fav.title}</span>
+          <span className="muted">Préférée : « Lecture » la lance quand rien ne joue ; à la voix, « mets ma playlist ».</span>
+        </span>
+        <span className="spacer" />
+        <button className="close" aria-label="Retirer la préférée" title="Retirer la préférée" onClick={() => musicApi.clearFavorite().then(onChanged).catch(() => {})}>✕</button>
+      </div>
+      <label className="switch">
+        <input type="checkbox" checked={!!status.settings.favoriteAutoPlay} onChange={(e) => save({ favoriteAutoPlay: e.target.checked })} />
+        <span>La lancer toute seule au début de chaque session (si la musique y est permise et que rien ne joue)</span>
+      </label>
+    </div>
+  );
+}
+
+function MusicSearch({ disabled, onPlayed, favoriteId, onFavorite }: { disabled: boolean; onPlayed: (message: string) => void; favoriteId: number | null; onFavorite: () => void }) {
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<MusicKind>('playlist');
   const [items, setItems] = useState<MusicItem[] | null>(null);
@@ -187,7 +221,7 @@ function MusicSearch({ disabled, onPlayed }: { disabled: boolean; onPlayed: (mes
         items.length === 0 ? <div className="muted">Aucun résultat.</div> : (
           <ul className="music-results">
             {items.slice(0, 8).map((it) => (
-              <li key={`${it.kind}-${it.id}`}>
+              <li key={`${it.kind}-${it.id}`} className="music-result-row">
                 <button className="music-result" disabled={disabled} onClick={async () => {
                   try { onPlayed((await musicApi.open(it, kind)).message); } catch (err) { onPlayed((err as Error).message); }
                 }}>
@@ -197,6 +231,10 @@ function MusicSearch({ disabled, onPlayed }: { disabled: boolean; onPlayed: (mes
                     <span className="muted">{[it.subtitle, kind === 'artist' ? fans(it.count) : kind === 'track' ? null : it.count ? `${it.count} titres` : null].filter(Boolean).join(' · ')}</span>
                   </span>
                   <Glyph name="play" />
+                </button>
+                <button className={`music-star ${favoriteId === it.id ? 'on' : ''}`} title={favoriteId === it.id ? 'Votre préférée' : 'En faire ma playlist préférée'} aria-label={favoriteId === it.id ? 'Préférée' : 'Choisir comme préférée'}
+                  onClick={() => musicApi.setFavorite(it, kind).then(onFavorite).catch((err) => onPlayed((err as Error).message))}>
+                  {favoriteId === it.id ? '★' : '☆'}
                 </button>
               </li>
             ))}
@@ -232,6 +270,19 @@ function MusicSettingsPanel({ status, save }: { status: MusicStatus; save: (p: P
 
   return (
     <div className="music-settings stack-sm">
+      <div className="music-set-row">
+        <span className="secondary">Musique sur</span>
+        <div className="seg">
+          <button className={(s.output ?? 'ordinateur') === 'ordinateur' ? 'on' : ''} onClick={() => save({ output: 'ordinateur' })}>Cet ordinateur</button>
+          <button className={s.output === 'pc' ? 'on' : ''} onClick={() => save({ output: 'pc' })}>Le PC de jeu (casque)</button>
+        </div>
+      </div>
+      {s.output === 'pc' && (
+        <div className="secondary small">
+          Recherche, commandes et voix restent ici ; la musique joue dans l'application Deezer du PC de jeu, donc dans le casque.
+          Dans la fenêtre du collecteur, cochez « Musique Deezer sur ce PC ». {status.pcConnected ? 'Collecteur relié.' : 'Aucun collecteur ne la propose pour l\'instant.'}
+        </div>
+      )}
       <div className="music-set-row">
         <span className="secondary">Lecteur</span>
         <div className="seg">

@@ -19,6 +19,8 @@ public sealed class DataSourceService : BackgroundService
     private CaptureWriter? _capture;
     private string? _lastLogText;
     private int _repeat;
+    private readonly object _modeLock = new();
+    private volatile bool _stopping;
 
     /// <summary>Enregistrement à rejouer au lieu d'écouter le réseau (option « --rejouer fichier »).</summary>
     public static string? ReplayFile { get; set; }
@@ -58,16 +60,25 @@ public sealed class DataSourceService : BackgroundService
             return Task.Run(() => ReplayAsync(ReplayFile, stoppingToken), stoppingToken);
         }
 
-        StartReceiver();
-        if (_settings.Current.DemoMode)
+        // Serveur de calcul : cet ordinateur ne reçoit pas la course (sinon il se relierait lui aussi au PC de jeu).
+        if (!_settings.Current.IsComputeServer)
         {
-            StartDemo();
+            StartReceiver();
+            if (_settings.Current.DemoMode)
+            {
+                StartDemo();
+            }
+        }
+        else
+        {
+            AddLog("Serveur de calcul : réception de la course arrêtée sur cet ordinateur");
         }
 
         stoppingToken.Register(() =>
         {
+            _stopping = true;
             StopDemo();
-            _receiver?.Dispose();
+            StopReceiver();
         });
         return Task.CompletedTask;
     }
@@ -75,6 +86,11 @@ public sealed class DataSourceService : BackgroundService
     private void StartReceiver()
     {
         HubSettings s = _settings.Current;
+        if (_receiver != null)
+        {
+            return;
+        }
+
         _receiver = new RemoteReceiver(s.GamePort, s.GameHosts);
         _receiver.LogMessage += AddLog;
         // Enregistrement de ce que le jeu envoie : permet de rejouer une session pour comprendre un problème.
@@ -88,6 +104,14 @@ public sealed class DataSourceService : BackgroundService
             }
         };
         _receiver.Start();
+    }
+
+    private void StopReceiver()
+    {
+        _receiver?.Dispose();
+        _receiver = null;
+        _capture?.Dispose();
+        _capture = null;
     }
 
     /// <summary>Rejoue un enregistrement comme si le collecteur l'envoyait (même rythme, ou accéléré).</summary>
@@ -134,6 +158,33 @@ public sealed class DataSourceService : BackgroundService
 
     private void OnSettingsChanged(HubSettings s)
     {
+        if (ReplayFile != null || _stopping)
+        {
+            return;
+        }
+
+        lock (_modeLock)
+        {
+            // Passage en serveur de calcul (ou retour à l'affichage) sans redémarrer.
+            if (s.IsComputeServer)
+            {
+                if (_receiver != null || _demoTask != null)
+                {
+                    StopDemo();
+                    StopReceiver();
+                    _engine.Reset();
+                    AddLog("Serveur de calcul : réception de la course arrêtée sur cet ordinateur");
+                }
+
+                return;
+            }
+
+            if (_receiver == null)
+            {
+                StartReceiver();
+            }
+        }
+
         _receiver?.SetManualHosts(s.GameHosts);
         if (s.DemoMode && _demoTask == null)
         {

@@ -119,7 +119,7 @@ plist() {
   <key>LSMinimumSystemVersion</key><string>12.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.sports</string>
   <key>NSHighResolutionCapable</key><true/>
-  <key>NSLocalNetworkUsageDescription</key><string>SecondMonitor échange les données de course avec le PC de jeu sur le réseau local.</string>
+  <key>NSLocalNetworkUsageDescription</key><string>SecondMonitor échange les données de course avec le PC de jeu, et les questions de l'ingénieur avec les serveurs de calcul, sur le réseau local.</string>
 $micro
 </dict>
 </plist>
@@ -162,7 +162,7 @@ construire_mac() {
     cp -R "$TMP/coll-osx-$arch/." "$coll/Contents/MacOS/"
     rm -f "$coll/Contents/MacOS/LISEZ-MOI.md"
     cp packaging/SecondMonitor.icns "$coll/Contents/Resources/"
-    plist "$coll" "SecondMonitor Collecteur" "fr.onedrop3d.secondmonitor-collecteur" "SecondMonitor-Collecteur" non
+    plist "$coll" "SecondMonitor Collecteur" "fr.onedrop3d.secondmonitor-collecteur" "SecondMonitor-Collecteur" oui  # micro : radio de l'ingénieur sur ce PC
     chmod +x "$coll/Contents/MacOS/SecondMonitor-Collecteur"
     signer "$coll" fr.onedrop3d.secondmonitor-collecteur
 

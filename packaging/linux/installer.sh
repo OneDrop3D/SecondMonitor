@@ -180,15 +180,16 @@ elif [ "$DEMARRAGE" = non ]; then
 fi
 
 # ───── Pare-feu ─────
-# PC de jeu (collecteur) : UDP 52642 entrant. Ordinateur qui affiche (SecondMonitor) : TCP 8686 et 8687 pour les autres écrans.
+# PC de jeu (collecteur) : UDP 52642 entrant. Ordinateur qui affiche (SecondMonitor) : TCP 8686 et 8687 pour les autres écrans,
+# UDP 8689 pour entendre les serveurs de calcul. Serveur de calcul : TCP 8686 (relais vers son Ollama, protégé par code).
 PF=""
 if command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd --state >/dev/null 2>&1; then
-  PF="sudo firewall-cmd --permanent --add-port=52642/udp --add-port=8686-8687/tcp && sudo firewall-cmd --reload"
+  PF="sudo firewall-cmd --permanent --add-port=52642/udp --add-port=8689/udp --add-port=8686-8687/tcp && sudo firewall-cmd --reload"
 elif command -v ufw >/dev/null 2>&1 && { systemctl is-active --quiet ufw 2>/dev/null || grep -qs '^ENABLED=yes' /etc/ufw/ufw.conf; }; then
-  PF="sudo ufw allow 52642/udp && sudo ufw allow 8686:8687/tcp"
+  PF="sudo ufw allow 52642/udp && sudo ufw allow 8689/udp && sudo ufw allow 8686:8687/tcp"
 fi
 if [ -n "$PF" ]; then
-  if [ "$PAREFEU" = oui ] || demander "Un pare-feu est actif. Ouvrir les ports de SecondMonitor (UDP 52642, TCP 8686-8687) ? (sudo)"; then
+  if [ "$PAREFEU" = oui ] || demander "Un pare-feu est actif. Ouvrir les ports de SecondMonitor (UDP 52642 et 8689, TCP 8686-8687) ? (sudo)"; then
     sh -c "$PF" && dire "✔ Ports ouverts dans le pare-feu." toujours || echo "Ports non ouverts. À faire à la main : $PF"
   else
     dire "Pare-feu actif : si le PC de jeu n'est pas trouvé ou si un autre écran ne se connecte pas, ouvrez les ports :"

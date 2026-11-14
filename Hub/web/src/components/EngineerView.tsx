@@ -3,7 +3,9 @@ import { api, usePoll } from '../live';
 import { Recorder, audioPref, canChooseSpeaker, listAudioDevices, playBase64Wav, setAudioPref, testSpeaker } from '../audio';
 import { useRadio, type RadioMessage } from '../radio';
 import type { HubSettings, MemoryState, NodeStatus, OllamaModel } from '../types';
-import { CategoryPill } from './CarnetView';
+import { CategoryPill, type CarnetSummary } from './CarnetView';
+import { useStations } from '../stations';
+import { ComputeLinkPanel } from './ComputeServer';
 
 interface Diagnostic {
   step: string;
@@ -52,14 +54,16 @@ function useHubSettings() {
     setSettings(next);
     api<HubSettings>('/api/settings', { method: 'PUT', body: JSON.stringify(next) }).then(setSettings).catch(() => {});
   }, []);
-  return { settings, save };
+  // Relecture après un changement fait par le hub lui-même (serveur de calcul relié : nouvelle machine).
+  const reload = useCallback(() => api<HubSettings>('/api/settings').then(setSettings).catch(() => {}), []);
+  return { settings, save, reload };
 }
 
 export function EngineerView({ radio, hasLiveData, sessionType }: { radio: RadioMessage[]; hasLiveData: boolean; sessionType?: string | null }) {
   const QUICK = sessionType === 'Race' || !sessionType ? QUICK_RACE : QUICK_PRACTICE;
   const r = useRadio();
   const [text, setText] = useState('');
-  const { settings, save } = useHubSettings();
+  const { settings, save, reload: reloadSettings } = useHubSettings();
   const [models, setModels] = useState<ModelsResponse | null>(null);
   const loadModels = useCallback(() => {
     api<ModelsResponse>('/api/ai/models').then(setModels).catch((e) => setModels({ ok: false, error: (e as Error).message, models: [], nodes: [] }));
@@ -74,7 +78,13 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
     return () => window.removeEventListener('keydown', down);
   }, [r]);
 
-  const messages = r.testMode ? r.testReplies : radio;
+  const [sessionId, setSessionId] = useState<string>('current');
+  const past = usePoll<{ radios: { at: string; from?: string | null; question?: string | null; answer: string; kind?: string | null; category?: string | null; proactive: boolean }[] }>(
+    sessionId === 'current' ? null : `/api/carnets/${encodeURIComponent(sessionId)}`, 60000);
+  const pastMessages: RadioMessage[] = (past.data?.radios ?? []).map((x) => ({
+    at: x.at, from: x.from ?? '', question: x.question, answer: x.answer, kind: x.kind, category: x.category, proactive: x.proactive, milliseconds: 0,
+  }));
+  const messages = r.testMode ? r.testReplies : sessionId === 'current' ? radio : pastMessages;
   const lastProactive = [...radio].reverse().find((m) => m.awaitingAnswer);
 
   return (
@@ -91,6 +101,7 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
             </label>
           </div>
           <div className="card-body stack">
+            {!r.testMode && <SessionBar value={sessionId} onChange={setSessionId} />}
             {r.testMode && (
               <div className="callout test">
                 <span aria-hidden>🧪</span>
@@ -130,6 +141,8 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
               </form>
             </div>
             {r.phase === 'recording' && <div className="status short"><span className="ico">●</span>Je vous écoute… appuyez de nouveau pour envoyer.</div>}
+            <PcStationLine />
+
             {!r.micAvailable && (
               <div className="secondary small">
                 Micro indisponible sur cette adresse : le navigateur l'exige en HTTPS ou sur <span className="code">http://localhost</span>. Utilisez l'adresse <b>https://…:8687</b> indiquée dans Réglages.
@@ -147,6 +160,7 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
             {r.error && <div className="status critical"><span className="ico">!</span>{r.error}</div>}
 
             <div className="stack-sm">
+              {sessionId !== 'current' && <div className="callout"><span aria-hidden>🗂</span><div>Session passée : échanges enregistrés dans le Carnet (lecture seule).</div></div>}
               {messages.length === 0 && <div className="muted">{r.testMode ? 'Posez une question pour tester.' : 'Aucun échange pour le moment.'}</div>}
               {[...messages].reverse().map((m, i) => <Message key={`${m.at}-${i}`} m={m} />)}
             </div>
@@ -158,10 +172,12 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
       <div className="stack">
         <TestCard />
         <BehaviourCard settings={settings} save={save} />
+        <LexiconCard settings={settings} save={save} />
         <AudioDevicesCard />
         <WheelBindingCard />
         <ModelsCard settings={settings} save={save} models={models} reload={loadModels} />
-        <MachinesCard settings={settings} save={save} models={models} reload={loadModels} />
+        <SpecialistsCard settings={settings} save={save} models={models} />
+        <MachinesCard settings={settings} save={save} models={models} reload={loadModels} reloadSettings={reloadSettings} />
       </div>
     </div>
   );
@@ -175,15 +191,54 @@ const KIND_LABEL: Record<string, string> = {
   conseil: 'conseil de réglage',
   suite: 'suite de la conversation',
   retour: 'retour du pilote',
+  accusé: 'réponse à venir',
+  alerte: 'alerte de pilotage',
 };
+
+const SESSION_NAME: Record<string, string> = { Race: 'Course', Qualification: 'Qualification', Practice: 'Essais', WarmUp: 'Warm-up' };
+
+/** Choix de la session à revoir (en cours ou passée, depuis le Carnet), et boutons « Terminer » / « Nouvelle session ». */
+export function SessionBar({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const { data, reload } = usePoll<CarnetSummary[]>('/api/carnets', 15000);
+  const [busy, setBusy] = useState(false);
+  const act = async (path: string, confirmText: string) => {
+    if (!window.confirm(confirmText)) return;
+    setBusy(true);
+    try {
+      await fetch(path, { method: 'POST' });
+      onChange('current');
+      reload();
+    } finally {
+      setBusy(false);
+    }
+  };
+  const sessions = (data ?? []).filter((c) => !c.current);
+  const label = (c: CarnetSummary) => {
+    const d = new Date(c.startedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return `${d} · ${SESSION_NAME[c.sessionType ?? ''] ?? 'Session'}${c.track ? ` · ${c.track}` : ''}${c.laps ? ` · ${c.laps} tours` : ''}`;
+  };
+  return (
+    <div className="row session-bar">
+      <span className="secondary">Session :</span>
+      <select className="select compact" value={value} onChange={(e) => onChange(e.target.value)} aria-label="Session à afficher">
+        <option value="current">En cours</option>
+        {sessions.map((c) => <option key={c.id} value={c.id}>{label(c)}</option>)}
+      </select>
+      <span className="spacer" />
+      <button className="chip" disabled={busy} onClick={() => act('/api/session/end', 'Terminer la session ? Le carnet est fermé et récapitulé ; rien n\'y sera plus ajouté jusqu\'à la prochaine session.')}>Terminer la session</button>
+      <button className="chip" disabled={busy} onClick={() => act('/api/session/new', 'Nouvelle session ? La mémoire de course et les calculs repartent de zéro (le carnet actuel est gardé).')}>Nouvelle session</button>
+    </div>
+  );
+}
 
 function Message({ m }: { m: RadioMessage }) {
   const [showFacts, setShowFacts] = useState(false);
   return (
     <div className={`msg ${m.test ? 'msg-test' : ''} ${m.proactive ? 'msg-proactive' : ''}`}>
       {(m.transcript || m.question) && (
-        <div className="msg-q"><b>{m.from === 'pilote' ? 'Pilote' : 'Ingénieur'}</b> : « {m.transcript ?? m.question} »</div>
+        <div className="msg-q"><b>{m.from?.startsWith('pilote') ? 'Pilote' : 'Ingénieur'}</b> : « {m.transcript ?? m.question} »</div>
       )}
+      {m.followUp && m.inReplyTo && <div className="msg-q muted">↩ réponse à « {m.inReplyTo} »</div>}
       <div className="row" style={{ alignItems: 'flex-start', flexWrap: 'nowrap' }}>
         <div className="msg-a">{m.proactive ? (m.awaitingAnswer ? '❓ ' : '📣 ') : '📻 '}{m.answer}</div>
         {m.audioBase64 && <button className="close" onClick={() => playBase64Wav(m.audioBase64!)} aria-label="Réécouter">▶</button>}
@@ -195,6 +250,8 @@ function Message({ m }: { m: RadioMessage }) {
         {m.milliseconds ? ` · total ${(m.milliseconds / 1000).toFixed(1)} s` : ''}
         {m.kind && KIND_LABEL[m.kind] && <span className="pill small-pill">{KIND_LABEL[m.kind]}</span>}
         {m.category && <CategoryPill category={m.category} />}
+        {m.specialist && m.kind === 'modèle' && <span className="pill small-pill">spécialiste {m.specialist}</span>}
+        {m.model && m.kind === 'modèle' && <span className="pill small-pill" title="Modèle qui a formulé la réponse">{m.model.replace('@', ' sur ')}</span>}
         {m.awaitingAnswer && <span className="pill small-pill">attend votre réponse</span>}
         {m.scenario && <span className="pill small-pill">{m.scenario}</span>}
         {m.facts && <button className="chip tiny" onClick={() => setShowFacts(!showFacts)}>{showFacts ? 'masquer les faits' : 'faits utilisés'}</button>}
@@ -278,6 +335,44 @@ function BehaviourCard({ settings, save }: { settings: HubSettings | null; save:
           <span className="secondary">% d'humidité de la piste</span>
         </div>
         <label className="switch">
+          <input type="checkbox" checked={ai.drivingAlerts ?? true} onChange={(e) => set({ drivingAlerts: e.target.checked })} />
+          <span>Alertes de pilotage immédiates</span>
+        </label>
+        <div className="secondary small">
+          Limites de piste (« Track limits virage 5 : trop large. 2 sur 3 »), temps annulé, pénalité, moteur coupé au départ,
+          et usure brutale d'un pneu analysée (où, dans quelle phase du virage, quel réglage essayer).
+        </div>
+        <label className="switch">
+          <input type="checkbox" checked={ai.trackLimitAlerts ?? true} onChange={(e) => set({ trackLimitAlerts: e.target.checked })} disabled={!(ai.drivingAlerts ?? true)} />
+          <span>Annoncer les limites de piste et les temps annulés</span>
+        </label>
+        <div className="secondary small">À la radio aussi : « coupe les limites de piste », « remets les limites de piste ».</div>
+        <label className="switch">
+          <input type="checkbox" checked={ai.lmuPitMenu ?? false} onChange={(e) => set({ lmuPitMenu: e.target.checked })} />
+          <span>Régler le menu des stands de Le Mans Ultimate</span>
+        </label>
+        <div className="secondary small">
+          Quand vous demandez « softs neufs », « la réparation » ou « le plein », l'ingénieur règle le menu des stands du jeu par le collecteur du PC de jeu
+          (API locale de LMU, non officielle : vérifiez le menu avant d'entrer). L'ingénieur le propose à la première demande ; à la radio : « active le menu des stands », « essaie l'API ».
+        </div>
+        <PitMenuTest />
+        <label className="switch">
+          <input type="checkbox" checked={ai.englishCalls ?? true} onChange={(e) => set({ englishCalls: e.target.checked })} />
+          <span>Accusés de réception en anglais (« Copy »)</span>
+        </label>
+        <div className="row">
+          <span className="secondary">« Copy, je reviens vers vous » après</span>
+          <select className="select compact" value={ai.ackAfterSeconds ?? 2.5} onChange={(e) => set({ ackAfterSeconds: Number(e.target.value) })}>
+            {[1.5, 2.5, 4, 6, 10].map((v) => <option key={v} value={v}>{String(v).replace('.', ',')} s</option>)}
+          </select>
+          <span className="secondary">de réflexion</span>
+        </div>
+        <div className="secondary small">
+          Pendant que l'IA réfléchit, vous pouvez poser d'autres questions : les réponses calculées (pneus, essence, TC…) arrivent tout de suite,
+          les autres attendent leur tour, puis l'ingénieur revient (« Pour la stratégie : … »).
+        </div>
+        <ThinkingSwitch on={ai.thinkingMode ?? false} set={(v) => set({ thinkingMode: v })} />
+        <label className="switch">
           <input type="checkbox" checked={ai.strictAnswers} onChange={(e) => set({ strictAnswers: e.target.checked })} />
           <span>Réponses calculées dites telles quelles</span>
         </label>
@@ -287,6 +382,92 @@ function BehaviourCard({ settings, save }: { settings: HubSettings | null; save:
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * Lexique de piste : le vocabulaire que l'ingénieur comprend (box box, delta, stint, brake bias…), les erreurs de dictée corrigées
+ * d'office, et les corrections du pilote (« ce que la dictée entend » → « ce que j'ai dit »). Aussi la longueur des morceaux d'audio.
+ */
+function LexiconCard({ settings, save }: { settings: HubSettings | null; save: (p: (s: HubSettings) => HubSettings) => void }) {
+  const { data } = usePoll<{ vocabulary: { word: string; meaning: string }[]; builtin: string[] }>('/api/ai/lexique', 3_600_000);
+  const [heard, setHeard] = useState('');
+  const [meant, setMeant] = useState('');
+  if (!settings) return null;
+  const mine = settings.ai.lexicon ?? [];
+  const setMine = (list: { heard: string; meant: string }[]) => save((s) => ({ ...s, ai: { ...s.ai, lexicon: list } }));
+  const add = () => {
+    const h = heard.trim(), m = meant.trim();
+    if (!h || !m) return;
+    setMine([...mine.filter((e) => e.heard.toLowerCase() !== h.toLowerCase()), { heard: h, meant: m }]);
+    setHeard('');
+    setMeant('');
+  };
+  return (
+    <section className="card">
+      <div className="card-head"><span className="card-title">Lexique de piste</span><span className="muted">vocabulaire et dictée</span></div>
+      <div className="card-body stack-sm">
+        <div className="secondary small">L'ingénieur comprend et emploie ces mots :</div>
+        <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+          {(data?.vocabulary ?? []).map((v) => <span key={v.word} className="chip" title={v.meaning}>{v.word}</span>)}
+        </div>
+        {data?.builtin && data.builtin.length > 0 && (
+          <div className="secondary small">Erreurs de dictée corrigées d'office : {data.builtin.join(' · ')}.</div>
+        )}
+        <div className="secondary small" style={{ marginTop: 4 }}>
+          <b>Vos corrections</b> : quand la dictée entend toujours le même mot de travers, ajoutez-le ici (majuscules et accents ne comptent pas).
+          Le test « Écoute » ci-dessus montre la phrase avant et après correction.
+        </div>
+        {mine.length > 0 && (
+          <div className="stack-sm">
+            {mine.map((e) => (
+              <div key={e.heard} className="row">
+                <span className="code">{e.heard}</span>
+                <span className="muted">→</span>
+                <span className="code">{e.meant}</span>
+                <span className="spacer" />
+                <button className="close" aria-label={`Retirer ${e.heard}`} onClick={() => setMine(mine.filter((x) => x.heard !== e.heard))}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr) auto', gap: 6, alignItems: 'center' }}>
+          <input className="input compact-input" placeholder="entendu (ex. vexe)" value={heard} onChange={(e) => setHeard(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+          <span className="muted">→</span>
+          <input className="input compact-input" placeholder="voulu (ex. BB)" value={meant} onChange={(e) => setMeant(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+          <button className="btn" onClick={add} disabled={!heard.trim() || !meant.trim()}>Ajouter</button>
+        </div>
+        <div className="row" style={{ marginTop: 6 }}>
+          <span className="secondary">Audio envoyé au modèle « écoute » par morceaux d'au plus</span>
+          <select className="select compact" value={settings.ai.listenChunkSeconds ?? 28} onChange={(e) => save((s) => ({ ...s, ai: { ...s.ai, listenChunkSeconds: Number(e.target.value) } }))}>
+            {[10, 20, 28, 45, 55, 90].map((v) => <option key={v} value={v}>{v} s</option>)}
+          </select>
+        </div>
+        <div className="secondary small">
+          La voix est toujours envoyée en WAV 16 kHz mono (le format que tous les modèles acceptent), sans les silences.
+          Un message plus long est coupé sur un silence ; si le modèle refuse un morceau, il est renvoyé en morceaux de 10 s.
+          Pour un modèle limité à 30 s, gardez 28 s ; à 60 s, 55 s.
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Voix et micro sur le PC de jeu (collecteur) : affiché dans la carte Radio. */
+function PcStationLine() {
+  const { stations, voiceOutput } = useStations();
+  const voice = stations.find((s) => s.voice);
+  const mic = stations.find((s) => s.mic);
+  if (!voice && !mic) return null;
+  const where = voiceOutput === 'ecrans' ? 'sur les écrans (réglage « Voix de l\'ingénieur sur »)' : voiceOutput === 'deux' ? 'sur le PC de jeu et ici' : 'sur le PC de jeu seulement';
+  return (
+    <div className="callout">
+      <span aria-hidden>🎧</span>
+      <div>
+        <b>{(voice ?? mic)!.name}</b> :{voice ? ` voix de l'ingénieur ${where}` : ''}{voice && mic ? ' ;' : ''}
+        {mic ? " le bouton radio du PC de jeu (et ClickDeck) enregistre le micro du PC de jeu" : ''}.
+      </div>
+    </div>
   );
 }
 
@@ -306,7 +487,7 @@ function AudioDevicesCard() {
       <div className="card-body stack-sm">
         <p className="secondary small" style={{ margin: 0 }}>
           Chaque écran utilise ses propres appareils : sur le Mac, le micro du Mac (ou un micro branché dessus) ;
-          pour le micro et le casque du PC de jeu, ouvrez le hub sur le PC (adresse HTTPS dans Réglages) et choisissez-les là-bas.
+          pour le micro et le casque du PC de jeu, choisissez-les dans la fenêtre du collecteur (« Radio de l'ingénieur »).
         </p>
         <div className="field">
           <label>Micro</label>
@@ -554,6 +735,75 @@ function ModelsCard({ settings, save, models, reload }: { settings: HubSettings 
   );
 }
 
+/** Mode « thinking » : seulement pour les modèles qui l'ont (Ollama le dit dans leur fiche). Aussi à la voix. */
+function ThinkingSwitch({ on, set }: { on: boolean; set: (v: boolean) => void }) {
+  const { data } = usePoll<{ enabled: boolean; models: { model: string; thinking: boolean }[] }>('/api/ai/thinking', 20000);
+  const models = data?.models ?? [];
+  const able = models.filter((m) => m.thinking).map((m) => m.model.split(':')[0]);
+  return (
+    <>
+      <label className="switch">
+        <input type="checkbox" checked={on} onChange={(e) => set(e.target.checked)} />
+        <span>Mode thinking (l'IA raisonne avant de répondre)</span>
+      </label>
+      <div className="secondary small">
+        Plus juste mais plus lent ; l'ingénieur répond « Copy, je reviens vers toi » en attendant. À la radio : « active le mode thinking », « réfléchis plus »,
+        « coupe le thinking », « réponds plus vite ».{' '}
+        {models.length === 0 ? 'Aucun modèle choisi.' : able.length > 0 ? `Disponible sur : ${able.join(', ')}.` : 'Aucun des modèles choisis ne l\'a (Qwen 3, DeepSeek R1, gpt-oss… l\'ont).'}
+      </div>
+    </>
+  );
+}
+
+/** Lecture seule du menu des stands de LMU par le collecteur ; le résultat arrive à la radio. */
+function PitMenuTest() {
+  const [state, setState] = useState<string | null>(null);
+  const test = async () => {
+    setState('Demande envoyée au collecteur…');
+    try {
+      const r = await api<{ sent: boolean }>('/api/pitmenu/test', { method: 'POST' });
+      setState(r.sent ? 'Demande envoyée : le résultat arrive à la radio.' : 'Aucun collecteur relié pour le menu des stands (collecteur ouvert sur le PC de jeu, case « menu des stands » cochée).');
+    } catch (e) {
+      setState((e as Error).message);
+    }
+  };
+  return (
+    <div className="row">
+      <button className="chip" onClick={test}>Tester le menu des stands</button>
+      {state && <span className="muted small">{state}</span>}
+    </div>
+  );
+}
+
+const SPECIALISTS: [string, string][] = [['pneus', 'Pneus'], ['stratégie', 'Stratégie'], ['voiture', 'Voiture et réglages'], ['course', 'Course']];
+
+/** Un modèle par spécialiste (sinon le modèle « réflexion ») : chacun ne reçoit que les faits de son domaine. */
+function SpecialistsCard({ settings, save, models }: { settings: HubSettings | null; save: (p: (s: HubSettings) => HubSettings) => void; models: ModelsResponse | null }) {
+  if (!settings) return null;
+  const chat = (models?.models ?? []).filter((m) => m.capabilities.includes('completion'));
+  const set = (key: string, value: string) => save((s) => ({ ...s, ai: { ...s.ai, specialists: { ...(s.ai.specialists ?? {}), [key]: value } } }));
+  return (
+    <section className="card">
+      <div className="card-head"><span className="card-title">Spécialistes</span><span className="muted hide-xs">un domaine par question</span></div>
+      <div className="card-body stack-sm">
+        <div className="secondary small">
+          Chaque question libre va au spécialiste de son domaine, qui ne reçoit que ses faits : réponse plus rapide et plus juste,
+          puis son contexte est vidé. Par défaut, chacun utilise le modèle « réflexion ».
+        </div>
+        {SPECIALISTS.map(([key, label]) => (
+          <ModelSelect key={key} label={label} value={settings.ai.specialists?.[key] ?? ''} options={chat} onChange={(v) => set(key, v)} allowSame />
+        ))}
+        <ModelSelect label="Questions difficiles (analyse, « pourquoi », plusieurs sujets)" value={settings.ai.hardModel ?? ''} options={chat}
+          onChange={(v) => save((s) => ({ ...s, ai: { ...s.ai, hardModel: v } }))} allowSame />
+        <div className="secondary small">
+          Les questions simples et celles que le hub calcule restent sur leur modèle habituel ; seules les questions difficiles vont à ce modèle,
+          par exemple un plus gros modèle sur un serveur de calcul (« nom sur machine »). Vide : le spécialiste du domaine.
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ModelSelect({ label, value, options, onChange, allowSame }: { label: string; value: string; options: OllamaModel[]; onChange: (v: string) => void; allowSame?: boolean }) {
   const known = options.some((m) => m.id === value);
   return (
@@ -568,8 +818,11 @@ function ModelSelect({ label, value, options, onChange, allowSame }: { label: st
   );
 }
 
-/** Machines IA du réseau : ce Mac, un Raspberry Pi, un autre PC… chacune fait tourner Ollama. */
-function MachinesCard({ settings, save, models, reload }: { settings: HubSettings | null; save: (p: (s: HubSettings) => HubSettings) => void; models: ModelsResponse | null; reload: () => void }) {
+/**
+ * Machines IA du réseau : ce Mac, un Raspberry Pi, un autre PC… chacune fait tourner Ollama.
+ * Un serveur de calcul SecondMonitor (troisième ordinateur) se relie avec le code affiché sur son écran (ComputeLinkPanel).
+ */
+function MachinesCard({ settings, save, models, reload, reloadSettings }: { settings: HubSettings | null; save: (p: (s: HubSettings) => HubSettings) => void; models: ModelsResponse | null; reload: () => void; reloadSettings: () => Promise<unknown> }) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   if (!settings) return null;
@@ -599,18 +852,31 @@ function MachinesCard({ settings, save, models, reload }: { settings: HubSetting
             <div key={n.name} className="node-row">
               <NodeDot s={st} />
               <b>{n.name}</b>
+              {n.token && <span className="pill small-pill" title="Serveur de calcul SecondMonitor relié par code (jeton)">serveur de calcul</span>}
               <span className="muted small">{n.url}</span>
               <span className="spacer" />
-              <span className="muted small">{st?.ok ? `${st.modelCount} modèle(s) · ${st.milliseconds} ms` : st?.error ?? '…'}</span>
+              <span className="muted small">{st?.ok ? `${st.modelCount} modèle(s) · ${st.milliseconds} ms` : n.token && st?.error?.includes('401') ? 'jeton refusé : reliez de nouveau ci-dessous' : st?.error ?? '…'}</span>
               <button className="close" onClick={() => { save((s) => ({ ...s, ai: { ...s.ai, nodes: s.ai.nodes.filter((x) => x.name !== n.name) } })); window.setTimeout(reload, 400); }} aria-label={`Retirer ${n.name}`}>✕</button>
             </div>
           );
         })}
+        <ComputeLinkPanel onLinked={() => { reloadSettings().then(reload); }} />
+        <div className="secondary small">Ou un Ollama ouvert au réseau (Raspberry Pi, autre PC…) :</div>
         <form className="row" onSubmit={(e) => { e.preventDefault(); add(); }}>
           <input className="input" style={{ flex: '1 1 110px' }} value={name} onChange={(e) => setName(e.target.value)} placeholder="nom (ex. raspberry)" />
           <input className="input" style={{ flex: '2 1 180px' }} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="raspberrypi.local ou 192.168.1.40" />
           <button className="btn" disabled={!name.trim() || !url.trim()}>Ajouter</button>
         </form>
+        <details className="small secondary">
+          <summary>Un troisième ordinateur comme serveur de calcul (PC avec une grosse carte graphique, autre Mac)</summary>
+          <ol style={{ paddingLeft: 18, lineHeight: 1.7 }}>
+            <li>Sur cet ordinateur (Windows, Linux ou Mac) : installez Ollama et vos modèles, puis SecondMonitor.</li>
+            <li>Au premier lancement, choisissez <b>Serveur de calcul</b> (installateur Windows : type « Serveur de calcul » ; Linux sans écran : <span className="code">SecondMonitorHub --sans-fenetre --serveur-calcul</span>). Son écran affiche un code à 6 chiffres.</li>
+            <li>Il apparaît ci-dessus dans « Serveurs de calcul sur le réseau » : <b>Relier</b>, puis saisissez le code.</li>
+            <li>Choisissez ses modèles dans « Modèles » ou « Spécialistes » (par exemple le spécialiste « Voiture et réglages » sur le gros PC, les réponses courtes ici).</li>
+          </ol>
+          Inutile d'ouvrir son Ollama au réseau : SecondMonitor le relaie lui-même, et seulement pour les SecondMonitor reliés par code.
+        </details>
         <details className="small secondary">
           <summary>Installer Ollama sur un Raspberry Pi (ou un autre PC)</summary>
           <ol style={{ paddingLeft: 18, lineHeight: 1.7 }}>

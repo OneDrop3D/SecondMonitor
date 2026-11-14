@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLive } from './live';
 import { classColorVar } from './format';
-import type { DriverRow } from './types';
+import type { DriverRow, HubStatus } from './types';
 import { Leaderboard } from './components/Leaderboard';
 import { TrackMap } from './components/TrackMap';
 import { PlayerPanel } from './components/PlayerPanel';
@@ -16,8 +16,9 @@ import { CarView } from './components/CarView';
 import { WeatherView } from './components/WeatherView';
 import { BattlePanel } from './components/BattlePanel';
 import { RadioDock } from './components/RadioDock';
-import { RadioProvider, isRadioStation, type RadioMessage } from './radio';
+import { RadioProvider, isRadioStation, speaksHere, useRadio, type RadioMessage } from './radio';
 import { playBase64Wav, stopPlayback } from './audio';
+import { screensPlayVoice, setStations, type StationsState } from './stations';
 import { useSelection } from './selection';
 import type { ClassView } from './classView';
 import { Icon, StatusBar, TimingHeader } from './components/Timing';
@@ -30,6 +31,9 @@ import { CarnetView } from './components/CarnetView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { collectorAddress, linkStage, useHubStatus } from './status';
 import { UpdateBanner } from './components/UpdateBanner';
+import { hasWindowParam, isExtraWindow, readDevicePref, readOwnPref, readPref, windowNumber, writeDevicePref, writePref } from './prefs';
+import { inAppWindow, openNewWindow } from './windows';
+import { ComputeServerView, ModeChoice } from './components/ComputeServer';
 
 type Tab = 'timing' | 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'ai' | 'carnet' | 'connection' | 'settings';
 
@@ -49,49 +53,48 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'settings', label: 'Réglages', icon: 'settings' },
 ];
 
-function readPref(key: string, fallback: string) {
-  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
-}
-function writePref(key: string, value: string) {
-  try { localStorage.setItem(key, value); } catch { /* stockage indisponible */ }
-}
-
 export default function App() {
+  const status = useHubStatus();
+  // Serveur de calcul (troisième ordinateur) : il n'affiche pas la course, seulement son propre écran.
+  if (status?.mode === 'calcul') return <ComputeServerView />;
   return (
     <RadioProvider>
       <NoticeProvider>
-        <Shell />
+        <Shell status={status} />
+        {status?.mode === '' && <ModeChoice />}
       </NoticeProvider>
     </RadioProvider>
   );
 }
 
-function Shell() {
+function Shell({ status }: { status: HubStatus | null }) {
   const [radio, setRadio] = useState<RadioMessage[]>([]);
-  const speakRef = useRef(readPref('smhub-speak', 'true') === 'true');
+  const speakRef = useRef(speaksHere());
   const { snapshot, link } = useLive((m) => {
     if (m.type === 'radioHistory') {
       setRadio(m.data as RadioMessage[]);
       return;
     }
     if (m.type === 'radioStop') { stopPlayback(); return; }
-    if (m.type === 'radioPress') { if (isRadioStation()) window.dispatchEvent(new Event('sm-radio-press')); return; }
+    if (m.type === 'stations') { setStations(m.data as StationsState); return; }
+    // Appui venu d'ailleurs : pour le poste radio, sauf si le micro du PC de jeu s'en charge (« poste »).
+    if (m.type === 'radioPress') { if (isRadioStation() && !(m.data as { poste?: string | null })?.poste) window.dispatchEvent(new Event('sm-radio-press')); return; }
     if (m.type !== 'radio') return;
     const msg = m.data as RadioMessage;
     setRadio((r) => [...r.slice(-49), msg]);
-    speakRef.current = readPref('smhub-speak', 'true') === 'true';
-    if (speakRef.current && msg.audioBase64) playBase64Wav(msg.audioBase64);
+    speakRef.current = speaksHere(); // propre à cette fenêtre : une fenêtre ajoutée est muette par défaut
+    if (speakRef.current && msg.audioBase64 && screensPlayVoice()) playBase64Wav(msg.audioBase64);
   });
   const [tab, setTabState] = useState<Tab>(() => {
-    const h = location.hash.slice(1) as Tab;
+    // Fenêtre de l'application (« ?fenetre= ») : elle reprend la page affichée la dernière fois (une page par écran).
+    const h = (location.hash.slice(1) || (hasWindowParam ? readOwnPref('smhub-onglet', '') : '')) as Tab;
     return TABS.some((t) => t.id === h) ? h : 'timing';
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [theme, setThemeState] = useState(() => readPref('smhub-theme', 'dark'));
-  const status = useHubStatus();
   const version = status?.version ? String(status.version).split('.').slice(0, 3).join('.') : null;
-  const [guide, setGuide] = useState(() => readPref('smhub-guide-vu', '') === '');
-  const closeGuide = () => { setGuide(false); writePref('smhub-guide-vu', '1'); };
+  const [guide, setGuide] = useState(() => readDevicePref('smhub-guide-vu', '') === '');
+  const closeGuide = () => { setGuide(false); writeDevicePref('smhub-guide-vu', '1'); };
   const notices = useNotices();
   const [layoutEdit, setLayoutEdit] = useState(false);
   // Événements de course du hub ; drapeaux, dégâts et pénalités s'affichent aussi en notification (croix, disparition seule).
@@ -133,7 +136,44 @@ function Shell() {
     writePref('smhub-theme', theme);
   }, [theme]);
 
-  useEffect(() => { history.replaceState(null, '', `#${tab}`); }, [tab]);
+  useEffect(() => {
+    history.replaceState(null, '', `#${tab}`); // garde « ?fenetre=2 » : seule l'ancre change
+    if (hasWindowParam) writePref('smhub-onglet', tab);
+  }, [tab]);
+
+  // ───── Nouvelle fenêtre (un autre écran, une autre page) ─────
+  const opening = useRef(false);
+  const current = useRef({ tab, notices });
+  current.current = { tab, notices };
+  const newWindow = useCallback(async () => {
+    if (opening.current) return;
+    opening.current = true;
+    const { tab: from, notices: n } = current.current;
+    try {
+      const r = await openNewWindow(from);
+      if (r.kind === 'native') {
+        n.notify({ key: 'fenetre-ouverte', text: `Fenêtre ${r.number} ouverte ${r.otherScreen ? 'sur l\'autre écran' : 'sur cet écran (pas d\'autre écran libre)'} : muette par défaut, la voix reste sur la fenêtre principale.`, level: 'good', source: 'Fenêtres', ttl: 6000 });
+      } else if (r.kind === 'browser') {
+        n.notify({ key: 'fenetre-ouverte', text: `Fenêtre ${r.number} ouverte dans le navigateur : faites-la glisser sur l'autre écran.`, level: 'good', source: 'Fenêtres', ttl: 6000 });
+      } else {
+        n.notify({ key: 'fenetre-impossible', text: `Impossible d'ouvrir une autre fenêtre${r.reason ? ` : ${r.reason}` : '.'}`, level: 'warn', source: 'Fenêtres', ttl: 8000 });
+      }
+    } finally {
+      opening.current = false;
+    }
+  }, []);
+  useEffect(() => {
+    // ⌘N (Mac) ou Ctrl+N : seulement dans la fenêtre de l'application (dans un navigateur, le raccourci est le sien).
+    if (!inAppWindow()) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        void newWindow();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [newWindow]);
 
   // Couleur de catégorie stable pendant toute la session (ordre d'apparition, jamais selon le classement).
   const classColor = useCallback((classId: string) => {
@@ -210,19 +250,34 @@ function Shell() {
               <span className="sm-rail-label">{t.label}</span>
             </button>
           ))}
+          <button className="sm-rail-btn sm-rail-new" onClick={() => void newWindow()} title={`Nouvelle fenêtre : une autre page sur un autre écran${inAppWindow() ? (navigator.platform.startsWith('Mac') ? ' (⌘N)' : ' (Ctrl+N)') : ''}`}>
+            <Icon name="window" size={22} />
+            <span className="sm-rail-label">Nouvelle fenêtre</span>
+          </button>
           <button className="sm-rail-btn sm-rail-guide" onClick={() => setGuide(true)} title="Guide de mise en route">
             <span className="sm-rail-q" aria-hidden>?</span>
             <span className="sm-rail-label">Guide de mise en route</span>
           </button>
         </nav>
       </div>
-      <StatusBar snapshot={snapshot} link={link} version={version} status={status} onConnection={() => setTab('connection')} />
+      <StatusBar snapshot={snapshot} link={link} version={version} status={status} onConnection={() => setTab('connection')} extra={isExtraWindow ? <WindowBadge onSettings={() => setTab('settings')} /> : undefined} />
       <NoticeStack />
-      {guide && <GuideView status={status} snapshot={snapshot} onClose={closeGuide} onNavigate={(t) => setTab(t)} />}
+      {/* Premier lancement : le guide attend que l'usage de cet ordinateur soit choisi (ModeChoice). */}
+      {guide && status && status.mode !== '' && <GuideView status={status} snapshot={snapshot} onClose={closeGuide} onNavigate={(t) => setTab(t)} />}
       <RadioDock onOpen={() => setTab('ai')} />
       <UpdateBanner />
       {selected && <DriverDrawer driver={selected} onClose={() => setSelectedId(null)} />}
     </div>
+  );
+}
+
+/** Fenêtre ajoutée : son numéro, et si elle fait entendre la voix (réglage propre à la fenêtre). */
+function WindowBadge({ onSettings }: { onSettings: () => void }) {
+  const r = useRadio();
+  return (
+    <button className="tm-status-item tm-status-link" onClick={onSettings} title="Fenêtre ajoutée : sa page et sa disposition sont les siennes. Voix et micro : Réglages de cette fenêtre.">
+      Fenêtre {windowNumber}{r.speakHere ? '' : ' · muette'}
+    </button>
   );
 }
 

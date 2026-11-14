@@ -28,7 +28,13 @@ Options : `--demarrage-auto` (collecteur lancé à l'ouverture de session), `--p
 `--verifier` (dépendances seulement), `--silencieux` (aucune question).
 
 **Pare-feu** : le PC de jeu doit accepter UDP **52642** (collecteur) ; l'ordinateur qui affiche, TCP **8686** et **8687** pour les autres
-écrans (iPad, téléphone). Si la découverte automatique ne trouve pas le PC de jeu, saisissez son adresse dans SecondMonitor › Connexion.
+écrans (iPad, téléphone) et UDP **8689** pour trouver les serveurs de calcul. Si la découverte automatique ne trouve pas le PC de jeu,
+saisissez son adresse dans SecondMonitor › Connexion.
+
+**Serveur de calcul** : un PC Linux avec une grosse carte graphique peut prêter son Ollama au SecondMonitor qui affiche la course.
+Au premier lancement, choisissez « Serveur de calcul » ; sans écran : `~/.local/share/secondmonitor/SecondMonitorHub --sans-fenetre --serveur-calcul`
+(le code d'appairage s'affiche dans le terminal, de nouveau à chaque changement ; retour à l'affichage : `--affichage`).
+Il doit accepter TCP **8686**. Son Ollama peut rester fermé au réseau : SecondMonitor le relaie, seulement pour les SecondMonitor reliés par code.
 
 ## Quels jeux ?
 

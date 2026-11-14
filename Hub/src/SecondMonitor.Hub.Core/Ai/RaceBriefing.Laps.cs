@@ -64,7 +64,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
             if (worst != null)
             {
-                add(Topic.Laps, $"Pire tour {Lap(worst.Time)} au tour {worst.Lap}, à {Sec(worst.Time.Value - b)} de votre meilleur{(worst.Valid ? string.Empty : " (tour invalidé)")}{(race ? " ; hors premier tour et passages au stand" : " ; hors passages au stand")}.", "pire");
+                add(Topic.Laps, $"Pire tour {Lap(worst.Time)} au tour {worst.Lap}, à {Sec(worst.Time.Value - b)} de ton meilleur{(worst.Valid ? string.Empty : " (tour invalidé)")}{(race ? " ; hors premier tour et passages au stand" : " ; hors passages au stand")}.", "pire");
             }
             else
             {
@@ -73,13 +73,13 @@ namespace SecondMonitor.Hub.Core.Ai
 
             if (lastTime is double l2)
             {
-                string delta = Math.Abs(l2 - b) < 0.0005 ? " : c'est votre meilleur tour" : $", à {Sec(l2 - b)} de votre meilleur";
+                string delta = Math.Abs(l2 - b) < 0.0005 ? " : c'est ton meilleur tour" : $", à {Sec(l2 - b)} de ton meilleur";
                 add(Topic.Laps, $"Dernier tour {Lap(l2)}{(lastNumber.HasValue ? $" (tour {lastNumber})" : string.Empty)}{delta}.", "dernier");
             }
 
             if (avg is double a2)
             {
-                add(Topic.Laps, $"Moyenne {Lap(a2)} sur vos {recent.Count} derniers tours propres, à {Sec(a2 - b)} de votre meilleur.", "moyenne");
+                add(Topic.Laps, $"Moyenne {Lap(a2)} sur tes {recent.Count} derniers tours propres, à {Sec(a2 - b)} de ton meilleur.", "moyenne");
             }
             else
             {
@@ -153,7 +153,7 @@ namespace SecondMonitor.Hub.Core.Ai
             var straights = gaps.Where(g => g.Seg.Kind == "straight").ToList();
             if (straights.Count > 0)
             {
-                add(Topic.Speed, "Vmax par ligne droite (vous / meilleur de la catégorie) : " + string.Join(", ", straights.Select(g => $"{g.Seg.Name.Replace(" (principale)", string.Empty)} {N(g.Mine, 0)} / {N(g.Best, 0)}")) + " km/h.", false);
+                add(Topic.Speed, "Vmax par ligne droite (toi / meilleur de la catégorie) : " + string.Join(", ", straights.Select(g => $"{g.Seg.Name.Replace(" (principale)", string.Empty)} {N(g.Mine, 0)} / {N(g.Best, 0)}")) + " km/h.", false);
             }
 
             var corners = gaps.Where(g => g.Seg.Kind == "corner").OrderByDescending(g => g.Best - g.Mine).ToList();
@@ -161,8 +161,8 @@ namespace SecondMonitor.Hub.Core.Ai
             {
                 var worst = corners[0];
                 add(Topic.Speed, worst.Best - worst.Mine < 1
-                    ? "En virage, vos vitesses de passage sont au niveau des meilleurs de la catégorie."
-                    : $"Virage où vous passez le moins vite : {worst.Seg.Name.ToLowerInvariant()}, {N(worst.Mine, 0)} contre {Kph(worst.Best)}.", false);
+                    ? "En virage, tes vitesses de passage sont au niveau des meilleurs de la catégorie."
+                    : $"Virage où tu passes le moins vite : {worst.Seg.Name.ToLowerInvariant()}, {N(worst.Mine, 0)} contre {Kph(worst.Best)}.", false);
             }
 
             if (deficit < TopSpeedDeficitKph)
@@ -181,20 +181,20 @@ namespace SecondMonitor.Hub.Core.Ai
                 string straightName = straight.Seg.Name.Replace(" (principale)", " principale").ToLowerInvariant();
                 if (exit.Seg != null && exit.Best - exit.Mine >= 3)
                 {
-                    add(Topic.Speed, $"Vous perdez {N(straight.Best - straight.Mine, 0)} km/h dans la {straightName} : vous sortez moins vite du {before.Name.ToLowerInvariant()} ({N(exit.Mine, 0)} contre {N(exit.Best, 0)}), soignez cette sortie.", true);
-                    return new Proposal { Key = "exit-" + before.Id, Kind = "pilotage", Infinitive = $"soigner la sortie du {before.Name.ToLowerInvariant()}", Imperative = $"soignez la sortie du {before.Name.ToLowerInvariant()}", Note = $"sortie du {before.Name.ToLowerInvariant()} à soigner" };
+                    add(Topic.Speed, $"Tu perds {N(straight.Best - straight.Mine, 0)} km/h dans la {straightName} : tu sors moins vite du {before.Name.ToLowerInvariant()} ({N(exit.Mine, 0)} contre {N(exit.Best, 0)}), soigne cette sortie.", true);
+                    return new Proposal { Key = "exit-" + before.Id, Kind = "pilotage", Infinitive = $"soigner la sortie du {before.Name.ToLowerInvariant()}", Imperative = $"soigne la sortie du {before.Name.ToLowerInvariant()}", Note = $"sortie du {before.Name.ToLowerInvariant()} à soigner" };
                 }
 
                 if (snap.Weather.Wetness < 10)
                 {
-                    add(Topic.Speed, $"Vous perdez {N(straight.Best - straight.Mine, 0)} km/h dans la {straightName} avec une sortie de virage au niveau : c'est l'appui. Un cran d'aileron arrière en moins au prochain arrêt ?", true);
-                    return new Proposal { Key = "wing-rear-less", Kind = "setup", Infinitive = "mettre un cran d'aileron arrière en moins", Imperative = "mettez un cran d'aileron arrière en moins", Note = "un cran d'aileron arrière en moins" };
+                    add(Topic.Speed, $"Tu perds {N(straight.Best - straight.Mine, 0)} km/h dans la {straightName} avec une sortie de virage au niveau : c'est l'appui. Un cran d'aileron arrière en moins au prochain arrêt ?", true);
+                    return new Proposal { Key = "wing-rear-less", Kind = "setup", Infinitive = "mettre un cran d'aileron arrière en moins", Imperative = "mets un cran d'aileron arrière en moins", Note = "un cran d'aileron arrière en moins" };
                 }
             }
             else if (snap.Weather.Wetness < 10)
             {
                 add(Topic.Speed, $"{Kph(deficit)} de moins que le plus rapide : moins d'aileron arrière au prochain arrêt, ou une meilleure sortie des virages lents.", true);
-                return new Proposal { Key = "wing-rear-less", Kind = "setup", Infinitive = "mettre un cran d'aileron arrière en moins", Imperative = "mettez un cran d'aileron arrière en moins", Note = "un cran d'aileron arrière en moins" };
+                return new Proposal { Key = "wing-rear-less", Kind = "setup", Infinitive = "mettre un cran d'aileron arrière en moins", Imperative = "mets un cran d'aileron arrière en moins", Note = "un cran d'aileron arrière en moins" };
             }
 
             return null;

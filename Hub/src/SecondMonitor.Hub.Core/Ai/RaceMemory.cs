@@ -13,11 +13,21 @@ namespace SecondMonitor.Hub.Core.Ai
     {
         private readonly object _lock = new();
         private readonly List<MemoryEntry> _entries = new();
+        private readonly List<WearWatch> _wearWatches = new();
         private PendingQuestion _pending;
         private int _nextId = 1;
 
         /// <summary>Arrêt décidé avec le pilote (remplace l'arrêt conseillé tant qu'il n'est pas passé).</summary>
         public int? PlannedStopLap { get; set; }
+
+        /// <summary>Ce que le pilote a demandé pour le prochain arrêt (pneus, réparation, carburant).</summary>
+        public PitOrder PitPlan { get; set; }
+
+        /// <summary>L'ingénieur a déjà proposé de régler lui-même le menu des stands pendant cette session.</summary>
+        public bool PitAutoAsked { get; set; }
+
+        /// <summary>Annonce de l'écart demandée par le pilote, ou null.</summary>
+        public GapWatch GapWatch { get; set; }
 
         /// <summary>Décidé avec le pilote : finir sans s'arrêter.</summary>
         public bool NoStopPlanned { get; set; }
@@ -65,7 +75,11 @@ namespace SecondMonitor.Hub.Core.Ai
             {
                 _entries.Clear();
                 _pending = null;
+                _wearWatches.Clear();
+                GapWatch = null;
                 PlannedStopLap = null;
+                PitPlan = null;
+                PitAutoAsked = false;
                 NoStopPlanned = false;
             }
 
@@ -94,6 +108,43 @@ namespace SecondMonitor.Hub.Core.Ai
             lock (_lock)
             {
                 _pending = null;
+            }
+        }
+
+        /// <summary>
+        /// L'ingénieur a promis de « surveiller l'usure » d'une roue : il reviendra vers le pilote deux tours plus tard
+        /// (une surveillance par roue, la plus récente l'emporte).
+        /// </summary>
+        public void WatchWear(WearWatch watch)
+        {
+            if (watch == null)
+            {
+                return;
+            }
+
+            lock (_lock)
+            {
+                _wearWatches.RemoveAll(w => w.Wheel == watch.Wheel);
+                _wearWatches.Add(watch);
+            }
+        }
+
+        public IReadOnlyList<WearWatch> WearWatches
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _wearWatches.ToList();
+                }
+            }
+        }
+
+        public void EndWearWatch(WearWatch watch)
+        {
+            lock (_lock)
+            {
+                _wearWatches.Remove(watch);
             }
         }
 
@@ -170,5 +221,36 @@ namespace SecondMonitor.Hub.Core.Ai
         public int? PlannedLap { get; set; }
 
         public int? ProposedLap { get; set; }
+
+        /// <summary>Usure anormale : roue (« FL », « FR », « RL », « RR »), phase, virage, cause et réglage proposé (« TC de 7 à 8 »).</summary>
+        public string Wheel { get; set; }
+
+        public string Phase { get; set; }
+
+        public string Corner { get; set; }
+
+        public string Cause { get; set; }
+
+        public string Proposal { get; set; }
+    }
+
+    /// <summary>Usure d'une roue à reprendre avec le pilote deux tours après son explication.</summary>
+    public sealed class WearWatch
+    {
+        public string Wheel { get; set; }
+
+        /// <summary>Tour (bouclés) au moment de l'explication.</summary>
+        public int Lap { get; set; }
+
+        /// <summary>Usure de la roue à ce moment (%).</summary>
+        public double StartWearPct { get; set; }
+
+        /// <summary>Usure par tour du relais avant l'incident (%), si connue.</summary>
+        public double? BaselinePerLap { get; set; }
+
+        /// <summary>Réglage proposé avec l'alerte, redit si l'usure reste forte.</summary>
+        public string Proposal { get; set; }
+
+        public DateTime AtUtc { get; set; } = DateTime.UtcNow;
     }
 }
