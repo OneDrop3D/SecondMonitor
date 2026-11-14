@@ -31,6 +31,7 @@ import { CarnetView } from './components/CarnetView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { collectorAddress, linkStage, useHubStatus } from './status';
 import { UpdateBanner } from './components/UpdateBanner';
+import { readPref, writePref } from './prefs';
 
 type Tab = 'timing' | 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'ai' | 'carnet' | 'connection' | 'settings';
 
@@ -49,13 +50,6 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'connection', label: 'Connexion au PC de jeu', icon: 'link' },
   { id: 'settings', label: 'Réglages', icon: 'settings' },
 ];
-
-function readPref(key: string, fallback: string) {
-  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
-}
-function writePref(key: string, value: string) {
-  try { localStorage.setItem(key, value); } catch { /* stockage indisponible */ }
-}
 
 export default function App() {
   return (

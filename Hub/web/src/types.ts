@@ -458,7 +458,88 @@ export interface SpeedTraces {
 
 export interface Trajectories {
   segment: TrackSegment | null;
-  drivers: { id: string; lap: number; time: number | null; sampleHz: number; points: [number, number, number][] }[];
+  /** Points : [x, z, vitesse km/h, distance depuis la ligne en m], un tous les ~10 m. */
+  drivers: { id: string; lap: number; time: number | null; sampleHz: number; points: [number, number, number, number][] }[];
+}
+
+/** Micro-secteurs de chaque tour bouclé (GET /api/analysis/microsectors/laps?ids=…). */
+export interface MicroSectorLaps {
+  count: number;
+  lapLength: number;
+  drivers: {
+    id: string;
+    name: string | null;
+    number: number | null;
+    classId: string;
+    className: string | null;
+    car: string | null;
+    isPlayer: boolean;
+    sampleHz: number;
+    laps: MicroSectorLapRow[];
+  }[];
+}
+
+export interface MicroSectorLapRow {
+  lap: number;
+  time: number | null;
+  /** 1 = stand, 2 = tour de sortie, 4 = invalide, 8 = micro-secteur dans la voie des stands. */
+  flags: number;
+  compound: string | null;
+  stint: number | null;
+  tyreLaps: number | null;
+  ms: (number | null)[] | null;
+}
+
+/** Comparaison des tours du joueur (GET /api/analysis/lapcompare?laps=best,last,12,current). */
+export interface LapComparison {
+  step: number;
+  lapLength: number;
+  laps: LapChoice[];
+  traces: LapDetail[];
+}
+
+export interface LapChoice {
+  lap: number;
+  time: number | null;
+  complete: boolean;
+  current: boolean;
+  valid: boolean;
+  pit: boolean;
+  outLap: boolean;
+  best: boolean;
+  compound: string | null;
+  tyreLaps: number | null;
+}
+
+export interface ShiftPoint { distance: number; speed: number; rpmBefore: number; rpmAfter: number; from: number; to: number }
+
+export interface ControlChange { key: string; distance: number; from: number; to: number }
+
+export interface LapDetail {
+  lap: number;
+  time: number | null;
+  complete: boolean;
+  current: boolean;
+  valid: boolean;
+  pit: boolean;
+  outLap: boolean;
+  compound: string | null;
+  tyreLaps: number | null;
+  fuel: number | null;
+  topSpeed: number | null;
+  maxRpm: number | null;
+  speed: (number | null)[];
+  throttle: (number | null)[];
+  brake: (number | null)[];
+  steering: (number | null)[];
+  gear: (number | null)[];
+  rpm: (number | null)[];
+  /** Temps écoulé depuis la ligne (s), case par case. */
+  elapsed: (number | null)[];
+  shifts: ShiftPoint[];
+  /** Réglages en roulant au départ du tour (« bias », « tc », « tcCut », « tcSlip », « abs », « map », « migration », « arbFront », « arbRear »). */
+  controls: Record<string, number>;
+  controlChanges: ControlChange[];
 }
 
 export interface MicroSectorReport {
