@@ -113,8 +113,17 @@ namespace SecondMonitor.Hub.Core.Ai
                 double n = Math.Max(1, Math.Ceiling(b.LapsToContact.Value));
                 string laps = n <= 1 ? "un tour" : $"{N(n, 0)} tours";
                 candidates.Add(b.Side == "behind"
-                    ? Info($"threat-{b.Id}", "duel", $"Attention, le numéro {b.Number} revient de {pace} seconde par tour. Il sera dans tes roues dans environ {laps}.", 360)
-                    : Info($"chance-{b.Id}", "duel", $"Tu reprends {pace} seconde par tour au numéro {b.Number}. Contact dans environ {laps}, continue comme ça.", 360));
+                    ? Info("threat", "duel", $"Attention, le numéro {b.Number} revient de {pace} seconde par tour. Il sera dans tes roues dans environ {laps}.", 600)
+                    : Info("chance", "duel", $"Tu reprends {pace} seconde par tour au numéro {b.Number}. Contact dans environ {laps}, continue comme ça.", 600));
+            }
+
+            // ── Temps perdu par l'arrêt qui vient d'avoir lieu (une fois le tour de sortie bouclé) ──
+            if (race && p.PitPlan?.PlayerLastStopLoss is double stopLoss && p.PitPlan.PlayerLastStopLap is int outLap && me.Laps - outLap is >= 0 and <= 1)
+            {
+                string vs = p.PitPlan.PitLoss > 0 && Math.Abs(stopLoss - p.PitPlan.PitLoss) >= 3
+                    ? stopLoss > p.PitPlan.PitLoss ? $", {N(stopLoss - p.PitPlan.PitLoss, 0)} de plus que prévu" : $", {N(p.PitPlan.PitLoss - stopLoss, 0)} de moins que prévu"
+                    : string.Empty;
+                candidates.Add(Info($"stop-loss-{outLap}", "stand", $"Ton arrêt t'a coûté {N(stopLoss, 0)} secondes{vs}.", 100000));
             }
 
             // ── Surchauffe (au moins 30 s d'affilée) ──
@@ -194,7 +203,7 @@ namespace SecondMonitor.Hub.Core.Ai
                     candidates.Add(Info(
                         "tyre-cold",
                         "pneus",
-                        $"Pneus encore froids : {N(cold.Surface.Value, 0)} degrés à l'{TyreThermalWatch.WheelName(cold.Position)}, il en faut au moins {N(cold.Min.Value, 0)}. Faites-les chauffer : zigzags et freinages appuyés.",
+                        $"Pneus encore froids : {N(cold.Surface.Value, 0)} degrés à l'{TyreThermalWatch.WheelName(cold.Position)}, il en faut au moins {N(cold.Min.Value, 0)}. Fais-les chauffer : zigzags et freinages appuyés.",
                         600));
                 }
             }

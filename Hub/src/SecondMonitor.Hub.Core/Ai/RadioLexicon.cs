@@ -93,6 +93,25 @@ namespace SecondMonitor.Hub.Core.Ai
             (Rx(@"\bengine map\b"), "cartographie"),
         };
 
+        private static readonly Regex AsrLanguage = new(@"^\s*(?:language\s+[A-Za-z]+\s*)?<asr_text>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex AsrTags = new(@"</?asr_text>|<\|[^|>]{1,40}\|>|^\s*language\s+(?:None|French|English|Français)\b\s*", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Sortie brute de certains modèles d'écoute (Qwen3-ASR : « language French&lt;asr_text&gt;Box box. ») : seulement la phrase dite.
+        /// Sans cela, les commandes qui commencent la phrase (« mets de la musique ») n'étaient plus reconnues.
+        /// </summary>
+        public static string CleanTranscript(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return text;
+            }
+
+            string t = AsrLanguage.Replace(text, string.Empty);
+            t = AsrTags.Replace(t, " ");
+            return Regex.Replace(t, @"\s{2,}", " ").Trim();
+        }
+
         /// <summary>Exemples des corrections d'office (affichés dans l'écran Ingénieur IA).</summary>
         public static IReadOnlyList<string> BuiltinExamples => Builtin.Where(b => b.Example != null).Select(b => b.Example).ToList();
 

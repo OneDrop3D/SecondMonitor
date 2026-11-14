@@ -112,6 +112,12 @@ public sealed class AiSettings
     /// <summary>Temps (s) au-delà duquel l'ingénieur répond « Copy, je regarde et je reviens vers vous » et laisse le pilote poser une autre question.</summary>
     public double AckAfterSeconds { get; set; } = 2.5;
 
+    /// <summary>
+    /// Modèle pour les questions difficiles (analyse, « pourquoi », plusieurs sujets, longues), par exemple un plus gros modèle
+    /// sur un serveur de calcul (« nom@machine ») ; vide = le modèle habituel. Les questions simples restent sur le modèle habituel.
+    /// </summary>
+    public string HardModel { get; set; } = "";
+
     /// <summary>Lexique de piste : corrections ajoutées par le pilote pour la dictée (« ce qu'elle entend » → « ce que j'ai dit »).</summary>
     public List<SecondMonitor.Hub.Core.Ai.LexiconEntry> Lexicon { get; set; } = new();
 

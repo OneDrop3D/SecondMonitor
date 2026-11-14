@@ -206,6 +206,49 @@ namespace SecondMonitor.Hub.Core.Ai
 
         public static string Build(RaceSnapshot snap, string question = null, BriefingExtras extras = null) => Prepare(snap, question, extras).Facts;
 
+        /// <summary>
+        /// Question difficile : pas de réponse calculée, et une question longue, à plusieurs sujets, ou qui demande une analyse
+        /// (« pourquoi », « qu'est-ce que je fais », « compare », « stratégie »…). Les questions simples restent sur le modèle habituel.
+        /// </summary>
+        public static bool IsHardQuestion(string question, BriefingResult brief)
+        {
+            if (brief?.Suggestion != null)
+            {
+                return false;
+            }
+
+            string t = RadioCommands.Normalize(question);
+            int words = t.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+            return words >= 14 || (brief?.Topics?.Count ?? 0) >= 2
+                || Regex.IsMatch(t, @"\b(pourquoi|explique|expliquer|analyse|analyser|compare|comparer|strategie|que faire|qu est ce que je fais|tu conseilles|conseille moi|meilleure option|vaut le coup|quel plan|qu est ce qui est mieux)\b");
+        }
+
+        /// <summary>
+        /// « Combien de temps prend un arrêt ? », « combien je perds au stand ? », « le temps de descendre aux stands » :
+        /// le temps perdu par un arrêt (mesuré sur les arrêts vus, sinon estimé) et celui du dernier arrêt du pilote. Null sinon.
+        /// </summary>
+        public static string PitLossAnswer(string question, RaceSnapshot snap)
+        {
+            string t = RadioCommands.Normalize(question);
+            bool pit = Regex.IsMatch(t, @"\b(arret|arrets|stand|stands|box|pit|pit stop|ravitaillement)\b");
+            bool time = Regex.IsMatch(t, @"\b(combien de temps|temps perdu|temps que (ca|ça) (me |nous )?(fait|coute)|perte|perd|perds|perdre|coute|dure|duree|prend|descendre|passage)\b");
+            if (!pit || !time || Regex.IsMatch(t, @"\b(quand|quel tour|dans combien de tours)\b"))
+            {
+                return null;
+            }
+
+            SecondMonitor.Hub.Core.Strategy.PitPlanDto plan = snap?.Player?.PitPlan;
+            double loss = plan?.PitLoss ?? SecondMonitor.Hub.Core.Strategy.PitPlanner.DefaultPitLoss;
+            string source = plan?.PitLossSource ?? "estimation, aucun arrêt vu pour l'instant";
+            string text = $"Un arrêt te coûte environ {N(loss, 0)} secondes par rapport à un tour normal, entrée, arrêt et sortie des stands compris ({source}).";
+            if (plan?.PlayerLastStopLoss is double mine && plan.PlayerLastStopLap is int lap)
+            {
+                text += $" Ton dernier arrêt, au tour {lap - 1} : {N(mine, 0)} secondes.";
+            }
+
+            return text;
+        }
+
         public static BriefingResult Prepare(RaceSnapshot snap, string question, BriefingExtras extras = null)
         {
             if (snap == null || !snap.HasData)
@@ -240,8 +283,14 @@ namespace SecondMonitor.Hub.Core.Ai
                 // Plusieurs sujets dans la même question (« ma position, la météo et les prévisions ? ») : on répond à chacun.
                 foreach (Topic other in topics.Where(t => t != main.Value && sections.ContainsKey(t)).Take(1))
                 {
-                    suggestion += " " + Answer(sections[other], q, behind, ahead);
+                    string more = Answer(sections[other], q, behind, ahead);
+                    if (!string.IsNullOrWhiteSpace(more) && !suggestion.Contains(more.Trim(), StringComparison.Ordinal))
+                    {
+                        suggestion += " " + more;
+                    }
                 }
+
+                suggestion = RadioFormat.WithoutRepeats(suggestion);
             }
 
             var sb = new StringBuilder();
@@ -683,7 +732,7 @@ namespace SecondMonitor.Hub.Core.Ai
                     Add(Topic.Pit, rejoin, companion: true, tag: "ressortie");
                 }
 
-                Add(Topic.Strategy, $"Un arrêt coûte environ {N(plan.PitLoss, 0)} s ({plan.PitLossSource})" +
+                Add(Topic.Strategy, $"Un arrêt coûte environ {N(plan.PitLoss, 0)} s, {plan.PitLossSource}" +
                     (plan.FreshTyreGain is double fg ? $" ; les pneus neufs font gagner environ {N(fg, 1)} s par tour ({plan.FreshTyreGainSource})." : "."), companion: true);
             }
 

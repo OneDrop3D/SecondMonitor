@@ -116,7 +116,7 @@ public sealed class EngineerService
         AiSettings ai = _settings.Current.Ai;
         var started = DateTime.UtcNow;
         // Lexique de piste : erreurs connues de la dictée (« books » → « box ») et corrections du pilote.
-        question = RadioLexicon.Correct(question, ai.Lexicon) ?? question;
+        question = RadioLexicon.Correct(RadioLexicon.CleanTranscript(question), ai.Lexicon) ?? question;
         Prepared prep;
         await _gate.WaitAsync(ct); // court : état de la conversation et réponses calculées, jamais pendant la réflexion du modèle
         try
@@ -133,7 +133,7 @@ public sealed class EngineerService
             return await FinishAsync(prep, Join(prep.Prefix, prep.Answer), prep.Kind, speak, from, started, ct);
         }
 
-        if (string.IsNullOrWhiteSpace(ModelFor(prep.Domain)))
+        if (string.IsNullOrWhiteSpace(ModelFor(prep)))
         {
             throw new InvalidOperationException("Choisissez d'abord un modèle « réflexion » dans l'onglet Ingénieur IA.");
         }
@@ -214,6 +214,12 @@ public sealed class EngineerService
 
         /// <summary>Question que l'ingénieur venait de poser au pilote (contexte pour le modèle).</summary>
         public string? PendingText;
+
+        /// <summary>Question jugée difficile : modèle « questions difficiles » s'il est choisi (par exemple sur un serveur de calcul).</summary>
+        public bool Hard;
+
+        /// <summary>Modèle qui a formulé la réponse (affiché sous l'échange).</summary>
+        public string? Model;
     }
 
     private async Task<Prepared> PrepareAsync(string question, bool test, CancellationToken ct)
@@ -270,6 +276,15 @@ public sealed class EngineerService
         // Suites de conversation (« oui », « non », « autre chose ? ») avant les politesses : « ok » répond à la proposition.
         DialogReply? dialog = wearQuestion != null ? null : RadioDialog.FollowUp(q, memory, car, prep.Lap);
         string? answer = dialog?.Text ?? await HandleCommandAsync(q, test, prep.Lap, ct);
+        // « Combien de temps prend un arrêt ? » : le temps perdu au stand (et celui du dernier arrêt), pas le tour d'arrêt.
+        if (dialog == null && answer == null && RaceBriefing.PitLossAnswer(q, snapshot) is string pitLoss)
+        {
+            prep.Answer = pitLoss;
+            prep.Kind = "calculée";
+            prep.Category = ExchangeCategorizer.Strategy;
+            return prep;
+        }
+
         if (dialog == null && answer == null && PitOrders.Parse(q) is PitOrder order)
         {
             // « Je boxe », « je veux des softs neufs », « la réparation aussi » : confirmé tout de suite et gardé pour l'arrêt.
@@ -342,6 +357,16 @@ public sealed class EngineerService
             return prep;
         }
 
+        // Dictée ratée (« C'est une cause pour. ») : ni sujet de course, ni question, ni retour sur la voiture.
+        // On demande de répéter tout de suite, au lieu de « je reviens vers toi » puis d'une réponse à côté.
+        if (RadioCommands.IsUnclear(q))
+        {
+            prep.Answer = RadioStyle.NotUnderstood();
+            prep.Kind = "commande";
+            prep.Category = ExchangeCategorizer.RaceInfo;
+            return prep;
+        }
+
         bool live = snapshot.HasData && !test;
         var extras = new BriefingExtras
         {
@@ -358,6 +383,7 @@ public sealed class EngineerService
         prep.Brief = brief;
         prep.Facts = brief.Facts;
         prep.Domain = Specialists.For(brief.Topics);
+        prep.Hard = RaceBriefing.IsHardQuestion(q, brief);
         prep.Category = ExchangeCategorizer.Categorize(q, brief.Topics);
         if (prep.Category == null)
         {
@@ -383,6 +409,7 @@ public sealed class EngineerService
     /// <summary>Diffuse la réponse (voix comprise), la garde dans l'historique et le carnet.</summary>
     private async Task<EngineerReply> FinishAsync(Prepared prep, string answer, string kind, bool speak, string from, DateTime started, CancellationToken ct, bool remember = true, bool followUp = false)
     {
+        answer = RadioStyle.Vary(RadioFormat.WithoutRepeats(answer), _settings.Current.Ai.EnglishCalls);
         if (!prep.Test && remember)
         {
             lock (_history)
@@ -427,6 +454,7 @@ public sealed class EngineerService
             FollowUp = followUp,
             InReplyTo = followUp ? prep.Question : null,
             Specialist = prep.Brief.Topics.Count > 0 || kind == "modèle" ? prep.Domain : null,
+            Model = kind == "modèle" ? prep.Model : null,
         };
 
         // Tous les écrans (Mac, iPad, poste du pilote) voient et peuvent entendre l'échange (sauf en mode test).
@@ -446,6 +474,18 @@ public sealed class EngineerService
         if (RadioCommands.TimeAnswer(text, DateTime.Now) is string time)
         {
             return time;
+        }
+
+        // « Annonce-moi l'écart à chaque fois qu'il baisse d'une seconde », « arrête les écarts ».
+        if (GapWatcher.Parse(text) is var (start, watch))
+        {
+            if (test)
+            {
+                return "Mode test : commande des écarts reconnue, rien n'est changé.";
+            }
+
+            Memory.GapWatch = start ? watch : null;
+            return start ? GapWatcher.Confirm(watch!) : "Copy, plus d'annonces d'écart.";
         }
 
         string? small = RadioCommands.SmallTalk(text);
@@ -641,6 +681,14 @@ public sealed class EngineerService
         return ai.Specialists != null && ai.Specialists.TryGetValue(domain, out string? model) && !string.IsNullOrWhiteSpace(model) ? model : ai.ThinkModel;
     }
 
+    /// <summary>Question difficile + modèle « questions difficiles » choisi : celui-ci (souvent plus gros, sur un serveur de calcul) ; sinon le spécialiste.</summary>
+    private string ModelFor(Prepared prep)
+    {
+        AiSettings ai = _settings.Current.Ai;
+        return prep.Hard && !string.IsNullOrWhiteSpace(ai.HardModel) ? ai.HardModel : ModelFor(prep.Domain);
+    }
+
+
     /// <summary>File de réflexion : une question au modèle à la fois, dans l'ordre d'arrivée.</summary>
     private async Task<string> ThinkQueuedAsync(Prepared prep)
     {
@@ -701,7 +749,8 @@ public sealed class EngineerService
         }
 
         messages.Add(new { role = "user", content = string.IsNullOrWhiteSpace(prep.ModelInput) ? prep.Question : prep.ModelInput });
-        string answer = Shorten(Clean(await _ollama.ChatAsync(ModelFor(prep.Domain), messages, ct, think: _settings.Current.Ai.ThinkingMode)));
+        prep.Model = ModelFor(prep);
+        string answer = Shorten(Clean(await _ollama.ChatAsync(prep.Model, messages, ct, think: _settings.Current.Ai.ThinkingMode)));
 
         // Garde-fous : chiffre inventé, réponse en anglais ou qui parle du « document » → réponse du hub.
         bool invented = brief.Suggestion != null && HasUnknownNumber(answer, brief.Facts + " " + prep.Question);
@@ -841,7 +890,7 @@ public sealed class EngineerService
         if (chunks == null)
         {
             // Format inconnu et aucun outil pour le convertir : envoyé tel quel.
-            return await _ollama.TranscribeAsync(model, audio, fileName, ai.Language, ct, hint);
+            return RadioLexicon.CleanTranscript(await _ollama.TranscribeAsync(model, audio, fileName, ai.Language, ct, hint));
         }
 
         var parts = new List<string>();
@@ -858,14 +907,14 @@ public sealed class EngineerService
         string language = _settings.Current.Ai.Language;
         try
         {
-            return await _ollama.TranscribeAsync(model, wav, "question.wav", language, ct, hint);
+            return RadioLexicon.CleanTranscript(await _ollama.TranscribeAsync(model, wav, "question.wav", language, ct, hint));
         }
         catch (InvalidOperationException first) when (!ct.IsCancellationRequested)
         {
             _logger.LogInformation("Transcription refusée ({Error}) : nouvel essai", first.Message);
             try
             {
-                return await _ollama.TranscribeAsync(model, wav, "question.wav", language, ct);
+                return RadioLexicon.CleanTranscript(await _ollama.TranscribeAsync(model, wav, "question.wav", language, ct));
             }
             catch (InvalidOperationException) when (!ct.IsCancellationRequested && WavAudio.Duration(wav) > 11)
             {
@@ -874,7 +923,7 @@ public sealed class EngineerService
                 var parts = new List<string>();
                 foreach (byte[] piece in smaller)
                 {
-                    parts.Add(await _ollama.TranscribeAsync(model, piece, "question.wav", language, ct));
+                    parts.Add(RadioLexicon.CleanTranscript(await _ollama.TranscribeAsync(model, piece, "question.wav", language, ct)));
                 }
 
                 return string.Join(" ", parts.Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p.Trim()));
@@ -964,6 +1013,7 @@ public sealed class EngineerService
     /// <summary>Message radio sans question (alerte du hub, consigne de l'ingénieur humain, intervention spontanée de l'IA).</summary>
     public async Task<EngineerReply> SayAsync(string text, string from, CancellationToken ct, bool proactive = false, bool awaitingAnswer = false, string? category = null, bool urgent = false)
     {
+        text = RadioStyle.Vary(text, _settings.Current.Ai.EnglishCalls);
         var started = DateTime.UtcNow;
         string? audio = await TrySpeakAsync(text, ct);
         var reply = new EngineerReply { Answer = text, From = from, AudioBase64 = _stopRequestedUtc > started ? null : audio, Proactive = proactive, AwaitingAnswer = awaitingAnswer, Urgent = urgent, Kind = proactive ? (urgent ? "alerte" : "spontanée") : "message", Category = category ?? ExchangeCategorizer.FromText(text) ?? ExchangeCategorizer.RaceInfo };
@@ -1060,6 +1110,9 @@ public sealed class EngineerReply
 
     /// <summary>Spécialiste qui a répondu : « pneus », « stratégie », « voiture », « course ».</summary>
     public string? Specialist { get; set; }
+
+    /// <summary>Modèle qui a formulé la réponse (« nom » ou « nom@machine »), si c'est l'IA.</summary>
+    public string? Model { get; set; }
 
     public DateTime At { get; set; } = DateTime.Now;
 }

@@ -31,11 +31,56 @@ namespace SecondMonitor.Hub.Core.Ai
             return text.StartsWith("Noté", System.StringComparison.Ordinal) ? "Copy, " + LowerFirst(text) : "Copy. " + text;
         }
 
-        /// <summary>Le pilote attend : l'ingénieur réfléchit et reviendra (le pilote peut poser une autre question entre-temps).</summary>
+        private static int _turn;
+
+        private static readonly string[] Waiting = { "Une seconde, je vérifie.", "Je regarde et je te dis.", "Reçu, je regarde ça.", "Deux secondes, je cherche." };
+
+        private static readonly string[] WaitingEnglish = { "Copy, je regarde.", "Une seconde, je vérifie.", "Je regarde et je te dis.", "Deux secondes, je cherche." };
+
+        private static readonly string[] Queued = { "Je finis la question d'avant et je te dis.", "Une seconde, je termine l'autre question." };
+
+        private static readonly string[] Unclear = { "Pas compris, tu peux répéter ?", "Radio pas claire, répète ?", "J'ai mal entendu, redis-moi ?" };
+
+        /// <summary>Le pilote attend : l'ingénieur réfléchit et reviendra (le pilote peut poser une autre question entre-temps). Formules variées.</summary>
         public static string Thinking(bool queued, bool english) =>
-            english
-                ? queued ? "Copy, je finis la question d'avant et je reviens vers toi." : "Copy, je regarde ça et je reviens vers toi."
-                : queued ? "Bien reçu, je finis la question d'avant et je reviens vers toi." : "Bien reçu, je regarde ça et je reviens vers toi.";
+            Pick(queued ? Queued : english ? WaitingEnglish : Waiting);
+
+        /// <summary>Phrase incompréhensible (dictée ratée) : on demande de répéter au lieu de répondre à côté.</summary>
+        public static string NotUnderstood() => Pick(Unclear);
+
+        /// <summary>
+        /// « Copy » à chaque phrase finit par agacer : en tête de réponse, il devient tour à tour « Copy », « Reçu », « Compris »
+        /// ou disparaît. Sans « Copy » (réglage en français), jamais de « Copy ».
+        /// </summary>
+        public static string Vary(string text, bool english)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return text;
+            }
+
+            Match m = Regex.Match(text, @"^copy( that)?\s*([,.:!])\s*", RegexOptions.IgnoreCase);
+            if (!m.Success)
+            {
+                return text;
+            }
+
+            string rest = text[m.Length..];
+            string[] heads = english ? new[] { "Copy", "Reçu", null, "Compris" } : new[] { "Reçu", null, "Compris", null };
+            string head = heads[Next() % heads.Length];
+            if (head == null || rest.Length == 0)
+            {
+                return rest.Length == 0 ? (head ?? "Reçu") + "." : Cap(rest);
+            }
+
+            return m.Groups[2].Value == "," ? $"{head}, {rest}" : $"{head}. {rest}";
+        }
+
+        private static string Pick(string[] options) => options[Next() % options.Length];
+
+        private static int Next() => System.Threading.Interlocked.Increment(ref _turn) & int.MaxValue;
+
+        private static string Cap(string s) => s.Length == 0 ? s : char.ToUpper(s[0], System.Globalization.CultureInfo.GetCultureInfo("fr-FR")) + s[1..];
 
         private static string LowerFirst(string s) =>
             s.Length > 1 && char.IsUpper(s[0]) && !char.IsUpper(s[1]) ? char.ToLowerInvariant(s[0]) + s[1..] : s;

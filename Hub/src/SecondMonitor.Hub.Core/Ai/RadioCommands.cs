@@ -191,6 +191,18 @@ namespace SecondMonitor.Hub.Core.Ai
             return now.Minute == 0 ? $"Il est {now.Hour} h." : $"Il est {now.Hour} h {now.Minute:00}.";
         }
 
+        /// <summary>Dictée ratée (« C'est une cause pour. ») : ni sujet de course, ni question, ni retour sur la voiture, quelques mots seulement.</summary>
+        public static bool IsUnclear(string question)
+        {
+            string t = Normalize(question);
+            int words = t.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+            return words is > 0 and <= 8
+                && RaceBriefing.DetectTopics(question).Count == 0
+                && !IsQuestion(question)
+                && !IsFeedback(question)
+                && SetupAdvisor.DetectSymptom(question) == null;
+        }
+
         /// <summary>Réponse oui / non du pilote à une question de l'IA : true, false ou null (ni l'un ni l'autre).</summary>
         public static bool? YesNo(string text)
         {

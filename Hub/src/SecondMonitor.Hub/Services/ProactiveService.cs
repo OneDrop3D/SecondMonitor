@@ -16,6 +16,10 @@ public sealed class ProactiveService : BackgroundService
     private readonly ILogger<ProactiveService> _logger;
     private readonly ProactiveEngineer _rules = new();
     private readonly RaceFinishRadio _finish = new();
+    private DateTime _lastWearAlert = DateTime.MinValue;
+
+    /// <summary>Au plus une alerte d'usure anormale dans cet intervalle (le pilote en recevait une toutes les 30 secondes).</summary>
+    private static readonly TimeSpan WearAlertInterval = TimeSpan.FromMinutes(4);
 
     public ProactiveService(RaceEngine engine, EngineerService engineer, SettingsStore settings, ILogger<ProactiveService> logger)
     {
@@ -60,14 +64,21 @@ public sealed class ProactiveService : BackgroundService
             }
 
             // « Je te redis l'usure dans deux tours » : promesse faite après une usure anormale, tenue ici.
-            if (ai.DrivingAlerts && DateTime.UtcNow >= nextWearPoint)
+            // « Annonce-moi l'écart à chaque seconde » : demandé par le pilote, donc dit même sans interventions spontanées.
+            if (DateTime.UtcNow >= nextWearPoint)
             {
                 nextWearPoint = DateTime.UtcNow.AddSeconds(3);
                 try
                 {
-                    if (WearFollowUp.Check(_engine.BuildSnapshot(), _engineer.Memory, DateTime.UtcNow) is string point)
+                    RaceSnapshot snapNow = _engine.BuildSnapshot();
+                    if (ai.DrivingAlerts && WearFollowUp.Check(snapNow, _engineer.Memory, DateTime.UtcNow) is string point)
                     {
                         await _engineer.SayAsync(point, "ingénieur IA", stoppingToken, proactive: true, category: ExchangeCategorizer.RaceSettings);
+                    }
+
+                    if (_engineer.Memory.GapWatch is GapWatch gaps && !Finished(snapNow) && GapWatcher.Check(gaps, snapNow, DateTime.UtcNow) is string gapLine)
+                    {
+                        await _engineer.SayAsync(gapLine, "ingénieur IA", stoppingToken, proactive: true, category: ExchangeCategorizer.RaceInfo);
                     }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
@@ -137,12 +148,48 @@ public sealed class ProactiveService : BackgroundService
         }
     }
 
+    /// <summary>Course finie pour le joueur (drapeau à damier passé) : plus d'alertes ni de conseils de course.</summary>
+    private static bool Finished(RaceSnapshot snap)
+    {
+        DriverRow? me = snap?.Drivers.FirstOrDefault(d => d.IsPlayer);
+        return snap?.SessionPhase == "Checkered" || me?.FinishStatus is "Finished" or "Dnf" or "Dq";
+    }
+
     /// <summary>Alertes de pilotage : une phrase courte, sans attendre l'intervalle des autres messages.</summary>
     private async Task SayDrivingAsync(List<DrivingEvent> events, CancellationToken ct)
     {
         try
         {
             RaceSnapshot snap = _engine.BuildSnapshot();
+            DriverRow? player = snap.Drivers.FirstOrDefault(d => d.IsPlayer);
+
+            // Après le drapeau à damier (tour de décélération) ou au stand : plus d'usure ni de limites à commenter.
+            if (Finished(snap) || player?.InPits == true)
+            {
+                events.RemoveAll(e => e.Type is "usure" or "limites" or "tour-annulé");
+            }
+
+            // Usure anormale : une alerte à la fois, au plus toutes les 4 minutes, jamais tant que la précédente attend sa réponse.
+            if (events.Any(e => e.Type == "usure"))
+            {
+                bool waiting = _engineer.Memory.Pending(90) is { Topic: "usure" };
+                if (waiting || DateTime.UtcNow - _lastWearAlert < WearAlertInterval)
+                {
+                    events.RemoveAll(e => e.Type == "usure");
+                }
+                else
+                {
+                    DrivingEvent first = events.First(e => e.Type == "usure");
+                    events.RemoveAll(e => e.Type == "usure" && e != first);
+                    _lastWearAlert = DateTime.UtcNow;
+                }
+            }
+
+            if (events.Count == 0)
+            {
+                return;
+            }
+
             foreach (RadioLine line in DrivingRadio.Lines(events, snap))
             {
                 if (line.IsQuestion)

@@ -55,7 +55,9 @@ namespace SecondMonitor.Hub.Core.Ai
             {
                 order.NoTyres = true;
             }
-            else if (tyreWords && (request || Regex.IsMatch(t, @"\b(neufs?|nouveaux?|nouvelles?|frais)\b")))
+            // « des pneus (parce que les miens ont des plats) », « change les pneus » : une demande de pneus, pas une remarque.
+            else if (tyreWords && (request || Regex.IsMatch(t, @"\b(neufs?|nouveaux?|nouvelles?|frais)\b")
+                || Regex.IsMatch(t, @"^(des|de nouveaux|d autres) (pneus|gommes)\b|\b(change|changer|changes|on change) (de |les |mes )?(pneus|gommes)\b")))
             {
                 order.Tyres = compound switch
                 {
@@ -85,10 +87,37 @@ namespace SecondMonitor.Hub.Core.Ai
             return order.IsEmpty ? null : order;
         }
 
+        /// <summary>« 3 L et 10 % d'énergie » : ce qui manque pour finir d'après la stratégie calculée, ou null si rien.</summary>
+        public static string NeededAtStop(RaceSnapshot snap)
+        {
+            PlayerStrategy p = snap?.Player;
+            double? fuel = p?.Fuel == null ? null : p.Fuel.ToAdd ?? p.Fuel.NextStopAdd;
+            double? energy = p?.Energy == null ? null : p.Energy.ToAddPct ?? p.Energy.NextStopAddPct;
+            var parts = new List<string>();
+            if (fuel is > 0.4)
+            {
+                parts.Add($"{RadioFormat.N(System.Math.Ceiling(fuel.Value), 0)} L");
+            }
+
+            if (energy is > 0.4)
+            {
+                parts.Add($"{RadioFormat.N(System.Math.Ceiling(energy.Value), 0)} % d'énergie");
+            }
+
+            return parts.Count == 0 ? null : string.Join(" et ", parts);
+        }
+
         /// <summary>Réponse radio et note de mémoire. Le plan d'arrêt est fusionné avec la demande précédente (pneus puis réparation).</summary>
         public static string Confirm(PitOrder order, RaceMemory memory, RaceSnapshot snap, int? lap)
         {
             PitOrder plan = memory?.PitPlan ?? new PitOrder();
+            // « Box » sans rien préciser : on prend le plan calculé (carburant et énergie qui manquent pour finir).
+            string autoFuel = order.BoxNow && order.Fuel == null && plan.Fuel == null ? NeededAtStop(snap) : null;
+            if (autoFuel != null)
+            {
+                order.Fuel = "jusqu'à la fin";
+            }
+
             plan.Tyres = order.Tyres ?? (order.NoTyres ? null : plan.Tyres);
             plan.NoTyres = order.NoTyres || (plan.NoTyres && order.Tyres == null);
             plan.Repair |= order.Repair;
@@ -120,7 +149,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
             if (plan.Fuel != null)
             {
-                parts.Add(plan.Fuel == "plein" ? "le plein" : "carburant jusqu'à la fin");
+                parts.Add(plan.Fuel == "plein" ? "le plein" : autoFuel ?? "carburant jusqu'à la fin");
             }
 
             string list = parts.Count == 0 ? string.Empty : " " + RadioFormat.Cap(string.Join(", ", parts)) + ".";

@@ -40,11 +40,17 @@ namespace SecondMonitor.Hub.Core.Strategy
             var plan = new PitPlanDto
             {
                 PitLoss = Math.Round(pitLoss ?? DefaultPitLoss, 1),
-                PitLossSource = pitLoss.HasValue ? $"mesurée sur {stops} arrêt{(stops > 1 ? "s" : string.Empty)}" : "estimée (aucun arrêt observé pour l'instant)",
+                PitLossSource = pitLoss.HasValue ? $"mesuré sur {stops} arrêt{(stops > 1 ? "s" : string.Empty)}" : "estimation, aucun arrêt vu pour l'instant",
                 FreshTyreGain = freshGain.HasValue ? Math.Round(freshGain.Value, 2) : null,
                 FreshTyreGainSource = fieldGain.HasValue ? $"mesuré sur {gainSamples} relais" : playerGain.HasValue ? "d'après ta dégradation" : "inconnu pour l'instant",
                 WarmupPenalty = warmup,
             };
+
+            if (trackers != null && trackers.TryGetValue(me.Id, out DriverTracker mine) && LastStopLoss(mine) is var (lossLap, loss))
+            {
+                plan.PlayerLastStopLap = lossLap;
+                plan.PlayerLastStopLoss = Math.Round(loss, 1);
+            }
 
             var cls = snap.Drivers.Where(d => d.ClassId == me.ClassId && d.FinishStatus is not ("Dnf" or "Dq")).OrderBy(d => d.ClassPosition).ToList();
             plan.RejoinNow = Rejoin(snap, me, cls, plan.PitLoss);
@@ -210,6 +216,33 @@ namespace SecondMonitor.Hub.Core.Strategy
             return samples.Count == 0 ? (null, 0) : (Median(samples), samples.Count);
         }
 
+        /// <summary>
+        /// Temps perdu par le dernier arrêt de ce pilote : tour d'entrée + tour de sortie − deux tours normaux (médiane de ses tours propres).
+        /// Null tant que le tour de sortie n'est pas bouclé.
+        /// </summary>
+        public static (int Lap, double Loss)? LastStopLoss(DriverTracker t)
+        {
+            var clean = t.Laps.Where(l => l.Time > 0 && !l.IsPitLap && !l.IsOutLap).Select(l => l.Time.Value).ToList();
+            if (clean.Count < 2)
+            {
+                return null;
+            }
+
+            double normal = Median(clean);
+            for (int i = t.Laps.Count - 2; i >= 0; i--)
+            {
+                LapRecord inLap = t.Laps[i];
+                LapRecord outLap = t.Laps[i + 1];
+                if (inLap.IsPitLap && outLap.IsOutLap && inLap.Time > 0 && outLap.Time > 0)
+                {
+                    double loss = inLap.Time.Value + outLap.Time.Value - (2 * normal);
+                    return loss is > 5 and < 300 ? (outLap.Lap, loss) : null;
+                }
+            }
+
+            return null;
+        }
+
         /// <summary>Gain des pneus neufs : médiane des 3 derniers tours d'un relais moins les tours 2 à 4 du suivant.</summary>
         public static (double? Gain, int Count) MeasureFreshGain(IReadOnlyDictionary<string, DriverTracker> trackers)
         {
@@ -264,6 +297,11 @@ namespace SecondMonitor.Hub.Core.Strategy
         public double PitLoss { get; set; }
 
         public string PitLossSource { get; set; }
+
+        /// <summary>Dernier arrêt du joueur : tour de sortie et temps perdu (entrée + sortie des stands comparées à son rythme).</summary>
+        public int? PlayerLastStopLap { get; set; }
+
+        public double? PlayerLastStopLoss { get; set; }
 
         public double? FreshTyreGain { get; set; }
 

@@ -248,6 +248,7 @@ function Message({ m }: { m: RadioMessage }) {
         {m.kind && KIND_LABEL[m.kind] && <span className="pill small-pill">{KIND_LABEL[m.kind]}</span>}
         {m.category && <CategoryPill category={m.category} />}
         {m.specialist && m.kind === 'modèle' && <span className="pill small-pill">spécialiste {m.specialist}</span>}
+        {m.model && m.kind === 'modèle' && <span className="pill small-pill" title="Modèle qui a formulé la réponse">{m.model.replace('@', ' sur ')}</span>}
         {m.awaitingAnswer && <span className="pill small-pill">attend votre réponse</span>}
         {m.scenario && <span className="pill small-pill">{m.scenario}</span>}
         {m.facts && <button className="chip tiny" onClick={() => setShowFacts(!showFacts)}>{showFacts ? 'masquer les faits' : 'faits utilisés'}</button>}
@@ -789,6 +790,12 @@ function SpecialistsCard({ settings, save, models }: { settings: HubSettings | n
         {SPECIALISTS.map(([key, label]) => (
           <ModelSelect key={key} label={label} value={settings.ai.specialists?.[key] ?? ''} options={chat} onChange={(v) => set(key, v)} allowSame />
         ))}
+        <ModelSelect label="Questions difficiles (analyse, « pourquoi », plusieurs sujets)" value={settings.ai.hardModel ?? ''} options={chat}
+          onChange={(v) => save((s) => ({ ...s, ai: { ...s.ai, hardModel: v } }))} allowSame />
+        <div className="secondary small">
+          Les questions simples et celles que le hub calcule restent sur leur modèle habituel ; seules les questions difficiles vont à ce modèle,
+          par exemple un plus gros modèle sur un serveur de calcul (« nom sur machine »). Vide : le spécialiste du domaine.
+        </div>
       </div>
     </section>
   );

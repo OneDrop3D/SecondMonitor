@@ -27,6 +27,8 @@ export interface RadioMessage {
   inReplyTo?: string | null;
   /** Spécialiste qui a répondu : « pneus », « stratégie », « voiture », « course ». */
   specialist?: string | null;
+  /** Modèle qui a formulé la réponse (« nom » ou « nom@machine »). */
+  model?: string | null;
   at: string;
 }
 

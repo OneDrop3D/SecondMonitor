@@ -156,13 +156,14 @@ namespace SecondMonitor.Hub.Core.Ai
             BattleDto ahead = p.Battles?.FirstOrDefault(b => b.Side == "ahead");
             if (race && ahead?.Gap is double ga && ga <= 1.0 && h.ChargePct >= 50)
             {
-                return Info($"ers-attack-{ahead.Id}", $"Le numéro {ahead.Number} est à {Sec(ga)} : garde la batterie pour la ligne droite principale{(f1 ? ", mode overtake" : string.Empty)}.", 300);
+                // Une clé par situation (attaque / défense), pas par adversaire : sinon une phrase par voiture croisée, chaque minute.
+                return Info("ers-attack", $"Le numéro {ahead.Number} est à {Sec(ga)} : garde la batterie pour la ligne droite principale{(f1 ? ", mode overtake" : string.Empty)}.", 600);
             }
 
             BattleDto behind = p.Battles?.FirstOrDefault(b => b.Side == "behind");
             if (race && behind?.Gap is double gb && gb <= 0.8 && h.ChargePct >= 40)
             {
-                return Info($"ers-defend-{behind.Id}", $"Le numéro {behind.Number} est à {Sec(gb)} derrière : déploie en sortie des virages lents pour le garder derrière.", 300);
+                return Info("ers-defend", $"Le numéro {behind.Number} est à {Sec(gb)} derrière : déploie en sortie des virages lents pour le garder derrière.", 600);
             }
 
             if (race && h.ChargePct < 12)

@@ -349,6 +349,8 @@ export interface HubSettings {
     lexicon?: { heard: string; meant: string }[];
     /** Durée maximale (s) d'un morceau d'audio envoyé au modèle « écoute » (découpé sur un silence au-delà). */
     listenChunkSeconds?: number;
+    /** Modèle pour les questions difficiles (vide : le spécialiste du domaine). */
+    hardModel?: string;
     proactiveMinIntervalSec: number;
     strictAnswers: boolean;
     wetThresholdPct: number;

@@ -26,6 +26,9 @@ namespace SecondMonitor.Hub.Core.Ai
         /// <summary>L'ingénieur a déjà proposé de régler lui-même le menu des stands pendant cette session.</summary>
         public bool PitAutoAsked { get; set; }
 
+        /// <summary>Annonce de l'écart demandée par le pilote, ou null.</summary>
+        public GapWatch GapWatch { get; set; }
+
         /// <summary>Décidé avec le pilote : finir sans s'arrêter.</summary>
         public bool NoStopPlanned { get; set; }
 
@@ -73,6 +76,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 _entries.Clear();
                 _pending = null;
                 _wearWatches.Clear();
+                GapWatch = null;
                 PlannedStopLap = null;
                 PitPlan = null;
                 PitAutoAsked = false;
