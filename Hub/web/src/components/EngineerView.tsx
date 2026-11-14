@@ -5,6 +5,7 @@ import { useRadio, type RadioMessage } from '../radio';
 import type { HubSettings, MemoryState, NodeStatus, OllamaModel } from '../types';
 import { CategoryPill, type CarnetSummary } from './CarnetView';
 import { useStations } from '../stations';
+import { ComputeLinkPanel } from './ComputeServer';
 
 interface Diagnostic {
   step: string;
@@ -53,14 +54,16 @@ function useHubSettings() {
     setSettings(next);
     api<HubSettings>('/api/settings', { method: 'PUT', body: JSON.stringify(next) }).then(setSettings).catch(() => {});
   }, []);
-  return { settings, save };
+  // Relecture après un changement fait par le hub lui-même (serveur de calcul relié : nouvelle machine).
+  const reload = useCallback(() => api<HubSettings>('/api/settings').then(setSettings).catch(() => {}), []);
+  return { settings, save, reload };
 }
 
 export function EngineerView({ radio, hasLiveData, sessionType }: { radio: RadioMessage[]; hasLiveData: boolean; sessionType?: string | null }) {
   const QUICK = sessionType === 'Race' || !sessionType ? QUICK_RACE : QUICK_PRACTICE;
   const r = useRadio();
   const [text, setText] = useState('');
-  const { settings, save } = useHubSettings();
+  const { settings, save, reload: reloadSettings } = useHubSettings();
   const [models, setModels] = useState<ModelsResponse | null>(null);
   const loadModels = useCallback(() => {
     api<ModelsResponse>('/api/ai/models').then(setModels).catch((e) => setModels({ ok: false, error: (e as Error).message, models: [], nodes: [] }));
@@ -174,7 +177,7 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
         <WheelBindingCard />
         <ModelsCard settings={settings} save={save} models={models} reload={loadModels} />
         <SpecialistsCard settings={settings} save={save} models={models} />
-        <MachinesCard settings={settings} save={save} models={models} reload={loadModels} />
+        <MachinesCard settings={settings} save={save} models={models} reload={loadModels} reloadSettings={reloadSettings} />
       </div>
     </div>
   );
@@ -808,8 +811,11 @@ function ModelSelect({ label, value, options, onChange, allowSame }: { label: st
   );
 }
 
-/** Machines IA du réseau : ce Mac, un Raspberry Pi, un autre PC… chacune fait tourner Ollama. */
-function MachinesCard({ settings, save, models, reload }: { settings: HubSettings | null; save: (p: (s: HubSettings) => HubSettings) => void; models: ModelsResponse | null; reload: () => void }) {
+/**
+ * Machines IA du réseau : ce Mac, un Raspberry Pi, un autre PC… chacune fait tourner Ollama.
+ * Un serveur de calcul SecondMonitor (troisième ordinateur) se relie avec le code affiché sur son écran (ComputeLinkPanel).
+ */
+function MachinesCard({ settings, save, models, reload, reloadSettings }: { settings: HubSettings | null; save: (p: (s: HubSettings) => HubSettings) => void; models: ModelsResponse | null; reload: () => void; reloadSettings: () => Promise<unknown> }) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   if (!settings) return null;
@@ -839,18 +845,31 @@ function MachinesCard({ settings, save, models, reload }: { settings: HubSetting
             <div key={n.name} className="node-row">
               <NodeDot s={st} />
               <b>{n.name}</b>
+              {n.token && <span className="pill small-pill" title="Serveur de calcul SecondMonitor relié par code (jeton)">serveur de calcul</span>}
               <span className="muted small">{n.url}</span>
               <span className="spacer" />
-              <span className="muted small">{st?.ok ? `${st.modelCount} modèle(s) · ${st.milliseconds} ms` : st?.error ?? '…'}</span>
+              <span className="muted small">{st?.ok ? `${st.modelCount} modèle(s) · ${st.milliseconds} ms` : n.token && st?.error?.includes('401') ? 'jeton refusé : reliez de nouveau ci-dessous' : st?.error ?? '…'}</span>
               <button className="close" onClick={() => { save((s) => ({ ...s, ai: { ...s.ai, nodes: s.ai.nodes.filter((x) => x.name !== n.name) } })); window.setTimeout(reload, 400); }} aria-label={`Retirer ${n.name}`}>✕</button>
             </div>
           );
         })}
+        <ComputeLinkPanel onLinked={() => { reloadSettings().then(reload); }} />
+        <div className="secondary small">Ou un Ollama ouvert au réseau (Raspberry Pi, autre PC…) :</div>
         <form className="row" onSubmit={(e) => { e.preventDefault(); add(); }}>
           <input className="input" style={{ flex: '1 1 110px' }} value={name} onChange={(e) => setName(e.target.value)} placeholder="nom (ex. raspberry)" />
           <input className="input" style={{ flex: '2 1 180px' }} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="raspberrypi.local ou 192.168.1.40" />
           <button className="btn" disabled={!name.trim() || !url.trim()}>Ajouter</button>
         </form>
+        <details className="small secondary">
+          <summary>Un troisième ordinateur comme serveur de calcul (PC avec une grosse carte graphique, autre Mac)</summary>
+          <ol style={{ paddingLeft: 18, lineHeight: 1.7 }}>
+            <li>Sur cet ordinateur (Windows, Linux ou Mac) : installez Ollama et vos modèles, puis SecondMonitor.</li>
+            <li>Au premier lancement, choisissez <b>Serveur de calcul</b> (installateur Windows : type « Serveur de calcul » ; Linux sans écran : <span className="code">SecondMonitorHub --sans-fenetre --serveur-calcul</span>). Son écran affiche un code à 6 chiffres.</li>
+            <li>Il apparaît ci-dessus dans « Serveurs de calcul sur le réseau » : <b>Relier</b>, puis saisissez le code.</li>
+            <li>Choisissez ses modèles dans « Modèles » ou « Spécialistes » (par exemple le spécialiste « Voiture et réglages » sur le gros PC, les réponses courtes ici).</li>
+          </ol>
+          Inutile d'ouvrir son Ollama au réseau : SecondMonitor le relaie lui-même, et seulement pour les SecondMonitor reliés par code.
+        </details>
         <details className="small secondary">
           <summary>Installer Ollama sur un Raspberry Pi (ou un autre PC)</summary>
           <ol style={{ paddingLeft: 18, lineHeight: 1.7 }}>

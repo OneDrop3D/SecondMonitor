@@ -7,6 +7,7 @@ import { isRadioStation, setRadioStation, useRadio } from '../radio';
 import { MusicCard } from '../music/MusicCard';
 import { UpdateCard } from './UpdateBanner';
 import { useStations, type VoiceOutput } from '../stations';
+import { ComputeModeCard } from './ComputeServer';
 
 export function SettingsView({ theme, setTheme, snapshot }: { theme: string; setTheme: (t: string) => void; snapshot: RaceSnapshot | null }) {
   const [settings, setSettings] = useState<HubSettings | null>(null);
@@ -78,6 +79,8 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
           </div>
         </div>
       </div>
+
+      <ComputeModeCard />
 
       <UpdateCard />
 
