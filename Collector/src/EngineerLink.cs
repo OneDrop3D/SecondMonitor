@@ -37,6 +37,9 @@ namespace SecondMonitor.Collector
         {
             _runtime = runtime;
             _music = new CollectorMusic(runtime.DataDirectory);
+            // Menu des stands de LMU : chaque échange avec le jeu dans le journal (tronqué) et en entier dans un fichier du dossier du collecteur.
+            LmuPitMenu.Log = runtime.Log;
+            LmuPitMenu.DumpFile = Path.Combine(runtime.DataDirectory, "menu-stands-lmu.txt");
             _ = Task.Run(LoopAsync);
         }
 
@@ -358,14 +361,33 @@ namespace SecondMonitor.Collector
             ClientWebSocket socket = _socket;
             _ = Task.Run(async () =>
             {
-                (bool ok, string text) = !WantsPit
-                    ? (false, "Le collecteur n'autorise pas le réglage du menu des stands (case à cocher dans sa fenêtre).")
-                    : _runtime.ActiveGame != "Le Mans Ultimate" && !test
-                        ? (false, "Le Mans Ultimate n'est pas lancé sur le PC de jeu.")
-                        : test ? await LmuPitMenu.TestAsync(_stop.Token).ConfigureAwait(false) : await LmuPitMenu.ApplyAsync(order, _stop.Token).ConfigureAwait(false);
+                bool ok;
+                string text;
+                string shown = null; // ce que la fenêtre affiche, quand c'est plus détaillé que la phrase radio
+                if (!WantsPit)
+                {
+                    (ok, text) = (false, "Le collecteur n'autorise pas le réglage du menu des stands (case à cocher dans sa fenêtre).");
+                    _runtime.Log($"Menu des stands LMU : demande de SecondMonitor refusée (case non cochée) : {(order.ValueKind == JsonValueKind.Undefined ? "(vide)" : order.GetRawText())}");
+                }
+                else if (_runtime.ActiveGame != "Le Mans Ultimate" && !test)
+                {
+                    (ok, text) = (false, "Le Mans Ultimate n'est pas lancé sur le PC de jeu.");
+                    _runtime.Log($"Menu des stands LMU : demande de SecondMonitor ignorée, jeu lu : {_runtime.ActiveGame ?? "aucun"}.");
+                }
+                else if (test)
+                {
+                    // À la radio : la phrase courte ; dans la fenêtre et le journal : le détail.
+                    LmuPitMenu.Inspection r = await LmuPitMenu.InspectAsync(_stop.Token, CarNow()).ConfigureAwait(false);
+                    (ok, text, shown) = (r.Ok, r.Text, r.Detail);
+                }
+                else
+                {
+                    (ok, text) = await LmuPitMenu.ApplyAsync(order, _stop.Token, CarNow()).ConfigureAwait(false);
+                }
+
                 _runtime.Log($"Menu des stands LMU : {text}");
-                LastPitMenu = text;
-                ToPage?.Invoke(new { type = "stand-resultat", ok, texte = text });
+                LastPitMenu = shown ?? text;
+                ToPage?.Invoke(new { type = "stand-resultat", ok, texte = shown ?? text });
                 try
                 {
                     await SendAsync(socket, new { type = "pitMenuResult", id, ok, test, text }, _stop.Token).ConfigureAwait(false);
@@ -406,13 +428,31 @@ namespace SecondMonitor.Collector
         /// <summary>Dernier résultat du menu des stands (affiché dans la fenêtre).</summary>
         public string LastPitMenu { get; private set; }
 
-        /// <summary>Bouton « Tester l'API du menu des stands » de la fenêtre : lecture seule, sans passer par SecondMonitor.</summary>
+        /// <summary>
+        /// Bouton « Tester l'API du menu des stands » de la fenêtre : lecture seule, sans passer par SecondMonitor.
+        /// Rend le détail (lignes du menu et leurs choix, état du jeu, voiture) ; les réponses brutes sont dans le journal et le fichier.
+        /// </summary>
         public async Task<(bool Ok, string Text)> TestPitMenuAsync()
         {
-            (bool ok, string text) = await LmuPitMenu.TestAsync(_stop.Token).ConfigureAwait(false);
-            LastPitMenu = text;
-            _runtime.Log($"Menu des stands LMU (test) : {text}");
-            return (ok, text);
+            LmuPitMenu.Inspection r = await LmuPitMenu.InspectAsync(_stop.Token, CarNow()).ConfigureAwait(false);
+            LastPitMenu = r.Detail;
+            _runtime.Log($"Menu des stands LMU (test) : {r.Text}");
+            return (r.Ok, r.Detail);
+        }
+
+        /// <summary>La voiture du pilote d'après la télémétrie lue par le collecteur (Le Mans Ultimate seulement), ou null.</summary>
+        private LmuPitMenu.CarNow CarNow()
+        {
+            if (_runtime.ActiveGame != "Le Mans Ultimate" || _runtime.Host.LastPlayer?.CarInfo is not { } car)
+            {
+                return null;
+            }
+
+            static string Clean(string s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+            string front = Clean(car.WheelsInfo?.FrontLeft?.TyreType);
+            string rear = Clean(car.WheelsInfo?.RearLeft?.TyreType) ?? front;
+            double? fuel = car.FuelSystemInfo?.FuelRemaining is { InLiters: >= 0 } v ? v.InLiters : null;
+            return front == null && fuel == null ? null : new LmuPitMenu.CarNow(front, rear, fuel);
         }
 
         /// <summary>Lit les messages de SecondMonitor jusqu'à la fermeture de la liaison.</summary>
