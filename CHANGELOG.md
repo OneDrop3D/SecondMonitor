@@ -3,6 +3,26 @@
 SecondMonitor (l'application qui affiche) et SecondMonitor Collecteur (PC de jeu), pour Windows, Mac et Linux/SteamOS.
 Basé sur [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) de winzarten (licence MIT).
 
+## Version 0.7.3
+
+- **Ingénieur IA, moins bavard** : un conseil de batterie (attaque ou défense) et une annonce de duel toutes les 10 minutes au plus, quel que soit l'adversaire (il y en avait un par minute) ; une alerte d'usure anormale toutes les 4 minutes au plus, jamais tant que la précédente attend ta réponse, et plus aucune alerte après le drapeau à damier ni au stand.
+- **Ingénieur IA, accusés de réception variés** : « Copy » une fois sur quatre environ, sinon « Reçu », « Compris » ou rien ; formules d'attente différentes (« Une seconde, je vérifie », « Je regarde et je te dis »).
+- **Ingénieur IA, phrase mal entendue** : une phrase sans sujet de course ni question (dictée ratée) reçoit « Pas compris, tu peux répéter ? » tout de suite, au lieu de « je reviens vers toi » suivi d'une réponse à côté.
+- **Temps perdu au stand** : « Combien de temps prend un arrêt ? », « combien je perds au stand ? » donnent le temps perdu (mesuré sur les arrêts vus, sinon estimé) ; après ton arrêt, l'ingénieur annonce ce qu'il t'a coûté.
+- **« Box box »** : sans autre précision, l'ingénieur prend le plan calculé (« 3 L et 10 % d'énergie ») et règle le menu des stands de Le Mans Ultimate avec ; « des pneus parce que les miens ont des plats » est compris comme une demande de pneus neufs.
+- **Écart annoncé** : « annonce-moi l'écart à chaque fois qu'il baisse d'une seconde » (ou « avec celui de derrière », « toutes les deux secondes ») ; « arrête les écarts » pour couper.
+- **Modèle pour les questions difficiles** : carte Spécialistes, les questions d'analyse (« pourquoi… », plusieurs sujets) peuvent aller à un plus gros modèle, par exemple sur un autre ordinateur ; les questions simples restent rapides. Le modèle qui a répondu s'affiche sous la réponse.
+- **Écoute** : la sortie brute de Qwen3-ASR (« language French<asr_text>… ») est nettoyée : les commandes en début de phrase sont de nouveau reconnues.
+- **Le Mans Ultimate, menu des stands** : « box » règle maintenant le menu avec le carburant et l'énergie prévus, « deux tours de carburant » est compris, et parler de la répartition des freins ne déclenche plus une « réparation » au stand. Côté collecteur : connexion à 127.0.0.1 (« localhost » ne répond plus depuis LMU 1.3.3), pneus neufs de la gomme montée sur les quatre roues, mode carburant relatif, et un journal détaillé (`menu-stands-lmu.txt`) ; le bouton « Tester l'API » montre tout le menu lu.
+- **Deux écrans** : bouton « Nouvelle fenêtre » (⌘N) en bas de la barre de droite. La fenêtre s'ouvre sur l'autre écran avec sa propre page et ses propres préférences d'affichage ; elle est muette (la voix ne sort qu'une fois) ; les fenêtres sont rouvertes à leur place au lancement suivant.
+- **Trois ordinateurs, serveur de calcul** : un troisième ordinateur (avec Ollama et de plus gros modèles) peut devenir « Serveur de calcul » au premier lancement, dans les Réglages ou à l'installation sous Windows. SecondMonitor le trouve tout seul sur le réseau (Ingénieur IA › Machines IA), s'y relie avec un code d'appairage, et ses modèles s'utilisent comme les autres (réflexion, spécialistes, questions difficiles).
+- **Batterie, pendant le tour** : « batterie » donne le pourcentage, ce que le dernier tour t'a fait gagner ou perdre, où tu la vides et où tu la recharges le plus (ligne droite, virage), et en direct si tu dépenses plus ou moins qu'au même endroit du tour précédent, avec la fin de tour estimée.
+- **Essence et énergie virtuelle, pendant le tour** : la consommation du tour en cours est comparée au tour précédent au même endroit, avec une estimation du tour entier ; dès le premier tour, la consommation au tour est estimée au lieu d'attendre la ligne.
+- **Fin de session** : en qualification et en essais aussi, l'ingénieur annonce la position, le meilleur tour et l'écart à la pole ou au meilleur temps (« Pole position, bravo ! ») ; le message d'arrivée est dit même si les interventions spontanées sont coupées.
+- **Temps perdu au stand, circuit par circuit** : avant tout arrêt, l'ingénieur connaît le temps de la voie des stands de 108 circuits (valeurs publiées pour 67, dont tous ceux de Le Mans Ultimate ; estimées d'après la longueur de la voie pour 41) et y ajoute le temps d'arrêt : au Mans, 32 s de voie et, en Le Mans Ultimate, l'arrêt calculé sur l'énergie prévue (« 10 % d'énergie et quatre pneus : 18 s »). La mesure le remplace dès qu'un arrêt est vu.
+
+---
+
 ## Version 0.7.2
 
 - **Windows** : SecondMonitor s'affiche de nouveau dans sa fenêtre (elle pouvait rester noire quand le collecteur avait été ouvert sur le même PC).
