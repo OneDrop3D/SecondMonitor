@@ -173,6 +173,33 @@ public class LapComparisonTests
     }
 
     [Test]
+    public void LapTrace_SurvivesASmallRollBack()
+    {
+        // Tête-à-queue au milieu du tour 2 : la voiture s'arrête, recule de 20 m, puis repart. Le tour garde sa trace (virages détectables).
+        var a = new DriverLapAnalysis();
+        const double lapLength = 2000;
+        double t = 0, total = 0;
+        void Push(double speedMs, double dt)
+        {
+            t += dt;
+            total += speedMs * dt;
+            int lap = (int)(total / lapLength);
+            a.Update(t, lap, total - (lap * lapLength), lapLength, Math.Abs(speedMs) * 3.6, total, 0, false);
+        }
+
+        while (total < 3000) Push(40, 0.1);
+        for (int i = 0; i < 20; i++) Push(-1, 0.1); // 2 m en arrière
+        for (int i = 0; i < 20; i++) Push(-9, 0.1); // 18 m de plus
+        while (total < 3 * lapLength + 100) Push(40, 0.1);
+
+        Assert.That(a.Traces.Select(tr => tr.Lap), Does.Contain(1), "le tour du tête-à-queue reste complet");
+        LapTrace spin = a.Traces.Single(tr => tr.Lap == 1);
+        Assert.That(spin.Speed.Count(v => float.IsNaN(v)), Is.LessThan(spin.Speed.Length * 0.05));
+        MicroSectorLap ms = a.MicroSectorLaps.Single(l => l.Lap == 2);
+        Assert.That(ms.Times.Count(v => v == null), Is.InRange(1, 2), "seul le micro-secteur du recul n'est pas chronométré");
+    }
+
+    [Test]
     public void OutLap_IsTheLapWhereTheCarLeavesThePits()
     {
         // Le Mans : on rentre au stand en fin de tour 2, on passe la ligne dans la voie des stands, on ressort pendant le tour 3.

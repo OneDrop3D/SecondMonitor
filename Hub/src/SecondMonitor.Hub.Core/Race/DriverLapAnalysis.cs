@@ -80,11 +80,28 @@ namespace SecondMonitor.Hub.Core.Race
                 ResetLapState();
             }
 
+            bool hadPrevious = _progress.HasPrevious;
+            double before = _progress.PreviousUnwrapped;
+            double beforeTime = _progress.PreviousTime;
             bool continuous = _progress.Push(now, completedLaps, lapDistance, lapLength, out double u1, out bool rebased);
             if (rebased)
             {
+                // Recul de quelques mètres (tête-à-queue, voiture qui repart en arrière) : le tour continue et sa trace reste utilisable ;
+                // seul le micro-secteur en cours n'est pas chronométré. Téléportation, retour au stand : tour incomplet.
+                bool smallStepBack = hadPrevious && u1 <= before && before - u1 < 300 && now - beforeTime < 5;
+                if (smallStepBack)
+                {
+                    // Revenue en arrière d'un repère : le micro-secteur d'avant le repère n'a plus un temps juste (le recul n'y est pas compté).
+                    double msLen = LapLength / MicroSectorCount;
+                    long back = (long)Math.Floor(u1 / msLen), reached = (long)Math.Floor(before / msLen);
+                    if (back < reached && back / MicroSectorCount == reached / MicroSectorCount)
+                    {
+                        CurrentMs[(int)(back % MicroSectorCount)] = null;
+                    }
+                }
+
                 _lastBoundary = -1;
-                _gapInLap = true;
+                _gapInLap |= !smallStepBack;
                 Remember(now, u1, speedKph, x, z);
                 return;
             }
