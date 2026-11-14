@@ -28,6 +28,9 @@ namespace SecondMonitor.Hub.Core.Track
 
         public static int Count => Tracks.Value.Count;
 
+        /// <summary>Tous les tracés de la bibliothèque (contrôles : chaque circuit a-t-il sa voie des stands dans pitlane.json ?).</summary>
+        public static IReadOnlyList<LibraryTrack> All => Tracks.Value;
+
         /// <summary>Le tracé correspondant au circuit annoncé par le jeu, ou null.</summary>
         public static LibraryTrack Find(string trackName, string layoutName, double lapLength)
         {
