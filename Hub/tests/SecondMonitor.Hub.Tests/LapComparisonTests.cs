@@ -137,7 +137,8 @@ public class LapComparisonTests
             double total = speedMs * t;
             int lap = (int)(total / lapLength);
             double dist = total - (lap * lapLength);
-            string gear = dist < 500 ? "3" : dist < 1200 ? "4" : dist < 1500 ? "3" : "1";
+            // Comme Le Mans Ultimate : le point mort apparaît sur une ou deux mesures pendant la montée 3 → 4.
+            string gear = dist < 494 ? "3" : dist < 504 ? "N" : dist < 1200 ? "4" : dist < 1500 ? "3" : "1";
             // Répartition baissée en deux crans rapprochés vers 800 m (un seul changement), remise à 56 sur la ligne (réglage de départ du tour suivant).
             double bias = dist < 800 ? 56.0 : dist < 812 ? 55.8 : 55.5;
             watch.Update(t, Car(lap, dist, speedMs * 3.6, gear, 6000 + (int)(dist % 500), bias), new InputInfo { ThrottlePedalPosition = 1 }, lapLength, null, "Practice", "Green");
@@ -164,10 +165,42 @@ public class LapComparisonTests
         Assert.That(last, Is.EqualTo(50).Within(0.3));
         Assert.That(second.Elapsed.First(v => v.HasValue).Value, Is.EqualTo(0.125).Within(0.2));
         Assert.That(second.Gear[100], Is.EqualTo(4));
+        Assert.That(second.Gear.Skip(45).Take(10), Has.None.EqualTo(0), "point mort pendant le passage : pas de trou dans la trace");
 
         var laps = watch.RecordedLaps();
         Assert.That(laps.Select(l => l.Lap), Is.EqualTo(new[] { 1, 2, 3 }));
         Assert.That(laps[^1].Current, Is.True);
+    }
+
+    [Test]
+    public void OutLap_IsTheLapWhereTheCarLeavesThePits()
+    {
+        // Le Mans : on rentre au stand en fin de tour 2, on passe la ligne dans la voie des stands, on ressort pendant le tour 3.
+        var tracker = new DriverTracker("1");
+        double now = 0;
+        void Step(int laps, double dist, bool pits)
+        {
+            tracker.Update(new DriverInfo { DriverSessionId = "1", CompletedLaps = laps, LapDistance = dist, InPits = pits, CurrentLapValid = true, Speed = Velocity.FromKph(pits ? 60 : 200) }, now, 4000);
+            now += 5;
+        }
+
+        for (int lap = 0; lap < 6; lap++)
+        {
+            for (double d = 0; d < 4000; d += 500)
+            {
+                bool pits = (lap == 1 && d >= 3500) || (lap == 2 && d < 1000);
+                Step(lap, d, pits);
+            }
+        }
+
+        Step(6, 10, false);
+        LapRecord Lap(int n) => tracker.Laps.Single(l => l.Lap == n);
+        Assert.That(Lap(2).IsPitLap, Is.True, "tour 2 : entrée au stand");
+        Assert.That(Lap(2).IsOutLap, Is.False);
+        Assert.That((Lap(3).IsPitLap, Lap(3).IsOutLap), Is.EqualTo((true, true)), "tour 3 : commencé dans la voie des stands, sortie pendant le tour");
+        Assert.That(Lap(4).IsOutLap, Is.False, "tour 4 : tour lancé, pas un tour de sortie");
+        Assert.That(Lap(4).IsClean, Is.True);
+        Assert.That((Lap(3).Stint, Lap(3).TyreLaps, Lap(4).TyreLaps), Is.EqualTo((2, 1, 2)), "nouveau relais à la sortie, âge des pneus remis à 1");
     }
 
     private static DriverInfo Car(int completedLaps, double dist, double kph, string gear, int rpm, double bias)

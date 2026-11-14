@@ -49,6 +49,7 @@ namespace SecondMonitor.Hub.Core.Race
         private readonly Dictionary<string, double> _controlValues = new();
         private InputLap _current;
         private Sample _previousTraced;
+        private Sample _lastInGear;
         private double _lastSpikeAt = double.NegativeInfinity;
         private double? _trackLimitPoints;
         private int? _penalties;
@@ -76,6 +77,7 @@ namespace SecondMonitor.Hub.Core.Race
             _controlValues.Clear();
             _current = null;
             _previousTraced = null;
+            _lastInGear = null;
             _lastSpikeAt = double.NegativeInfinity;
             _trackLimitPoints = null;
             _penalties = null;
@@ -263,11 +265,13 @@ namespace SecondMonitor.Hub.Core.Race
             if (lapLength <= 100 || s.InPits)
             {
                 _previousTraced = null;
+                _lastInGear = null;
                 return;
             }
 
             int bins = (int)Math.Ceiling(lapLength / BinMeters);
-            Sample previous = _previousTraced is Sample p && s.T > p.T && s.T - p.T < 2 ? p : null;
+            // Le temps de session peut rester le même sur deux mesures (le jeu ne l'avance pas à chaque envoi) : mesure d'avant quand même.
+            Sample previous = _previousTraced is Sample p && s.T >= p.T && s.T - p.T < 2 ? p : null;
             if (_current == null || _current.Lap != s.Lap)
             {
                 if (_current != null)
@@ -308,6 +312,8 @@ namespace SecondMonitor.Hub.Core.Race
             double brk = Math.Round(Math.Clamp(s.Brake, 0, 1) * 100);
             double str = Math.Round(Math.Clamp(s.Steer, -1, 1) * 100);
             double spd = Math.Round(s.Speed);
+            // Point mort vu un instant pendant un passage de rapport : on garde le rapport d'avant (pas de trou dans la trace).
+            double? gear = s.Gear == 0 && s.Speed > 30 && _lastInGear is Sample engaged && s.T - engaged.T < 1.5 ? engaged.Gear : s.Gear;
 
             // Données espacées (jeu à 5-10 Hz, 300 km/h = 8 à 17 m entre deux mesures) : on relie les deux mesures en ligne droite
             // pour que la trace du tour soit continue (jusqu'à 250 m de trou, démonstration accélérée comprise ; au-delà, pas de données inventées).
@@ -324,7 +330,7 @@ namespace SecondMonitor.Hub.Core.Race
                     l.Steer[i] = Math.Round(l.Steer[from].Value + ((str - l.Steer[from].Value) * f));
                     l.Speed[i] = Math.Round(l.Speed[from].Value + ((spd - l.Speed[from].Value) * f));
                     l.Rpm[i] = l.Rpm[from].HasValue ? Math.Round(l.Rpm[from].Value + ((s.Rpm - l.Rpm[from].Value) * f)) : s.Rpm;
-                    l.Gear[i] = f < 0.5 ? l.Gear[from] : s.Gear;
+                    l.Gear[i] = f < 0.5 ? l.Gear[from] : gear;
                     l.Time[i] = l.Time[from].HasValue ? l.Time[from].Value + ((s.T - l.Time[from].Value) * f) : null;
                 }
             }
@@ -334,11 +340,11 @@ namespace SecondMonitor.Hub.Core.Race
             l.Steer[bin] = str;
             l.Speed[bin] = spd;
             l.Rpm[bin] = s.Rpm;
-            l.Gear[bin] = s.Gear;
+            l.Gear[bin] = gear;
             l.Time[bin] = s.T;
             l.LastBin = bin;
 
-            RecordShift(previous, s, l);
+            RecordShift(s, l);
             RecordControls(s, l, controls);
             _previousTraced = s;
         }
@@ -359,11 +365,19 @@ namespace SecondMonitor.Hub.Core.Race
 
         /// <summary>
         /// Passage de rapport entre deux mesures : situé à mi-chemin (distance, vitesse), régime juste avant et juste après.
+        /// Le point mort vu pendant le passage (Le Mans Ultimate l'envoie souvent) est ignoré : on compare au dernier rapport engagé.
         /// Un saut de plusieurs rapports entre deux mesures (données espacées) compte pour chacun, au même endroit, pour comparer les tours.
         /// </summary>
-        private static void RecordShift(Sample previous, Sample s, InputLap l)
+        private void RecordShift(Sample s, InputLap l)
         {
-            if (previous == null || previous.Gear is not int from || s.Gear is not int to || from < 1 || to < 1 || from == to || l.Shifts.Count >= 300)
+            if (s.Gear is not int to || to < 1)
+            {
+                return; // point mort, marche arrière : on garde le dernier rapport engagé
+            }
+
+            Sample previous = _lastInGear;
+            _lastInGear = s;
+            if (previous == null || previous.Gear is not int from || from == to || s.T < previous.T || s.T - previous.T > 1.5 || l.Shifts.Count >= 300)
             {
                 return;
             }
