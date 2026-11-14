@@ -47,6 +47,12 @@ Onglet **Ingénieur IA** : on maintient le bouton (ou la barre d'espace) pour pa
 - On choisit un modèle par rôle : **réflexion** (répond), **écoute** (transcrit la voix), **voix** (parle), ainsi que la voix elle-même. Un modèle omni comme `lfm3-omni:2b` peut tenir les trois rôles.
 - **Fiabilité.** Les petits modèles calculent mal. Le hub calcule donc tous les chiffres et prépare une réponse pour les questions courantes : stand, essence, énergie, pneus, écarts, stratégie des voisins. Un garde-fou écarte toute réponse contenant un chiffre absent des données. Un clic sur « faits utilisés » montre exactement ce que l'IA a reçu.
 - Le micro du navigateur ne fonctionne que sur `http://localhost` (ou en HTTPS). Depuis un iPad ou un téléphone, utilisez la saisie texte pour l'instant.
+- **Écoute.** La voix part toujours en WAV 16 kHz mono 16 bits, sans les silences, découpée sur un silence au-delà de 28 s (réglable, carte « Lexique de piste ») ; un morceau refusé est renvoyé en morceaux de 10 s. Les autres formats sont convertis par ffmpeg (ou afconvert sur Mac). Le vocabulaire de piste est envoyé comme indice (`prompt`) aux modèles qui l'acceptent.
+- **Lexique de piste.** `RadioLexicon` corrige les erreurs connues de la dictée (« books » → box…) et celles ajoutées par le pilote, et traduit les mots de piste anglais (brake bias, stint, delta, fuel…) pour les règles du hub.
+
+## Musique Deezer
+
+Carte **Musique** (Réglages) et commandes vocales sans l'IA. La musique joue sur l'ordinateur de SecondMonitor, ou sur le **PC de jeu** (réglage « Musique sur », case « Musique Deezer sur ce PC » du collecteur, Windows) : la recherche et les commandes restent sur l'ordinateur, la lecture se fait dans l'application Deezer du PC, dans le casque, et s'efface quand l'ingénieur parle. L'étoile d'un résultat de recherche choisit la **playlist préférée** (« Lecture », « mets ma playlist », lancement automatique au début de chaque session si coché).
 
 ## Construire pour tous les systèmes
 
