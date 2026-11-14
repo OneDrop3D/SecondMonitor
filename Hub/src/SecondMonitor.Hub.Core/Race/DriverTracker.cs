@@ -242,6 +242,8 @@ namespace SecondMonitor.Hub.Core.Race
                     IsOutLap = Laps.Count == 0 || Laps[^1].IsPitLap,
                     Valid = valid,
                     Compound = CurrentCompound,
+                    Stint = CurrentStint?.Index,
+                    TyreLaps = CurrentStint != null ? Math.Max(1, completed - CurrentStint.StartLap) : null,
                 };
 
                 Laps.Add(record);
@@ -310,6 +312,12 @@ namespace SecondMonitor.Hub.Core.Race
         public bool Valid { get; set; }
 
         public string Compound { get; set; }
+
+        /// <summary>Relais (1 = premier) dans lequel le tour a été fait.</summary>
+        public int? Stint { get; set; }
+
+        /// <summary>Âge des pneus en tours à la fin de ce tour (1 = premier tour du relais, tour de sortie compris).</summary>
+        public int? TyreLaps { get; set; }
 
         public double? FuelUsed { get; set; }
 

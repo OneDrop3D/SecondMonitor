@@ -59,6 +59,9 @@ namespace SecondMonitor.Hub.Core.Race
 
         public List<LapTrace> Traces { get; } = new();
 
+        /// <summary>Micro-secteurs de chaque tour bouclé, du plus ancien au plus récent (au plus <see cref="MaxStoredLaps"/>).</summary>
+        public List<MicroSectorLap> MicroSectorLaps { get; } = new();
+
         public LapTrace LastTrace => Traces.LastOrDefault(t => t.Complete);
 
         public LapTrace BestTrace { get; private set; }
@@ -123,6 +126,7 @@ namespace SecondMonitor.Hub.Core.Race
             _lastBoundary = -1;
             _current = null;
             Traces.Clear();
+            MicroSectorLaps.Clear();
             BestTrace = null;
             _lineTimes.Clear();
             Array.Clear(CurrentMs);
@@ -159,7 +163,7 @@ namespace SecondMonitor.Hub.Core.Race
                     int lapStarting = (int)(g / MicroSectorCount);
                     _lineTimes[lapStarting] = t;
                     _lineTimes.Remove(lapStarting - 3);
-                    CompleteMicroSectorLap();
+                    CompleteMicroSectorLap(lapStarting);
                     CurrentLapElapsedAtBoundary = 0;
                 }
                 else if (_lineTimes.TryGetValue((int)(g / MicroSectorCount), out double start))
@@ -173,10 +177,22 @@ namespace SecondMonitor.Hub.Core.Race
             }
         }
 
-        private void CompleteMicroSectorLap()
+        /// <param name="lap">Tour qui vient d'être bouclé (1 = premier tour), même numérotation que <see cref="LapRecord.Lap"/>.</param>
+        private void CompleteMicroSectorLap(int lap)
         {
             LastMs = CurrentMs;
             LastMsPit = CurrentMsPit;
+            if (LastMs.Any(v => v.HasValue))
+            {
+                // Les tableaux du tour bouclé ne sont plus modifiés ensuite (nouveaux tableaux pour le tour suivant) : on les garde tels quels.
+                MicroSectorLaps.RemoveAll(l => l.Lap == lap);
+                MicroSectorLaps.Add(new MicroSectorLap(lap, LastMs, LastMsPit));
+                if (MicroSectorLaps.Count > MaxStoredLaps)
+                {
+                    MicroSectorLaps.RemoveAt(0);
+                }
+            }
+
             for (int i = 0; i < MicroSectorCount; i++)
             {
                 if (LastMs[i] is double v && !LastMsPit[i] && (BestMs[i] == null || v < BestMs[i]))
@@ -315,6 +331,24 @@ namespace SecondMonitor.Hub.Core.Race
                 Traces.RemoveAt(0);
             }
         }
+    }
+
+    /// <summary>Temps des micro-secteurs d'un tour bouclé (null = pas mesuré), et ceux passés dans la voie des stands.</summary>
+    public sealed class MicroSectorLap
+    {
+        public MicroSectorLap(int lap, double?[] times, bool[] pit)
+        {
+            Lap = lap;
+            Times = times;
+            Pit = pit;
+        }
+
+        /// <summary>Numéro du tour (1 = premier tour bouclé), comme <see cref="LapRecord.Lap"/>.</summary>
+        public int Lap { get; }
+
+        public double?[] Times { get; }
+
+        public bool[] Pit { get; }
     }
 
     /// <summary>Vitesse (km/h) et position par tranche de ~10 m sur un tour.</summary>
