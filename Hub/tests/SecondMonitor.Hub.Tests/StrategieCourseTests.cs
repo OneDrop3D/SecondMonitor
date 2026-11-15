@@ -192,6 +192,16 @@ public class StrategieCourseTests
     }
 
     [Test]
+    public void ReferenceApresUnArret()
+    {
+        // Rejeu du Mans : 27 entrée au stand, 28 sortie (marqués « stand »), 29 propre.
+        var laps = Laps((27, 231.1, 7.68, 7.12), (28, 262.4, 0, 0), (29, 212.8, 8.06, 7.52));
+        laps[0].Pit = true;
+        laps[1].Pit = true;
+        Assert.That(LiftCoast.LastCleanLap(laps, 30), Is.EqualTo(29));
+    }
+
+    [Test]
     public void LiftAndCoastAvecErreurOnRefait()
     {
         var memory = new RaceMemory();

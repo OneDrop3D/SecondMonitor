@@ -463,7 +463,7 @@ namespace SecondMonitor.Hub.Core.Ai
             _ => $"{n} arrêts",
         };
 
-        /// <summary>Dernier tour propre avant <paramref name="beforeLap"/> : ni stand, ni tour de sortie, valide, avec une mesure.</summary>
+        /// <summary>Dernier tour propre avant <paramref name="beforeLap"/> : ni stand (entrée ou sortie), valide, avec une mesure.</summary>
         public static int? LastCleanLap(IReadOnlyList<LapDto> laps, int beforeLap)
         {
             if (laps == null)
@@ -471,8 +471,8 @@ namespace SecondMonitor.Hub.Core.Ai
                 return null;
             }
 
-            var pits = laps.Where(l => l.Pit).Select(l => l.Lap).ToHashSet();
-            return laps.Where(l => l.Lap < beforeLap && !l.Pit && l.Valid && l.Time > 0 && !pits.Contains(l.Lap - 1) && (l.Energy.HasValue || l.Fuel.HasValue))
+            // Tours d'entrée et de sortie des stands sont déjà marqués « stand » : le tour qui suit la sortie est un tour normal.
+            return laps.Where(l => l.Lap < beforeLap && !l.Pit && l.Valid && l.Time > 0 && (l.Energy.HasValue || l.Fuel.HasValue))
                 .Select(l => (int?)l.Lap)
                 .LastOrDefault();
         }
