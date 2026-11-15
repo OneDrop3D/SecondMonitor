@@ -133,6 +133,36 @@ public class StrategieCourseTests
     }
 
     [Test]
+    public void RatioReglableALaRadio()
+    {
+        // « Règle le ratio » : le ratio conseillé (idéal 0,928 + marge) part au menu des stands.
+        PitOrder order = PitOrders.Parse("Règle le ratio");
+        Assert.That(order?.FuelRatio, Is.EqualTo(0));
+        var memory = new RaceMemory();
+        string reply = PitOrders.Confirm(order, memory, Snap(), 16);
+        TestContext.Out.WriteLine(reply);
+        Assert.That(reply, Does.Contain("Ratio 0,94"));
+        Assert.That(memory.PitPlan.FuelRatio, Is.EqualTo(0.94).Within(0.001));
+
+        // Valeur dite, même en question.
+        Assert.That(PitOrders.Parse("Tu peux mettre le ratio à zéro virgule quatre-vingt-quinze ?")?.FuelRatio, Is.EqualTo(0.95).Within(0.001));
+
+        // « Box box » sur une voiture à énergie virtuelle : le ratio part aussi.
+        var m2 = new RaceMemory();
+        PitOrders.Confirm(PitOrders.Parse("box box"), m2, Snap(lapsLeft: 13, energy: 8, fuel: 11), 20);
+        Assert.That(m2.PitPlan.FuelRatio, Is.EqualTo(0.94).Within(0.001));
+        Assert.That(m2.PitPlan.FuelRatioAuto, Is.True);
+
+        // « Comment je modifie mon ratio ? » : la marche à suivre, pas une demande.
+        Assert.That(PitOrders.Parse("Comment je modifie mon ratio énergie virtuelle essence ?"), Is.Null);
+        string how = StrategyRadio.Answer("Comment je modifie mon ratio énergie virtuelle essence ?", Snap(), new RaceMemory());
+        TestContext.Out.WriteLine(how);
+        Assert.That(how, Does.Contain("FUEL RATIO"));
+        Assert.That(how, Does.Contain("règle le ratio"));
+        Assert.That(StrategyRadio.Answer("Règle le ratio", Snap(), new RaceMemory()), Is.Null, "c'est une demande pour le menu des stands");
+    }
+
+    [Test]
     public void ToursRestantsEtOptions()
     {
         Assert.That(StrategyRadio.Answer("Il y a combien de tours avant la fin de la course ?", Snap(), new RaceMemory()), Does.StartWith("Encore 19 tours"));

@@ -212,6 +212,25 @@ public class LmuPitMenuTests
     }
 
     [Test]
+    public void Plan_FuelRatio_PicksTheClosestChoice_BeforeTheEnergy()
+    {
+        JsonArray m = Menu(); // ratio 0.79
+        var (done, missing) = LmuPitMenu.Plan(m, Order(new { fuelRatio = 0.94, energyTargetPct = 100.0 }));
+        Assert.That(Choice(m, "FUEL RATIO:"), Is.EqualTo("0.94"));
+        Assert.That(done, Does.Contain("ratio 0,94"));
+        Assert.That(missing, Is.Empty);
+
+        // Des litres seuls passent par le NOUVEAU ratio : 47 L / 0,94 = 50 %.
+        JsonArray m2 = Menu();
+        LmuPitMenu.Plan(m2, Order(new { fuelRatio = 0.94, fuelTargetLitres = 47.0 }));
+        Assert.That(At(m2, "VIRTUAL ENERGY:"), Is.EqualTo(50));
+
+        JsonArray lmp2 = Menu(Lmp2);
+        var (_, miss2) = LmuPitMenu.Plan(lmp2, Order(new { fuelRatio = 0.94 }));
+        Assert.That(miss2.Single(), Does.StartWith("ratio (pas de ligne FUEL RATIO"));
+    }
+
+    [Test]
     public void Plan_FullTank_TakesTheTopOfTheList()
     {
         JsonArray hyper = Menu();
@@ -281,7 +300,7 @@ public class LmuPitMenuTests
         {
             LmuPitMenu.Inspection test = await LmuPitMenu.InspectAsync(lmu.Token, new LmuPitMenu.CarNow("Soft", "Soft", 61.2));
             Assert.That(test.Ok, Is.True, test.Detail);
-            Assert.That(test.Text, Does.StartWith($"Menu des stands lu : {Menu().Count} lignes. Je peux régler : pneus (soft, medium, pluie), énergie (aujourd'hui 100 %), réparation."));
+            Assert.That(test.Text, Does.StartWith($"Menu des stands lu : {Menu().Count} lignes. Je peux régler : pneus (soft, medium, pluie), énergie (aujourd'hui 100 %), ratio (aujourd'hui 0.79), réparation."));
             Assert.That(test.Detail, Does.Contain("• FL TIRE:").And.Contain("Used Soft  -1% (Soft, usé)").And.Contain("navigationState=NAV_REALTIME").And.Contain("PitState=REQUEST"));
             Assert.That(test.Detail, Does.Contain("Reconnu : pneus : oui (TIRES: + 4 roues)").And.Contain("gomme Soft, 61,2 L à bord").And.Contain(dump));
             Assert.That(lmu.Requests.Count(r => r.Method == "POST"), Is.Zero, "le test ne change rien");

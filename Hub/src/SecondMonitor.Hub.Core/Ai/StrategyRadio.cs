@@ -54,7 +54,8 @@ namespace SecondMonitor.Hub.Core.Ai
 
             RacePlanDto plan = RacePlanner.Build(snap, LiftCoast.Context(memory));
 
-            if (Regex.IsMatch(t, @"\bratio\b"))
+            // « Mets le ratio à 0,94 » : une demande pour le menu des stands (PitOrders), pas une question.
+            if (Regex.IsMatch(t, @"\bratio\b") && !RatioCommand(t))
             {
                 return Ratio(t, snap, plan);
             }
@@ -290,6 +291,10 @@ namespace SecondMonitor.Hub.Core.Ai
             return $" On mettra {string.Join(" et ", parts)}{time}.";
         }
 
+        private static bool RatioCommand(string t) =>
+            Regex.IsMatch(t, @"\b(regle|regles|regler|mets|met|mettre|change|changer|corrige|corriger|modifie|modifier|passe|ajuste|ajuster|applique|baisse|monte|fais le)\b")
+            && !Regex.IsMatch(t, @"\b(comment|pourquoi|quel|quelle|combien|c est quoi)\b");
+
         /// <summary>Ratio carburant / énergie du menu des stands de LMU (litres par % d'énergie virtuelle).</summary>
         private static string Ratio(string t, RaceSnapshot snap, RacePlanDto plan)
         {
@@ -306,8 +311,13 @@ namespace SecondMonitor.Hub.Core.Ai
             }
 
             double advised = Math.Ceiling((r + 0.01) * 100) / 100; // une petite marge d'essence : la panne sèche coûte plus cher que 1 L
+            if (Regex.IsMatch(t, @"\bcomment\b"))
+            {
+                return $"Dans le menu des stands du jeu, ligne « FUEL RATIO », juste sous l'énergie virtuelle. Ou dis-moi « règle le ratio » et je le mets à {N(advised, 2)} pour toi ; il passe aussi tout seul avec « box ».";
+            }
+
             string text = $"Ratio idéal {N(r, 2)} : {N(p.Fuel.PerLap ?? 0, 2)} L pour {N(p.Energy.PerLapPct ?? 0, 1)} % d'énergie par tour. Mets {N(advised, 2)}.";
-            if (SaidRatio(t) is double mine)
+            if (PitOrders.SaidRatio(t) is double mine)
             {
                 double diff = mine - r;
                 if (Math.Abs(diff) < 0.012)
@@ -335,21 +345,6 @@ namespace SecondMonitor.Hub.Core.Ai
             }
 
             return text;
-        }
-
-        /// <summary>« Je suis à 0,97 », « zéro virgule quatre-vingt-dix-sept », « 97 » dans une phrase sur le ratio.</summary>
-        private static double? SaidRatio(string t)
-        {
-            Match m = Regex.Match(t, @"\b0 (?:virgule )?(\d{1,2})\b|\b1 (?:virgule )?(\d{1,2})\b|\b(?:a|de|est a|suis a|mis) (\d{2})\b");
-            if (!m.Success)
-            {
-                return null;
-            }
-
-            string g = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Success ? m.Groups[2].Value : m.Groups[3].Value;
-            double frac = double.Parse(g, CultureInfo.InvariantCulture) / (g.Length == 1 ? 10 : 100);
-            double v = m.Groups[2].Success ? 1 + frac : frac;
-            return v is > 0.3 and < 1.6 ? v : null;
         }
 
         /// <summary>« Qu'est-ce qu'on peut jouer ? » : le plan, un arrêt de moins, l'undercut, les pneus. Trois phrases au plus.</summary>

@@ -65,6 +65,7 @@ public sealed class EngineerService
         // Le collecteur a réglé (ou lu) le menu des stands de Le Mans Ultimate : on le dit à la radio.
         hub.PitMenuResult += r => _ = Task.Run(async () =>
         {
+            KeepPitMenuDetail(r);
             try
             {
                 string text = r.Test ? $"Test du menu des stands : {r.Text}" : (r.Ok ? "Copy. " : "Attention : ") + r.Text;
@@ -90,6 +91,30 @@ public sealed class EngineerService
     }
 
     public RaceMemory Memory { get; }
+
+    /// <summary>
+    /// Journal de l'échange avec le menu des stands de LMU (envoyé par le collecteur) gardé sur cet ordinateur,
+    /// dans menu-stands-lmu.txt du dossier de données : on voit d'ici ce que le jeu a reçu, gardé ou refusé.
+    /// </summary>
+    private void KeepPitMenuDetail(PitMenuReply r)
+    {
+        try
+        {
+            string file = Path.Combine(_settings.DataDirectory, "menu-stands-lmu.txt");
+            var info = new FileInfo(file);
+            if (info.Exists && info.Length > 1024 * 1024)
+            {
+                File.Move(file, Path.ChangeExtension(file, ".ancien.txt"), overwrite: true);
+            }
+
+            string body = string.IsNullOrWhiteSpace(r.Detail) ? "(collecteur sans journal détaillé : mettre à jour le collecteur du PC de jeu)" : r.Detail;
+            File.AppendAllText(file, $"===== {DateTime.Now:dd/MM/yyyy HH:mm:ss} {(r.Test ? "test" : "réglage")} · {(r.Ok ? "ok" : "échec")} : {r.Text}{Environment.NewLine}{body}{Environment.NewLine}{Environment.NewLine}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Journal du menu des stands non écrit");
+        }
+    }
 
     /// <summary>Chaque échange radio diffusé (question / réponse, message spontané) : le carnet de session s'y abonne.</summary>
     public event Action<EngineerReply>? Replied;
@@ -305,7 +330,7 @@ public sealed class EngineerService
             prep.Kind = "commande";
             prep.Category = ExchangeCategorizer.Strategy;
             bool lmu = snapshot.Source?.Contains("LM Ultimate", StringComparison.OrdinalIgnoreCase) == true;
-            bool hasMenuItems = memory.PitPlan is { } plan && (plan.Tyres != null || plan.NoTyres || plan.Repair || plan.Fuel != null);
+            bool hasMenuItems = memory.PitPlan is { } plan && (plan.Tyres != null || plan.NoTyres || plan.Repair || plan.Fuel != null || plan.FuelRatio != null);
             if (!test && lmu && hasMenuItems && _hub.HasPitStation)
             {
                 if (ai.LmuPitMenu)
@@ -647,6 +672,7 @@ public sealed class EngineerService
             repair = plan.Repair,
             energyTargetPct = energyTarget,
             fuelTargetLitres = fuelTarget,
+            fuelRatio = plan.FuelRatio,
         };
         return await _hub.SendToPitStationAsync("pitMenu", order, ct);
     }

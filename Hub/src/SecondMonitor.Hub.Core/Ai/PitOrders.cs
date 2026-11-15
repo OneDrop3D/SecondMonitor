@@ -25,7 +25,13 @@ namespace SecondMonitor.Hub.Core.Ai
         /// <summary>« deux tours de carburant » : tours à ajouter à ce qu'il reste.</summary>
         public int? FuelLaps { get; set; }
 
-        public bool IsEmpty => !BoxNow && Tyres == null && !NoTyres && !Repair && Fuel == null;
+        /// <summary>Ratio carburant / énergie virtuelle à régler (LMU, litres par %) ; 0 = le ratio conseillé d'après la consommation.</summary>
+        public double? FuelRatio { get; set; }
+
+        /// <summary>Le ratio vient du calcul (pas d'une valeur dite par le pilote) : recalculé à chaque demande.</summary>
+        public bool FuelRatioAuto { get; set; }
+
+        public bool IsEmpty => !BoxNow && Tyres == null && !NoTyres && !Repair && Fuel == null && FuelRatio == null;
     }
 
     /// <summary>
@@ -45,7 +51,8 @@ namespace SecondMonitor.Hub.Core.Ai
         public static PitOrder Parse(string text)
         {
             string t = RadioCommands.Normalize(text);
-            if (t.Length == 0 || RadioCommands.IsQuestion(text) && !Request.IsMatch(t))
+            bool ratioCommand = Regex.IsMatch(t, @"\bratio\b") && Regex.IsMatch(t, @"\b(regle|regler|mets|mettre|change|changer|corrige|corriger|modifie|modifier|ajuste|ajuster|applique)\b") && !Regex.IsMatch(t, @"\bcomment\b");
+            if (t.Length == 0 || RadioCommands.IsQuestion(text) && !Request.IsMatch(t) && !ratioCommand)
             {
                 return null;
             }
@@ -95,8 +102,34 @@ namespace SecondMonitor.Hub.Core.Ai
                 order.FuelLaps = Number(laps.Groups[1].Value);
             }
 
+            // « Règle le ratio », « mets le ratio à 0,94 », « corrige le ratio carburant énergie ».
+            if (Regex.IsMatch(t, @"\bratio\b") && Regex.IsMatch(t, @"\b(regle|regles|regler|mets|met|mettre|change|changer|corrige|corriger|modifie|modifier|passe|ajuste|ajuster|applique|baisse|monte|fais le)\b")
+                && !Regex.IsMatch(t, @"\b(comment|pourquoi|quel|quelle|combien|c est quoi)\b"))
+            {
+                order.FuelRatio = SaidRatio(StrategyRadio.Numbers(t)) ?? 0;
+            }
+
             return order.IsEmpty ? null : order;
         }
+
+        /// <summary>« 0 94 », « 0 virgule 94 », « à 94 » (texte normalisé, nombres en chiffres) → 0,94 ; null sinon.</summary>
+        public static double? SaidRatio(string t)
+        {
+            Match m = Regex.Match(t ?? string.Empty, @"\b0 (?:virgule )?(\d{1,2})\b|\b1 (?:virgule )?(\d{1,2})\b|\b(?:a|de|est a|suis a|mis) (\d{2})\b");
+            if (!m.Success)
+            {
+                return null;
+            }
+
+            string g = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Success ? m.Groups[2].Value : m.Groups[3].Value;
+            double frac = double.Parse(g, System.Globalization.CultureInfo.InvariantCulture) / (g.Length == 1 ? 10 : 100);
+            double v = m.Groups[2].Success ? 1 + frac : frac;
+            return v is > 0.3 and < 1.6 ? v : null;
+        }
+
+        /// <summary>Ratio conseillé : idéal d'après la consommation mesurée, plus 0,01 de marge (la panne sèche coûte plus cher qu'un litre).</summary>
+        public static double? AdvisedRatio(RaceSnapshot snap) =>
+            SecondMonitor.Hub.Core.Strategy.RacePlanner.Ratio(snap?.Player) is double r ? System.Math.Ceiling((r + 0.01) * 100) / 100 : null;
 
         private static int Number(string w) => w switch
         {
@@ -151,6 +184,20 @@ namespace SecondMonitor.Hub.Core.Ai
             plan.Repair |= order.Repair;
             plan.Fuel = order.Fuel ?? plan.Fuel;
             plan.FuelLaps = order.Fuel != null ? order.FuelLaps : plan.FuelLaps;
+
+            // Ratio carburant / énergie (LMU) : la valeur dite, sinon le ratio conseillé ; réglé aussi d'office avec le carburant
+            // d'une voiture à énergie virtuelle, pour que l'essence et l'énergie s'épuisent ensemble.
+            bool virtualEnergy = snap?.Player?.Energy != null;
+            if (order.FuelRatio is double said && said > 0)
+            {
+                plan.FuelRatio = said;
+                plan.FuelRatioAuto = false;
+            }
+            else if ((order.FuelRatio == 0 || (virtualEnergy && plan.Fuel != null && (plan.FuelRatio == null || plan.FuelRatioAuto))) && AdvisedRatio(snap) is double advised)
+            {
+                plan.FuelRatio = advised;
+                plan.FuelRatioAuto = true;
+            }
             if (memory != null)
             {
                 memory.PitPlan = plan;
@@ -181,6 +228,15 @@ namespace SecondMonitor.Hub.Core.Ai
                 parts.Add(plan.Fuel == "plein" ? "le plein"
                     : plan.Fuel == "tours" ? $"carburant pour {plan.FuelLaps} tour{(plan.FuelLaps > 1 ? "s" : string.Empty)} de plus"
                     : autoFuel ?? "carburant jusqu'à la fin");
+            }
+
+            if (plan.FuelRatio is double ratio)
+            {
+                parts.Add($"ratio {RadioFormat.N(ratio, 2)}");
+            }
+            else if (order.FuelRatio == 0)
+            {
+                parts.Add("ratio : il me faut un tour mesuré en essence et en énergie pour le calculer");
             }
 
             string list = parts.Count == 0 ? string.Empty : " " + RadioFormat.Cap(string.Join(", ", parts)) + ".";

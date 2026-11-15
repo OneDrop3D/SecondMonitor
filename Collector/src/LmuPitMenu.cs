@@ -216,6 +216,7 @@ namespace SecondMonitor.Collector
                 }
             }
 
+            PlanRatio(menu, order, done, missing);
             PlanEnergy(menu, order, car, done, missing);
             return (done, missing);
         }
@@ -317,6 +318,11 @@ namespace SecondMonitor.Collector
             if (EnergyRow(menu) is JsonNode ve)
             {
                 can.Add($"énergie (aujourd'hui {Format(Percent(ve, Current(ve)) ?? Current(ve))} %)");
+            }
+
+            if (Row(menu, "FUELRATIO") is JsonNode ratioRow)
+            {
+                can.Add($"ratio (aujourd'hui {OptionText(ratioRow, Current(ratioRow))})");
             }
             else if (FuelRow(menu) is JsonNode f)
             {
@@ -427,6 +433,36 @@ namespace SecondMonitor.Collector
             int k = Array.FindIndex(corners, c => c != null);
             string text = allPick >= 1 ? Text(Settings(all)[allPick]) : k >= 0 && picks[k] >= 1 ? Text(Settings(corners[k])[picks[k]]) : null;
             return text != null ? "pneus " + Pretty(text) : wanted == "neufs" ? $"pneus {Pretty(spec[0])} neufs" : $"pneus {Pretty(wanted)} neufs";
+        }
+
+        /// <summary>
+        /// Ratio carburant / énergie virtuelle (ligne « FUEL RATIO: », textes « 0.86 ») : le choix le plus proche du ratio demandé,
+        /// à égalité le plus haut (une goutte d'essence en plus plutôt qu'en moins).
+        /// </summary>
+        private static void PlanRatio(JsonArray menu, JsonElement order, List<string> done, List<string> missing)
+        {
+            if (Num(order, "fuelRatio") is not double want || want <= 0)
+            {
+                return;
+            }
+
+            JsonNode row = Row(menu, "FUELRATIO");
+            if (row == null)
+            {
+                missing.Add("ratio (pas de ligne FUEL RATIO dans le menu)");
+                return;
+            }
+
+            var opts = Settings(row).Select((o, i) => (i, v: Number(Text(o)))).Where(o => o.v is > 0).Select(o => (o.i, v: o.v.Value)).ToList();
+            if (opts.Count == 0)
+            {
+                missing.Add("ratio (choix du menu illisibles)");
+                return;
+            }
+
+            var pick = opts.OrderBy(o => Math.Abs(o.v - want)).ThenByDescending(o => o.v).First();
+            Set(row, pick.i);
+            done.Add($"ratio {pick.v.ToString("0.00", CultureInfo.InvariantCulture).Replace('.', ',')}");
         }
 
         private static void PlanEnergy(JsonArray menu, JsonElement order, CarNow car, List<string> done, List<string> missing)
@@ -826,8 +862,29 @@ namespace SecondMonitor.Collector
             Dump(head + Environment.NewLine + (sent != null ? "ENVOYÉ :" + Environment.NewLine + sent + Environment.NewLine : string.Empty) + "REÇU :" + Environment.NewLine + r.Body);
         }
 
+        /// <summary>Lignes de journal de l'échange en cours (demande, menu lu, changements, relecture), renvoyées à SecondMonitor.</summary>
+        private static readonly List<string> Exchange = new();
+
+        /// <summary>Journal du dernier échange (tronqué à 6 000 caractères) : SecondMonitor le garde sur le Mac pour le diagnostic.</summary>
+        public static string LastExchange
+        {
+            get
+            {
+                lock (Exchange)
+                {
+                    string all = string.Join(Environment.NewLine, Exchange);
+                    return all.Length > 6000 ? all[..6000] + " …" : all;
+                }
+            }
+        }
+
         private static void Begin(string what, string extra = null)
         {
+            lock (Exchange)
+            {
+                Exchange.Clear();
+            }
+
             Write($"Menu des stands LMU : {what}{(extra != null ? " — " + extra : string.Empty)}.");
             Dump($"===== {DateTime.Now:dd/MM/yyyy HH:mm:ss} {what} =====" + (extra != null ? Environment.NewLine + extra : string.Empty));
         }
@@ -836,6 +893,14 @@ namespace SecondMonitor.Collector
 
         private static void Write(string line)
         {
+            lock (Exchange)
+            {
+                if (Exchange.Count < 200)
+                {
+                    Exchange.Add(line);
+                }
+            }
+
             try
             {
                 Log?.Invoke(line);

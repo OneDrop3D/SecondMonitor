@@ -200,7 +200,8 @@ public sealed class LiveHub : BackgroundService
                 bool ok = root.TryGetProperty("ok", out JsonElement okEl) && okEl.ValueKind == JsonValueKind.True;
                 bool test = root.TryGetProperty("test", out JsonElement testEl) && testEl.ValueKind == JsonValueKind.True;
                 string reqId = root.TryGetProperty("id", out JsonElement idEl) ? idEl.ToString() : string.Empty;
-                PitMenuResult?.Invoke(new PitMenuReply(reqId, ok, test, text.Length > 400 ? text[..400] : text));
+                string? detail = root.TryGetProperty("detail", out JsonElement de) && de.ValueKind == JsonValueKind.String ? de.GetString() : null;
+                PitMenuResult?.Invoke(new PitMenuReply(reqId, ok, test, text.Length > 400 ? text[..400] : text, detail));
                 return;
             }
 
@@ -387,4 +388,5 @@ public sealed class LiveHub : BackgroundService
 public sealed record AudioStation(string Name, bool Voice, bool Mic, string? Address, DateTime Since, bool Pit = false, bool Music = false);
 
 /// <summary>Réponse du collecteur pour le menu des stands de Le Mans Ultimate.</summary>
-public sealed record PitMenuReply(string Id, bool Ok, bool Test, string Text);
+/// <summary>Résultat du menu des stands ; <see cref="Detail"/> : journal de l'échange avec LMU sur le PC de jeu (collecteur récent).</summary>
+public sealed record PitMenuReply(string Id, bool Ok, bool Test, string Text, string? Detail = null);

@@ -390,7 +390,8 @@ namespace SecondMonitor.Collector
                 ToPage?.Invoke(new { type = "stand-resultat", ok, texte = shown ?? text });
                 try
                 {
-                    await SendAsync(socket, new { type = "pitMenuResult", id, ok, test, text }, _stop.Token).ConfigureAwait(false);
+                    // Le détail de l'échange avec LMU part aussi : SecondMonitor le garde sur le Mac (menu-stands-lmu.txt).
+                    await SendAsync(socket, new { type = "pitMenuResult", id, ok, test, text, detail = LmuPitMenu.LastExchange }, _stop.Token).ConfigureAwait(false);
                 }
                 catch (Exception)
                 {
