@@ -22,6 +22,13 @@ public sealed class HubSettings
 
     public double DemoSpeed { get; set; } = 1.0;
 
+    /// <summary>
+    /// Reprendre la course après un redémarrage de SecondMonitor : l'état de course (tours, consommation, arrêts, relais,
+    /// mémoire de l'ingénieur) est sauvegardé dans &lt;données&gt;/reprise et rechargé si la même session du jeu continue.
+    /// Faux : tout repart de zéro au lancement, rien n'est sauvegardé.
+    /// </summary>
+    public bool ResumeSession { get; set; } = true;
+
     public AiSettings Ai { get; set; } = new();
 
     /// <summary>Fenêtre sans accélération graphique (comme l'option « --sans-gpu ») : Windows, fenêtre noire avec certains pilotes.</summary>

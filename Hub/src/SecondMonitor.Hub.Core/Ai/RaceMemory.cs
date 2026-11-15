@@ -86,6 +86,59 @@ namespace SecondMonitor.Hub.Core.Ai
             Thread.Clear();
         }
 
+        /// <summary>
+        /// Copie de la mémoire pour reprendre la course après un redémarrage : notes, arrêt prévu, plan d'arrêt, « pas d'arrêt »,
+        /// annonce d'écart, surveillances d'usure et décisions du pilote. La question en attente n'est pas gardée.
+        /// </summary>
+        public RaceMemoryState Export()
+        {
+            RaceMemoryState state;
+            lock (_lock)
+            {
+                state = new RaceMemoryState
+                {
+                    Entries = _entries.Select(e => e.Copy()).ToList(),
+                    NextId = _nextId,
+                    PlannedStopLap = PlannedStopLap,
+                    PitPlan = JsonCopy(PitPlan),
+                    PitAutoAsked = PitAutoAsked,
+                    GapWatch = JsonCopy(GapWatch),
+                    NoStopPlanned = NoStopPlanned,
+                    WearWatches = _wearWatches.Select(w => w.Copy()).ToList(),
+                };
+            }
+
+            state.Decisions = Thread.Decisions.ToList();
+            return state;
+        }
+
+        private static T JsonCopy<T>(T value) where T : class =>
+            value == null ? null : System.Text.Json.JsonSerializer.Deserialize<T>(System.Text.Json.JsonSerializer.Serialize(value));
+
+        /// <summary>Remplace la mémoire par un état sauvegardé (reprise de course).</summary>
+        public void Import(RaceMemoryState state)
+        {
+            Clear();
+            if (state == null)
+            {
+                return;
+            }
+
+            lock (_lock)
+            {
+                _entries.AddRange((state.Entries ?? new List<MemoryEntry>()).Where(e => e != null));
+                _nextId = Math.Max(state.NextId, _entries.Select(e => e.Id + 1).DefaultIfEmpty(1).Max());
+                PlannedStopLap = state.PlannedStopLap;
+                PitPlan = state.PitPlan;
+                PitAutoAsked = state.PitAutoAsked;
+                GapWatch = state.GapWatch;
+                NoStopPlanned = state.NoStopPlanned;
+                _wearWatches.AddRange((state.WearWatches ?? new List<WearWatch>()).Where(w => w != null));
+            }
+
+            Thread.Import(state.Decisions);
+        }
+
         public void Ask(PendingQuestion question)
         {
             lock (_lock)
@@ -203,6 +256,30 @@ namespace SecondMonitor.Hub.Core.Ai
 
         /// <summary>État des pneus au moment du retour : « neufs », « mi-usure », « usés ».</summary>
         public string Tyres { get; set; }
+
+        public MemoryEntry Copy() => (MemoryEntry)MemberwiseClone();
+    }
+
+    /// <summary>État sauvegardé de <see cref="RaceMemory"/> (reprise de course).</summary>
+    public sealed class RaceMemoryState
+    {
+        public List<MemoryEntry> Entries { get; set; } = new();
+
+        public int NextId { get; set; } = 1;
+
+        public int? PlannedStopLap { get; set; }
+
+        public PitOrder PitPlan { get; set; }
+
+        public bool PitAutoAsked { get; set; }
+
+        public GapWatch GapWatch { get; set; }
+
+        public bool NoStopPlanned { get; set; }
+
+        public List<WearWatch> WearWatches { get; set; } = new();
+
+        public List<ProposalDecision> Decisions { get; set; } = new();
     }
 
     public sealed class PendingQuestion
@@ -252,5 +329,7 @@ namespace SecondMonitor.Hub.Core.Ai
         public string Proposal { get; set; }
 
         public DateTime AtUtc { get; set; } = DateTime.UtcNow;
+
+        public WearWatch Copy() => (WearWatch)MemberwiseClone();
     }
 }

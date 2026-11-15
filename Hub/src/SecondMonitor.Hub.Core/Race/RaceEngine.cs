@@ -49,11 +49,26 @@ namespace SecondMonitor.Hub.Core.Race
             }
 
             bool reset;
+            RaceResumeState resumed = null;
+            string declined = null;
             lock (_lock)
             {
                 double now = data.SessionInfo.SessionTime.TotalSeconds;
                 string key = $"{data.Source}|{data.SessionInfo.TrackInfo?.TrackFullName}|{data.SessionInfo.SessionType}";
-                reset = kind == DatagramPayloadKind.SessionStart || key != _sessionKey || now < _lastSessionTime - 5;
+                if (_resumeCandidate != null)
+                {
+                    if (data.DriversInfo?.Any(d => d != null) != true)
+                    {
+                        return; // sauvegarde en attente : on décide sur un vrai paquet de course (RaceEngine.Resume.cs)
+                    }
+
+                    resumed = TryResumeInternal(data, key, now, out declined);
+                }
+
+                // Le collecteur renvoie « début de session » quand il se remet à lire le jeu (SecondMonitor relancé, pause sans hub) :
+                // même session déjà entamée et temps qui continue, ce n'est pas une nouvelle session (le carnet était coupé en deux).
+                bool repeatedStart = kind == DatagramPayloadKind.SessionStart && key == _sessionKey && now >= 30 && now >= _lastSessionTime - 5;
+                reset = (kind == DatagramPayloadKind.SessionStart && !repeatedStart) || key != _sessionKey || now < _lastSessionTime - 5;
                 if (reset)
                 {
                     ResetInternal();
@@ -81,7 +96,7 @@ namespace SecondMonitor.Hub.Core.Race
                     seen.Add(id);
                     if (!_trackers.TryGetValue(id, out DriverTracker tracker))
                     {
-                        tracker = new DriverTracker(id);
+                        tracker = NewTracker(id);
                         _trackers[id] = tracker;
                     }
 
@@ -102,6 +117,16 @@ namespace SecondMonitor.Hub.Core.Race
                 FeedTrackMap(data, player, lapLength);
             }
 
+            if (declined != null)
+            {
+                ResumeDeclined?.Invoke(declined);
+            }
+
+            if (resumed != null)
+            {
+                SessionResumed?.Invoke(resumed);
+            }
+
             if (reset)
             {
                 SessionReset?.Invoke();
@@ -113,6 +138,7 @@ namespace SecondMonitor.Hub.Core.Race
         {
             lock (_lock)
             {
+                _resumeCandidate = null;
                 ResetInternal();
             }
 
@@ -251,6 +277,8 @@ namespace SecondMonitor.Hub.Core.Race
             _segmentsVersion++;
             _maxLapDistanceSeen = 0;
             _last = null;
+            _resumedDrivers.Clear();
+            _generation++;
         }
 
         private void FeedTrackMap(SimulatorDataSet data, DriverInfo player, double lapLength)

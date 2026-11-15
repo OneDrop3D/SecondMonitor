@@ -16,6 +16,7 @@ public sealed class CarnetService : BackgroundService
     private readonly OllamaClient _ollama;
     private readonly SettingsStore _settings;
     private readonly ILogger<CarnetService> _logger;
+    private readonly RaceResumeKeeper _resume;
     private readonly object _lock = new();
     private CarnetSession? _current;
     private string? _currentKey;
@@ -23,9 +24,11 @@ public sealed class CarnetService : BackgroundService
     private DateTime? _finishedSince;
     private bool _dirty;
 
-    public CarnetService(RaceEngine engine, EngineerService engineer, OllamaClient ollama, SettingsStore settings, ILogger<CarnetService> logger)
+    public CarnetService(RaceEngine engine, EngineerService engineer, OllamaClient ollama, SettingsStore settings, RaceResumeKeeper resume, ILogger<CarnetService> logger)
     {
         _engine = engine;
+        _resume = resume;
+        resume.CarnetId = () => CurrentId; // gardé dans la sauvegarde de reprise : le carnet continue après un redémarrage
         _engineer = engineer;
         _ollama = ollama;
         _settings = settings;
@@ -409,12 +412,30 @@ public sealed class CarnetService : BackgroundService
 
         if (_current == null)
         {
-            _current = CarnetBuilder.Create(snap, DateTime.Now);
+            _current = Resumed(snap) ?? CarnetBuilder.Create(snap, DateTime.Now);
             _currentKey = key;
             _finishedSince = null;
         }
 
         return _current;
+    }
+
+    /// <summary>
+    /// Course reprise après un redémarrage de SecondMonitor : on continue son carnet (même fichier, radios et tours ajoutés
+    /// à la suite) au lieu d'en ouvrir un nouveau.
+    /// </summary>
+    private CarnetSession? Resumed(RaceSnapshot snap)
+    {
+        string? id = _resume.TakeResumedCarnetId();
+        CarnetSession? c = id == null ? null : Store.Load(id);
+        if (c == null || c.Track != snap.Track?.Name || c.SessionType != snap.SessionType || c.Game != CarnetBuilder.GameName(snap.Source))
+        {
+            return null;
+        }
+
+        c.EndedAt = null;
+        _logger.LogInformation("Carnet {Id} continué (course reprise)", c.Id);
+        return c;
     }
 
     private void Refresh(CarnetSession c, RaceSnapshot snap)

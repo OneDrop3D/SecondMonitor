@@ -316,6 +316,8 @@ export interface HubSettings {
   gameHosts: string[];
   demoMode: boolean;
   demoSpeed: number;
+  /** Reprendre la course après un redémarrage de SecondMonitor (même session du jeu toujours en cours). */
+  resumeSession?: boolean;
   /** Fenêtre sans accélération graphique (Windows). */
   fenetreSansGpu?: boolean;
   /** Voix de l'ingénieur quand le PC de jeu la demande : « pc », « ecrans » ou « deux ». */

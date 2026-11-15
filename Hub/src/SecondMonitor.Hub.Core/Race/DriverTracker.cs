@@ -163,6 +163,65 @@ namespace SecondMonitor.Hub.Core.Race
             return Strategy.StrategyMath.DegradationSlope(Laps.Where(l => l.Lap > stint.StartLap && l.IsClean && l.Time.HasValue).Select(l => (l.Lap, l.Time.Value)).ToList());
         }
 
+        /// <summary>
+        /// État à sauvegarder pour reprendre la course après un redémarrage (copie : la sérialisation se fait hors du verrou).
+        /// Sans la trace de distance ni les micro-secteurs, qui se reconstruisent en roulant.
+        /// </summary>
+        public DriverTrackerState Export() => new()
+        {
+            Id = Id,
+            Laps = Laps.Select(l => l.Copy()).ToList(),
+            PitStops = PitStops.Select(p => p.Copy()).ToList(),
+            Stints = Stints.Select(s => s.Copy()).ToList(),
+            StartPosition = StartPosition,
+            CurrentCompound = CurrentCompound,
+            BestSectors = (double?[])BestSectors.Clone(),
+            BestSectorLaps = (int?[])BestSectorLaps.Clone(),
+            LastCompletedLaps = _lastCompletedLaps,
+            LapStartTime = _lapStartTime,
+            WasInPits = _wasInPits,
+            PitSeenThisLap = _pitSeenThisLap,
+            PitExitThisLap = _pitExitThisLap,
+            PitEntryTime = _pitEntryTime,
+            LastSeenLastLapTicks = _lastSeenLastLapTime.Ticks,
+            LapValidSoFar = _lapValidSoFar,
+            AnyValidLapSeen = _anyValidLapSeen,
+        };
+
+        /// <summary>Reprend un état sauvegardé (pilote encore jamais mis à jour depuis le lancement).</summary>
+        public void Import(DriverTrackerState state)
+        {
+            if (state == null)
+            {
+                return;
+            }
+
+            Laps.Clear();
+            Laps.AddRange((state.Laps ?? new List<LapRecord>()).Where(l => l != null));
+            PitStops.Clear();
+            PitStops.AddRange((state.PitStops ?? new List<PitStopRecord>()).Where(p => p != null));
+            Stints.Clear();
+            Stints.AddRange((state.Stints ?? new List<StintRecord>()).Where(s => s != null));
+            StartPosition = state.StartPosition;
+            CurrentCompound = state.CurrentCompound;
+            for (int i = 0; i < 3; i++)
+            {
+                BestSectors[i] = state.BestSectors?.Length > i ? state.BestSectors[i] : null;
+                BestSectorLaps[i] = state.BestSectorLaps?.Length > i ? state.BestSectorLaps[i] : null;
+            }
+
+            _lastCompletedLaps = state.LastCompletedLaps;
+            _lapStartTime = state.LapStartTime;
+            _wasInPits = state.WasInPits;
+            _pitSeenThisLap = state.PitSeenThisLap;
+            _pitExitThisLap = state.PitExitThisLap;
+            _pitEntryTime = state.PitEntryTime;
+            _lastSeenLastLapTime = TimeSpan.FromTicks(Math.Max(0, state.LastSeenLastLapTicks));
+            _lapValidSoFar = state.LapValidSoFar;
+            _anyValidLapSeen = state.AnyValidLapSeen;
+            _pendingLap = null;
+        }
+
         private static string ReadCompound(CarInfo carInfo)
         {
             string type = carInfo?.WheelsInfo?.FrontLeft?.TyreType;
@@ -331,6 +390,13 @@ namespace SecondMonitor.Hub.Core.Race
         public double[] WearDeltaPct { get; set; }
 
         public bool IsClean => !IsPitLap && !IsOutLap && Valid;
+
+        public LapRecord Copy()
+        {
+            var copy = (LapRecord)MemberwiseClone();
+            copy.WearDeltaPct = (double[])WearDeltaPct?.Clone();
+            return copy;
+        }
     }
 
     public sealed class PitStopRecord
@@ -342,6 +408,46 @@ namespace SecondMonitor.Hub.Core.Race
         public double? Duration { get; set; }
 
         public string CompoundBefore { get; set; }
+
+        public PitStopRecord Copy() => (PitStopRecord)MemberwiseClone();
+    }
+
+    /// <summary>État sauvegardé d'un <see cref="DriverTracker"/> (reprise de course).</summary>
+    public sealed class DriverTrackerState
+    {
+        public string Id { get; set; }
+
+        public List<LapRecord> Laps { get; set; } = new();
+
+        public List<PitStopRecord> PitStops { get; set; } = new();
+
+        public List<StintRecord> Stints { get; set; } = new();
+
+        public int StartPosition { get; set; }
+
+        public string CurrentCompound { get; set; }
+
+        public double?[] BestSectors { get; set; }
+
+        public int?[] BestSectorLaps { get; set; }
+
+        public int LastCompletedLaps { get; set; } = -1;
+
+        public double? LapStartTime { get; set; }
+
+        public bool WasInPits { get; set; }
+
+        public bool PitSeenThisLap { get; set; }
+
+        public bool PitExitThisLap { get; set; }
+
+        public double? PitEntryTime { get; set; }
+
+        public long LastSeenLastLapTicks { get; set; }
+
+        public bool LapValidSoFar { get; set; } = true;
+
+        public bool AnyValidLapSeen { get; set; }
     }
 
     public sealed class StintRecord
@@ -359,5 +465,7 @@ namespace SecondMonitor.Hub.Core.Race
         public double? AverageLap { get; set; }
 
         public double? BestLap { get; set; }
+
+        public StintRecord Copy() => (StintRecord)MemberwiseClone();
     }
 }
