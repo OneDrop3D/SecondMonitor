@@ -97,8 +97,17 @@ builder.WebHost.ConfigureKestrel(k =>
     }
 });
 builder.Services.AddSingleton(settings);
-builder.Services.AddSingleton(new RaceEngine(dataDir) { ThermalProfiles = () => settings.Current.ThermalProfiles });
-builder.Services.AddSingleton<SecondMonitor.Hub.Core.Ai.RaceMemory>();
+var raceEngine = new RaceEngine(dataDir) { ThermalProfiles = () => settings.Current.ThermalProfiles };
+var raceMemory = new SecondMonitor.Hub.Core.Ai.RaceMemory();
+// Reprise de course : la sauvegarde est proposée au moteur avant la première donnée du jeu (SessionResumeService).
+var raceResume = new RaceResumeKeeper(raceEngine, raceMemory, new RaceResumeStore(Path.Combine(dataDir, "reprise", "session.json")), () => settings.Current.ResumeSession);
+raceResume.Resumed += s => HubJournal.Write(dataDir, "reprise", $"Course reprise après le redémarrage : {s.Track} ({s.SessionType}), {s.Summary()}, {s.Drivers.Count} pilotes, sauvegarde de {s.SavedAtUtc.ToLocalTime():HH:mm:ss}{(s.CarnetId != null ? $", carnet {s.CarnetId}" : string.Empty)}");
+raceResume.Declined += reason => HubJournal.Write(dataDir, "reprise", $"Course non reprise : {reason}");
+raceResume.Start(DateTime.UtcNow);
+builder.Services.AddSingleton(raceEngine);
+builder.Services.AddSingleton(raceMemory);
+builder.Services.AddSingleton(raceResume);
+builder.Services.AddHostedService<SessionResumeService>();
 builder.Services.AddSingleton<DataSourceService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataSourceService>());
 builder.Services.AddSingleton<LiveHub>();
@@ -180,6 +189,7 @@ app.MapPut("/api/settings", (SettingsStore store, HubSettings incoming) =>
         s.GameHosts = incoming.GameHosts ?? new List<string>();
         s.DemoMode = incoming.DemoMode;
         s.DemoSpeed = incoming.DemoSpeed;
+        s.ResumeSession = incoming.ResumeSession;
         AiSettings ai = incoming.Ai ?? new AiSettings();
         SettingsStore.KeepTokens(ai, s.Ai); // l'interface ne connaît pas les jetons : on garde ceux enregistrés
         s.Ai = ai;

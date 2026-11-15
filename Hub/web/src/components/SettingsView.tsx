@@ -52,6 +52,17 @@ export function SettingsView({ theme, setTheme, snapshot }: { theme: string; set
       <ThermalProfiles snapshot={snapshot} />
 
       <div className="card">
+        <div className="card-head"><span className="card-title">Course en cours</span></div>
+        <div className="card-body stack-sm">
+          <label className="switch-row">
+            <input type="checkbox" checked={settings.resumeSession !== false} disabled={saving} onChange={(e) => save({ resumeSession: e.target.checked })} />
+            <span><b>Reprendre la course après un redémarrage</b> : si vous fermez et relancez SecondMonitor pendant la même session du jeu, les tours, la consommation, les arrêts, les relais des adversaires et la mémoire de l'ingénieur sont repris, et le carnet continue. Décochez pour tout reprendre de zéro à chaque lancement.</span>
+          </label>
+          <p className="secondary small" style={{ margin: 0 }}>Le bouton « Nouvelle session » efface toujours la course enregistrée.</p>
+        </div>
+      </div>
+
+      <div className="card">
         <div className="card-head"><span className="card-title">Course de démonstration</span></div>
         <div className="card-body">
           <p className="secondary">Une course fictive (16 voitures, 2 catégories, arrêts, usure, énergie virtuelle) pour découvrir l'interface sans jeu.</p>

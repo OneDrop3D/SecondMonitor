@@ -100,6 +100,17 @@ namespace SecondMonitor.Hub.Core.Ai
             }
         }
 
+        /// <summary>Décisions reprises d'une sauvegarde (reprise de course) ; la proposition ouverte ne l'est pas.</summary>
+        public void Import(IEnumerable<ProposalDecision> decisions)
+        {
+            lock (_lock)
+            {
+                _open = null;
+                _decisions.Clear();
+                _decisions.AddRange((decisions ?? Enumerable.Empty<ProposalDecision>()).Where(d => d != null).TakeLast(200));
+            }
+        }
+
         /// <summary>Ouvre une proposition (la précédente est remplacée).</summary>
         public void Propose(string symptom, string label, string phase, string corner, string category, Proposal current, IEnumerable<Proposal> rest)
         {

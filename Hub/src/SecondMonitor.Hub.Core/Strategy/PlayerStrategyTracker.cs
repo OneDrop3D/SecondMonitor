@@ -40,6 +40,35 @@ namespace SecondMonitor.Hub.Core.Strategy
             _trace.Reset();
         }
 
+        /// <summary>
+        /// Consommation tour par tour et repères du tour en cours, pour reprendre la course après un redémarrage.
+        /// Les repères (essence, énergie, usure au début du tour) restent justes : le jeu, lui, ne s'est pas arrêté.
+        /// La batterie hybride et la trace du tour en cours ne sont pas gardées (elles se refont en un tour).
+        /// </summary>
+        public PlayerStrategyState Export() => new()
+        {
+            LastLap = _lastLap,
+            FuelAtLapStart = _fuelAtLapStart,
+            EnergyAtLapStart = _energyAtLapStart,
+            WearAtLapStart = (double[])_wearAtLapStart?.Clone(),
+            History = _history.Select(h => h.Copy()).ToList(),
+        };
+
+        public void Import(PlayerStrategyState state)
+        {
+            Reset();
+            if (state == null)
+            {
+                return;
+            }
+
+            _lastLap = state.LastLap;
+            _fuelAtLapStart = state.FuelAtLapStart;
+            _energyAtLapStart = state.EnergyAtLapStart;
+            _wearAtLapStart = state.WearAtLapStart?.Length == 4 ? state.WearAtLapStart : null;
+            _history.AddRange((state.History ?? new List<LapConsumption>()).Where(h => h != null));
+        }
+
         public void Update(DriverInfo player, DriverTracker tracker)
         {
             if (player?.CarInfo == null)
@@ -442,5 +471,26 @@ namespace SecondMonitor.Hub.Core.Strategy
         public double? Energy { get; set; }
 
         public double[] WearDelta { get; set; }
+
+        public LapConsumption Copy()
+        {
+            var copy = (LapConsumption)MemberwiseClone();
+            copy.WearDelta = (double[])WearDelta?.Clone();
+            return copy;
+        }
+    }
+
+    /// <summary>État sauvegardé de <see cref="PlayerStrategyTracker"/> (reprise de course).</summary>
+    public sealed class PlayerStrategyState
+    {
+        public int LastLap { get; set; } = -1;
+
+        public double? FuelAtLapStart { get; set; }
+
+        public double? EnergyAtLapStart { get; set; }
+
+        public double[] WearAtLapStart { get; set; }
+
+        public List<LapConsumption> History { get; set; } = new();
     }
 }

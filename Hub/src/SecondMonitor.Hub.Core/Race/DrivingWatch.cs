@@ -89,6 +89,35 @@ namespace SecondMonitor.Hub.Core.Race
             Inputs = null;
         }
 
+        /// <summary>
+        /// Usures brutales et repères des règles (points de limites, pénalités, dernier tour annulé), pour reprendre la course
+        /// après un redémarrage sans redire ce qui l'a déjà été. Les traces pédales / volant ne sont pas gardées.
+        /// </summary>
+        public DrivingWatchState Export() => new()
+        {
+            Spikes = _spikes.Select(s => s.Copy()).ToList(),
+            LastSpikeAt = double.IsFinite(_lastSpikeAt) ? _lastSpikeAt : null,
+            TrackLimitPoints = _trackLimitPoints,
+            Penalties = _penalties,
+            InvalidatedLap = _invalidatedLap,
+        };
+
+        public void Import(DrivingWatchState state)
+        {
+            Reset();
+            if (state == null)
+            {
+                return;
+            }
+
+            _spikes.AddRange((state.Spikes ?? new List<WearSpike>()).Where(s => s != null));
+            _lastSpikeAt = state.LastSpikeAt ?? double.NegativeInfinity;
+            _trackLimitPoints = state.TrackLimitPoints;
+            _penalties = state.Penalties;
+            _invalidatedLap = state.InvalidatedLap;
+            _startChecked = true; // course reprise : le rappel de départ (moteur, première) n'a plus lieu d'être
+        }
+
         /// <summary>Événements à dire tout de suite (vidés à la lecture).</summary>
         public List<DrivingEvent> Drain()
         {
@@ -917,6 +946,22 @@ namespace SecondMonitor.Hub.Core.Race
         public double MaxThrottle { get; set; }
 
         public double MaxSteer { get; set; }
+
+        public WearSpike Copy() => (WearSpike)MemberwiseClone();
+    }
+
+    /// <summary>État sauvegardé de <see cref="DrivingWatch"/> (reprise de course).</summary>
+    public sealed class DrivingWatchState
+    {
+        public List<WearSpike> Spikes { get; set; } = new();
+
+        public double? LastSpikeAt { get; set; }
+
+        public double? TrackLimitPoints { get; set; }
+
+        public int? Penalties { get; set; }
+
+        public int InvalidatedLap { get; set; } = -1;
     }
 
     /// <summary>Pédales et volant à l'instant (%, volant de -100 à 100).</summary>
