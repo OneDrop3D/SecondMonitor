@@ -75,6 +75,8 @@ public sealed class EngineerService
                 _logger.LogWarning(ex, "Résultat du menu des stands non dit");
             }
         });
+        // Plan de course de l'instantané (écrans) : lift and coast validé et arrêt décidé avec le pilote.
+        engine.PlanContextSource = () => LiftCoast.Context(memory);
         engine.SessionReset += () =>
         {
             lock (_history)
@@ -262,6 +264,17 @@ public sealed class EngineerService
                 prep.Answer = "Copy, tu gardes la main sur le menu des stands.";
             }
 
+            return prep;
+        }
+
+        // Stratégie calculée : essai de lift and coast (lancer, référence, « pas d'erreur »), nombre d'arrêts, « au tour 21 »,
+        // ratio carburant / énergie, options, tours restants. Avant les demandes d'arrêt : « je boxe au tour d'après » décale l'arrêt.
+        IReadOnlyList<LapDto>? laps = !test && snapshot.HasData ? _engine.PlayerLaps() : null;
+        if ((LiftCoast.Handle(q, memory, snapshot, laps) ?? StrategyRadio.Answer(q, snapshot, memory, laps)) is string strategy)
+        {
+            prep.Answer = strategy;
+            prep.Kind = "calculée";
+            prep.Category = ExchangeCategorizer.Strategy;
             return prep;
         }
 

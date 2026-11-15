@@ -80,6 +80,12 @@ public sealed class ProactiveService : BackgroundService
                     {
                         await _engineer.SayAsync(gapLine, "ingénieur IA", stoppingToken, proactive: true, category: ExchangeCategorizer.RaceInfo);
                     }
+
+                    // Essai de lift and coast demandé par le pilote : mesure à la fin du tour de test, puis suivi de la cible.
+                    if (!Finished(snapNow) && LiftCoast.Check(_engineer.Memory, snapNow, _engine.PlayerLaps()) is RadioLine lift)
+                    {
+                        await _engineer.SayAsync(lift.Text, "ingénieur IA", stoppingToken, proactive: true, awaitingAnswer: lift.IsQuestion, category: ExchangeCategorizer.Strategy);
+                    }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -113,6 +119,13 @@ public sealed class ProactiveService : BackgroundService
 
                 if (!ai.ProactiveRadio)
                 {
+                    continue;
+                }
+
+                // Un arrêt de moins à portée avec une petite économie : l'ingénieur propose un tour de lift and coast pour mesurer.
+                if (!Finished(snap) && LiftCoast.Propose(_engineer.Memory, snap, DateTime.UtcNow) is RadioLine proposal)
+                {
+                    await _engineer.SayAsync(proposal.Text, "ingénieur IA", stoppingToken, proactive: true, awaitingAnswer: true, category: ExchangeCategorizer.Strategy);
                     continue;
                 }
 

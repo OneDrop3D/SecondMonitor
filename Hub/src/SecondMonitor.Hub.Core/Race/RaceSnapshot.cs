@@ -320,6 +320,9 @@ namespace SecondMonitor.Hub.Core.Race
         /// <summary>Simulations d'arrêt : perte au stand, position à la sortie, undercut / overcut.</summary>
         public SecondMonitor.Hub.Core.Strategy.PitPlanDto PitPlan { get; set; }
 
+        /// <summary>Plan de course jusqu'au drapeau : arrêts restants, fenêtre du prochain, ±1 tour, ratio, un arrêt de moins.</summary>
+        public SecondMonitor.Hub.Core.Strategy.RacePlanDto Plan { get; set; }
+
         /// <summary>Réglages en roulant (répartition, TC, ABS, cartographie…), hybride, limites de piste et pénalités, si le jeu les donne.</summary>
         public ControlsDto Controls { get; set; }
 

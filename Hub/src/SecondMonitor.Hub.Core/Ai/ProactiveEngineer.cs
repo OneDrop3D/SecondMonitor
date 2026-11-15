@@ -58,7 +58,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
             var candidates = new List<ProactiveMessage>();
             PlayerStrategy p = snap.Player;
-            TyreAlerts(p, me, candidates);
+            TyreAlerts(p, me, candidates, snap.SessionType == "Race");
             DamageAlerts(p, candidates);
             if (HybridAdvisor.Proactive(snap, me) is ProactiveMessage battery)
             {
@@ -167,7 +167,7 @@ namespace SecondMonitor.Hub.Core.Ai
         /// Pneus : tour entier au-dessus de la plage (moyenne), surchauffe de plus de 30 s d'affilée, pneus froids au départ
         /// (tour de formation, sortie des stands). Un seul message à la fois : le pneu le plus touché, les autres cités.
         /// </summary>
-        private static void TyreAlerts(PlayerStrategy p, DriverRow me, List<ProactiveMessage> candidates)
+        private static void TyreAlerts(PlayerStrategy p, DriverRow me, List<ProactiveMessage> candidates, bool race = false)
         {
             var thermal = p.TyreThermal ?? new List<TyreThermalDto>();
             var lapHot = thermal.Where(t => t.LastLapState == "chaud" && t.LastLapAverage > t.Max).OrderByDescending(t => t.LastLapAverage - t.Max).ToList();
@@ -194,8 +194,9 @@ namespace SecondMonitor.Hub.Core.Ai
                     urgent: true));
             }
 
-            // Pneus froids au départ : tour de formation (0 tour bouclé) ou relais tout neuf.
-            if (me.Laps == 0 || p.StintLaps == 0)
+            // Pneus froids au départ : tour de formation (0 tour bouclé), ou relais tout neuf hors course.
+            // En course, après un arrêt, le pilote sait que ses pneus sont froids : on ne le redit pas à chaque sortie des stands.
+            if (me.Laps == 0 || (p.StintLaps == 0 && !race))
             {
                 TyreThermalDto cold = thermal.Where(t => t.Surface.HasValue && t.Min.HasValue && t.Surface < t.Min - 10).OrderBy(t => t.Surface - t.Min).FirstOrDefault();
                 if (cold != null && me.Speed > 40)

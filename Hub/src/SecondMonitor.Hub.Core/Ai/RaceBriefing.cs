@@ -44,7 +44,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
         private static readonly (Topic Topic, string[] Words)[] Keywords =
         {
-            (Topic.Strategy, new[] { "undercut", "under cut", "overcut", "over cut", "si je rentre", "ressors", "ressortir", "ressortirai", "sortie des stands", "perte au stand", "couvrir", "stratégie d'arrêt", "strategie d'arret", "ma stratégie", "ma strategie", "la stratégie", "la strategie", "notre stratégie", "notre strategie" }),
+            (Topic.Strategy, new[] { "undercut", "under cut", "overcut", "over cut", "si je rentre", "ressors", "ressort ", "ressort?", "resort", "ressortir", "ressortirai", "ressortirais", "sors des stands", "sortir des stands", "sortie des stands", "perte au stand", "couvrir", "stratégie d'arrêt", "strategie d'arret", "ma stratégie", "ma strategie", "la stratégie", "la strategie", "notre stratégie", "notre strategie" }),
             (Topic.Damage, new[] { "dégât", "degat", "cassé", "casse ", "aileron", "fond plat", "diffuseur", "ponton", "abîmé", "abime", "endommag", "touché", "réparer", "reparer", "mgu", "drs" }),
             (Topic.Laps, new[] { "meilleur tour", "meilleur temps", "meilleur chrono", "pire tour", "pire temps", "plus mauvais tour", "moins bon tour", "tour le plus lent", "plus lent tour", "dernier tour", "tour précédent", "tour precedent", "moyenne", "régularit", "regularit", "régulier", "regulier", "constan", "mes tours", "mes temps", "mes chronos" }),
             (Topic.Rules, new[] { "track limit", "tracks limit", "limites de piste", "limite de piste", "limites", "pénalité", "penalite", "pénalités", "penalites", "tour annulé", "tour annule", "temps annulé", "temps annule", "drive through", "stop and go" }),
@@ -62,7 +62,7 @@ namespace SecondMonitor.Hub.Core.Ai
             (Topic.Opponents, new[] { "sa stratégie", "sa strategie", "leur stratégie", "leur strategie", "adversaire", "concurrent", "va s'arrêter", "va s'arreter", "ses pneus" }),
             (Topic.Gap, new[] { "écart", "ecart", "derrière", "derriere", "devant", "gap", "revient", "reprend", "attaque", "loin", "rattrape" }),
             (Topic.Position, new[] { "position", "place", "classement", "rang", "leader", "premier", "combientième" }),
-            (Topic.Session, new[] { "temps restant", "tours restants", "tour rest", "il reste combien de tours", "combien de tour", "tours bouclés", "tour bouclé", "fin de course", "minutes", "drapeau", "safety", "arrivée" }),
+            (Topic.Session, new[] { "temps restant", "tours restants", "tour rest", "il reste combien de tours", "combien de tour", "tours bouclés", "tour bouclé", "fin de course", "fin de la course", "avant la fin", "minutes", "drapeau", "safety", "arrivée" }),
             (Topic.Weather, new[] { "pluie", "météo", "meteo", "température de piste", "pleuvoir", "pleut", "temps qu'il", "averse", "vent", "prévision", "prevision", "évoluer", "evoluer", "évolution", "evolution", "tendance", "la piste va" }),
         };
 
@@ -117,6 +117,23 @@ namespace SecondMonitor.Hub.Core.Ai
             if (topics.Contains(Topic.Driving) && topics.Contains(Topic.Car) && !Regex.IsMatch(q, @"temp[ée]rature|chaud|froid"))
             {
                 topics.Remove(Topic.Car);
+            }
+
+            // « Batterie », « consommation de la batterie », « énergie électrique sur la batterie » : le pourcentage de batterie,
+            // pas l'essence ni l'énergie virtuelle (sauf si elles sont nommées).
+            if (Regex.IsMatch(q, @"batter|\bers\b|hybride|[ée]lectrique|\bboost\b"))
+            {
+                topics.Remove(Topic.Hybrid);
+                topics.Insert(0, Topic.Hybrid);
+                if (!Regex.IsMatch(q, @"essence|carburant|fuel|litre"))
+                {
+                    topics.Remove(Topic.Fuel);
+                }
+
+                if (!Regex.IsMatch(q, @"virtuel"))
+                {
+                    topics.Remove(Topic.Energy);
+                }
             }
 
             // « Combien de tours d'essence ? » parle de carburant, pas de la fin de course.
@@ -390,9 +407,10 @@ namespace SecondMonitor.Hub.Core.Ai
             (new Regex(@"ratio", RegexOptions.Compiled), "ratio"),
             (new Regex(@"frein", RegexOptions.Compiled), "freins"),
             (new Regex(@"moteur|\beau\b|huile", RegexOptions.Compiled), "moteur"),
-            (new Regex(@"ressor|ressortir|sortie des stands", RegexOptions.Compiled), "ressortie"),
+            (new Regex(@"ressor|resort|ressortir|sortie des stands|sors des stands|sortir des stands", RegexOptions.Compiled), "ressortie"),
             (new Regex(@"carcasse|c(œ|oe)ur", RegexOptions.Compiled), "carcasse"),
             (new Regex(@"temp[ée]rature|chaud|froid|chauff", RegexOptions.Compiled), "température"),
+            (new Regex(@"m[êe]me endroit|par rapport (au|à mon) (tour|dernier)|compar|plus de batterie|moins de batterie|qu.au tour pr[ée]c[ée]dent|que le tour pr[ée]c[ée]dent", RegexOptions.Compiled), "comparaison"),
             (new Regex(@"meilleur", RegexOptions.Compiled), "meilleur"),
             (new Regex(@"pire|plus mauvais|moins bon|plus lent", RegexOptions.Compiled), "pire"),
             (new Regex(@"dernier|précédent|precedent", RegexOptions.Compiled), "dernier"),
@@ -728,7 +746,7 @@ namespace SecondMonitor.Hub.Core.Ai
                     proposals.Add((Topic.Speed, speedProposal));
                 }
 
-                AddPerformanceFacts(snap, me, extras, (t, s) => Add(t, s));
+                AddPerformanceFacts(snap, me, extras, (t, s) => Add(t, s), (t, s, tag) => Add(t, s, companion: true, tag: tag));
                 AddDrivingFacts(extras, (t, s) => Add(t, s));
                 AddRainFacts(snap, me, extras, (t, s) => Add(t, s));
             }
@@ -764,7 +782,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
                 if (plan.RejoinNow?.Text is string rejoin)
                 {
-                    Add(Topic.Strategy, rejoin, companion: true);
+                    Add(Topic.Strategy, rejoin, companion: true, tag: "ressortie");
                     Add(Topic.Pit, rejoin, companion: true, tag: "ressortie");
                 }
 
@@ -1127,10 +1145,14 @@ namespace SecondMonitor.Hub.Core.Ai
 
         private static string GapSecs(double s) => double.IsNaN(s) ? "un écart inconnu" : Sec(s);
 
-        private static void AddPerformanceFacts(RaceSnapshot snap, DriverRow me, BriefingExtras extras, Action<Topic, string> add)
+        private static void AddPerformanceFacts(RaceSnapshot snap, DriverRow me, BriefingExtras extras, Action<Topic, string> add, Action<Topic, string, string> addTagged = null)
         {
             MicroSectorReportDto ms = extras.MicroSectors;
             DriverMicroSectorsDto mine = ms?.Drivers.FirstOrDefault(d => d.Id == me.Id);
+            if (addTagged != null && ms != null && CurrentVsLast(mine, ms, extras.Speeds) is string live)
+            {
+                addTagged(Topic.Performance, live, "dernier");
+            }
             if (mine == null || !ms.ClassBest.TryGetValue(me.ClassId ?? string.Empty, out double?[] classBest))
             {
                 add(Topic.Performance, "Pas encore assez de tours pour comparer tes secteurs : il en faut deux complets.");
@@ -1170,7 +1192,9 @@ namespace SecondMonitor.Hub.Core.Ai
             var top = losses.OrderByDescending(l => l.Loss).Take(2).Where(l => l.Loss > 0.03).ToList();
             if (top.Count == 0)
             {
-                add(Topic.Performance, "Tu es au niveau des meilleurs de ta catégorie sur tout le tour.");
+                // Déjà le plus rapide partout : la seule référence utile, ce sont ses propres meilleurs passages.
+                string own = OwnLosses(mine, ms, extras.Speeds);
+                add(Topic.Performance, "Tu as les meilleurs micro-secteurs de ta catégorie partout." + (own == null ? string.Empty : " " + own));
             }
             else
             {
@@ -1182,6 +1206,53 @@ namespace SecondMonitor.Hub.Core.Ai
             {
                 add(Topic.Performance, $"En enchaînant tes meilleurs secteurs : {Sec(me.BestLap.Value - mine.TheoreticalBest.Value)} de mieux sur ton meilleur tour.");
             }
+        }
+
+        /// <summary>« Sur le dernier tour, tu perds le plus au micro-secteur 7, vers le virage 4 (0,21 s) par rapport à tes meilleurs passages. »</summary>
+        private static string OwnLosses(DriverMicroSectorsDto mine, MicroSectorReportDto ms, SpeedAnalysisDto speeds)
+        {
+            if (mine?.Last == null || mine.Best == null)
+            {
+                return null;
+            }
+
+            var own = Enumerable.Range(0, Math.Min(ms.Count, mine.Last.Length))
+                .Where(i => mine.Last[i].HasValue && mine.Best[i].HasValue && !(mine.LastPit?.ElementAtOrDefault(i) ?? false))
+                .Select(i => (Index: i, Loss: mine.Last[i].Value - mine.Best[i].Value))
+                .ToList();
+            var worst = own.OrderByDescending(l => l.Loss).Take(2).Where(l => l.Loss > 0.05).ToList();
+            return worst.Count == 0
+                ? "Dernier tour au niveau de tes meilleurs passages partout."
+                : $"Sur le dernier tour, tu perds le plus {string.Join(" et ", worst.Select(l => $"au micro-secteur {l.Index + 1}{Near(l.Index, ms, speeds)} ({Sec(l.Loss)})"))} par rapport à tes meilleurs passages.";
+        }
+
+        /// <summary>
+        /// Tour en cours contre le tour précédent, au même endroit : « Ce tour-ci : 0,4 s de mieux que le tour précédent au même endroit ;
+        /// dernier micro-secteur (8, vers le virage 4) : 0,12 s de perdu. »
+        /// </summary>
+        private static string CurrentVsLast(DriverMicroSectorsDto mine, MicroSectorReportDto ms, SpeedAnalysisDto speeds)
+        {
+            if (mine?.Current == null || mine.Last == null || mine.CurrentIndex <= 0)
+            {
+                return null;
+            }
+
+            int upTo = Math.Min(mine.CurrentIndex, Math.Min(mine.Current.Length, mine.Last.Length));
+            var pairs = Enumerable.Range(0, upTo).Where(i => mine.Current[i].HasValue && mine.Last[i].HasValue).ToList();
+            if (pairs.Count == 0)
+            {
+                return null;
+            }
+
+            double sum = pairs.Sum(i => mine.Current[i].Value - mine.Last[i].Value);
+            string overall = Math.Abs(sum) < 0.05 ? "comme au tour précédent au même endroit"
+                : sum < 0 ? $"{Sec(-sum)} de mieux que le tour précédent au même endroit"
+                : $"{Sec(sum)} de plus que le tour précédent au même endroit";
+            int last = pairs[^1];
+            double d = mine.Current[last].Value - mine.Last[last].Value;
+            string piece = Math.Abs(d) < 0.02 ? "pareil"
+                : d < 0 ? $"{Sec(-d)} de gagné" : $"{Sec(d)} de perdu";
+            return $"Ce tour-ci : {overall} ; dernier micro-secteur ({last + 1}{Near(last, ms, speeds)}) : {piece}.";
         }
 
         private static string Near(int index, MicroSectorReportDto ms, SpeedAnalysisDto speeds)

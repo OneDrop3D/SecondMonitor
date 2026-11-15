@@ -10,6 +10,9 @@ namespace SecondMonitor.Hub.Core.Race
     {
         private readonly RaceEventLog _events = new();
 
+        /// <summary>Ce que sait l'ingénieur pour le plan de course : lift and coast validé, arrêt décidé avec le pilote.</summary>
+        public System.Func<SecondMonitor.Hub.Core.Strategy.PlanContext> PlanContextSource { get; set; }
+
         /// <summary>Événements de course postérieurs à <paramref name="afterId"/> (0 = tous), avec l'identifiant de session du journal.</summary>
         public (long SessionId, IReadOnlyList<RaceEventDto> Events) RaceEvents(long afterId)
         {
@@ -28,6 +31,12 @@ namespace SecondMonitor.Hub.Core.Race
             }
 
             snap.RaceLength = BuildRaceLength(snap);
+            if (snap.Player != null)
+            {
+                // Plan jusqu'au drapeau : arrêts restants, fenêtre, ±1 tour, ratio, un arrêt de moins (lift and coast mesuré par l'ingénieur).
+                snap.Player.Plan = SecondMonitor.Hub.Core.Strategy.RacePlanner.Build(snap, PlanContextSource?.Invoke());
+            }
+
             _events.Observe(snap, _sessionKey);
             snap.LastEventId = _events.LastId;
             snap.EventSessionId = _events.SessionId;

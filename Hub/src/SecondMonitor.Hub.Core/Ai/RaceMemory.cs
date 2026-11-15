@@ -35,6 +35,9 @@ namespace SecondMonitor.Hub.Core.Ai
         /// <summary>Fil de la conversation : dernière proposition de l'ingénieur, réglages acceptés ou refusés.</summary>
         public ConversationThread Thread { get; } = new();
 
+        /// <summary>Essai de lift and coast : tour de test, tour de référence, mesure validée par le pilote.</summary>
+        public LiftCoastTest LiftCoast { get; set; } = new();
+
         public IReadOnlyList<MemoryEntry> Entries
         {
             get
@@ -81,6 +84,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 PitPlan = null;
                 PitAutoAsked = false;
                 NoStopPlanned = false;
+                LiftCoast = new LiftCoastTest();
             }
 
             Thread.Clear();

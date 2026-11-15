@@ -117,8 +117,10 @@ namespace SecondMonitor.Hub.Core.Ai
         public static string NeededAtStop(RaceSnapshot snap)
         {
             PlayerStrategy p = snap?.Player;
-            double? fuel = p?.Fuel == null ? null : p.Fuel.ToAdd ?? p.Fuel.NextStopAdd;
-            double? energy = p?.Energy == null ? null : p.Energy.ToAddPct ?? p.Energy.NextStopAddPct;
+            // On s'arrête maintenant : ce qui manque pour finir, plafonné à ce qui rentre (réservoir, 100 % d'énergie).
+            // Avant : « 95 L et 108 % d'énergie » (le total pour finir, sans plafond).
+            double? fuel = p?.Fuel == null ? null : System.Math.Min(p.Fuel.ToAdd ?? p.Fuel.NextStopAdd ?? 0, p.Fuel.Capacity > 0 ? System.Math.Max(0, p.Fuel.Capacity - p.Fuel.Remaining) : double.MaxValue);
+            double? energy = p?.Energy == null ? null : System.Math.Min(p.Energy.ToAddPct ?? p.Energy.NextStopAddPct ?? 0, System.Math.Max(0, 100 - p.Energy.RemainingPct));
             var parts = new List<string>();
             if (fuel is > 0.4)
             {

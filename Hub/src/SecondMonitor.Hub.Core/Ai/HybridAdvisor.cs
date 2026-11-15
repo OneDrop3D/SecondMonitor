@@ -28,8 +28,13 @@ namespace SecondMonitor.Hub.Core.Ai
                 yield break;
             }
 
-            yield return (State(snap, h) + " " + Advice(snap, me, h, speeds), null);
-            yield return (Where(snap, h, speeds), "où");
+            // Réponse par défaut, courte : le pourcentage, le bilan du dernier tour, la comparaison au même endroit, un conseil s'il sert.
+            string advice = Advice(snap, me, h, speeds);
+            string compare = snap.Player?.Live?.Battery is { } live ? Compare(live) : string.Empty;
+            yield return ((State(snap, h) + compare + (advice == null ? string.Empty : " " + advice)).Trim(), null);
+            yield return ((State(snap, h) + (compare.Length > 0 ? compare : " Pas encore de tour précédent à comparer.")).Trim(), "comparaison");
+            string zones = snap.Player?.Live?.Battery is { } live2 ? Zones(live2) : string.Empty;
+            yield return ((zones.Length > 0 ? zones.Trim() + " " : string.Empty) + Where(snap, h, speeds), "où");
         }
 
         /// <summary>« Batterie 64 %, mode moyen, elle se vide ; ce tour : 45 % du déploiement, 30 % récupérés. »</summary>
@@ -42,24 +47,49 @@ namespace SecondMonitor.Hub.Core.Ai
                 parts.Add($"mode {mode}");
             }
 
-            if (h.LastLapStartPct is double s && h.LastLapEndPct is double e)
+            // Bilan du dernier tour (un écart de plus de 40 % vient d'un passage au stand : on ne le dit pas).
+            if (h.LastLapStartPct is double s && h.LastLapEndPct is double e && Math.Abs(e - s) <= 40)
             {
                 double net = e - s;
-                parts.Add(Math.Abs(net) < 2 ? "bilan du dernier tour équilibré" : net > 0 ? $"tu en as gagné {N(net, 0)} % au dernier tour" : $"tu en as perdu {N(-net, 0)} % au dernier tour");
+                parts.Add(Math.Abs(net) < 2 ? "bilan du dernier tour équilibré" : net > 0 ? $"plus {N(net, 0)} % sur le dernier tour" : $"moins {N(-net, 0)} % sur le dernier tour");
             }
 
-            string text = string.Join(", ", parts) + ".";
-            if (snap.Player?.Live?.Battery is { } live)
+            return string.Join(", ", parts) + ".";
+        }
+
+        /// <summary>« Ce tour-ci : 3 % de plus qu'au même endroit du tour précédent, fin de tour estimée à −4 %. » Vide sans mesure.</summary>
+        public static string Compare(SecondMonitor.Hub.Core.Strategy.LiveQuantity b)
+        {
+            if (b.ChangeSoFar is double so && b.LastLapChangeAtSameDistance is double same)
             {
-                text += LiveBattery(live);
+                double diff = so - same;
+                string now = Math.Abs(diff) < 1 ? "autant qu'au même endroit du tour précédent"
+                    : diff > 0 ? $"{N(diff, 0)} % de plus qu'au même endroit du tour précédent"
+                    : $"{N(-diff, 0)} % de moins qu'au même endroit du tour précédent";
+                string end = b.ProjectedLapChange is double p ? $", fin de tour estimée à {(p >= 0 ? "+" : "−")}{N(Math.Abs(p), 0)} %" : string.Empty;
+                return $" Ce tour-ci : {now}{end}.";
             }
 
-            if (h.System == "LMU" && snap.Player?.Energy is { } en)
+            return string.Empty;
+        }
+
+        /// <summary>« Tu la vides le plus dans la ligne droite 2 (−18 %), tu la recharges le plus au virage 5 (+9 %). »</summary>
+        public static string Zones(SecondMonitor.Hub.Core.Strategy.LiveQuantity b)
+        {
+            var spend = b.Zones?.FirstOrDefault(z => z.Change < 0);
+            var gain = b.Zones?.FirstOrDefault(z => z.Change > 0);
+            var where = new List<string>();
+            if (spend != null)
             {
-                text += $" Énergie virtuelle {N(en.RemainingPct, 0)} %{(en.PerLapPct.HasValue ? $", {N(en.PerLapPct.Value, 1)} %/tour" : string.Empty)}.";
+                where.Add($"tu la vides le plus {Place(spend)} ({N(spend.Change, 0)} %)");
             }
 
-            return text;
+            if (gain != null)
+            {
+                where.Add($"tu la recharges le plus {Place(gain)} (+{N(gain.Change, 0)} %)");
+            }
+
+            return where.Count == 0 ? string.Empty : " " + Cap(string.Join(", ", where)) + ".";
         }
 
         /// <summary>
@@ -110,7 +140,7 @@ namespace SecondMonitor.Hub.Core.Ai
             return z.Kind == "corner" ? $"au {name}" : $"dans la {name}";
         }
 
-        /// <summary>Un seul conseil, le plus utile maintenant.</summary>
+        /// <summary>Un seul conseil, le plus utile maintenant, ou null s'il n'y a rien à dire.</summary>
         public static string Advice(RaceSnapshot snap, DriverRow me, HybridDto h, SpeedAnalysisDto speeds)
         {
             PlayerStrategy p = snap.Player;
@@ -119,7 +149,7 @@ namespace SecondMonitor.Hub.Core.Ai
             bool race = snap.SessionType == "Race";
             bool f1 = h.System == "F1";
 
-            if (race && p?.LapsRemaining is double left && left <= 1.05)
+            if (race && p?.LapsRemaining is double left && left <= 1.0)
             {
                 return h.ChargePct > 15 ? "Dernier tour : vide la batterie, déploiement maximum." : "Dernier tour : il reste peu de batterie, garde-la pour la dernière ligne droite.";
             }
@@ -167,7 +197,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 return $"Tu vides {N(perLap, 0)} % par tour : à ce rythme, à vide dans {N(Math.Max(1, Math.Floor(h.ChargePct / perLap)), 0)} tours. {(f1 ? "Passez en mode moyen ou bas." : "Récupérez un peu plus au freinage.")}";
             }
 
-            return "Gestion correcte, continue comme ça.";
+            return null; // rien d'utile à ajouter : la réponse reste courte
         }
 
         /// <summary>« Je déploie où ? » : les plus longues lignes droites, et où récolter.</summary>
@@ -201,7 +231,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
             bool race = snap.SessionType == "Race" && me.Laps >= 1;
             bool f1 = h.System == "F1";
-            if (race && p.LapsRemaining is double left && left <= 1.05 && left > 0.3 && h.ChargePct > 25)
+            if (race && p.LapsRemaining is double left && left <= 1.0 && left > 0.3 && h.ChargePct > 25)
             {
                 return Info("ers-last", "Dernier tour : vide la batterie, déploiement maximum.", 100000, urgent: true);
             }

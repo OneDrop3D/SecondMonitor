@@ -46,7 +46,8 @@ public class StrategyTests
     public void Ai_AnswersUndercutAndRejoinQuestions()
     {
         var r = RaceBriefing.Prepare(_snap, "Si je rentre maintenant, je ressors où ?");
-        Assert.That(r.Suggestion, Does.Contain("ressortez P").Or.Contain("ndercut"));
+        // « Je ressors où ? » : la position à la sortie des stands, pas l'undercut.
+        Assert.That(r.Suggestion, Does.Contain("tu ressors P"));
         var u = RaceBriefing.Prepare(_snap, "Undercut possible sur la voiture devant ?");
         TestContext.Out.WriteLine(u.Suggestion);
         Assert.That(u.Topics.First(), Is.EqualTo(RaceBriefing.Topic.Strategy));

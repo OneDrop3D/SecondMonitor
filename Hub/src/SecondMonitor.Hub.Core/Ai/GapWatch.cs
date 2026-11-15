@@ -19,6 +19,11 @@ namespace SecondMonitor.Hub.Core.Ai
 
         public double? LastAnnounced { get; set; }
 
+        /// <summary>« À chaque passage de la ligne » : une annonce par tour, avec ce qui a bougé sur le tour.</summary>
+        public bool PerLap { get; set; }
+
+        public int LastLap { get; set; } = -1;
+
         public DateTime LastAtUtc { get; set; }
     }
 
@@ -44,7 +49,11 @@ namespace SecondMonitor.Hub.Core.Ai
                 return null;
             }
 
-            var watch = new GapWatch { Side = Regex.IsMatch(t, @"\b(derriere|qui suit|poursuivant)\b") ? "behind" : "ahead" };
+            var watch = new GapWatch
+            {
+                Side = Regex.IsMatch(t, @"\b(derriere|qui suit|poursuivant)\b") ? "behind" : "ahead",
+                PerLap = Regex.IsMatch(t, @"\b(passages?|chaque tour|tous les tours|a chaque tour|ligne|par tour|fin de (chaque )?tour)\b"),
+            };
             Match n = Regex.Match(t, @"\b(\d+(?:[.,]\d+)?)\s*(seconde|secondes|s)\b");
             if (n.Success && double.TryParse(n.Groups[1].Value.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double step))
             {
@@ -62,8 +71,9 @@ namespace SecondMonitor.Hub.Core.Ai
             return (true, watch);
         }
 
-        public static string Confirm(GapWatch w) =>
-            $"Copy, je t'annonce l'écart avec la voiture {(w.Side == "behind" ? "derrière" : "devant")} à chaque {(Math.Abs(w.Step - 1) < 0.01 ? "seconde" : N(w.Step, 1) + " seconde")} gagnée ou perdue. Dis « arrête les écarts » pour couper.";
+        public static string Confirm(GapWatch w) => w.PerLap
+            ? $"Copy, l'écart avec la voiture {(w.Side == "behind" ? "derrière" : "devant")} à chaque passage sur la ligne. Dis « arrête les écarts » pour couper."
+            : $"Copy, je t'annonce l'écart avec la voiture {(w.Side == "behind" ? "derrière" : "devant")} à chaque {(Math.Abs(w.Step - 1) < 0.01 ? "seconde" : N(w.Step, 1) + " seconde")} gagnée ou perdue. Dis « arrête les écarts » pour couper.";
 
         /// <summary>Phrase à dire maintenant, ou null. Nouvelle voiture : on repart de son écart sans rien dire.</summary>
         public static string Check(GapWatch w, RaceSnapshot snap, DateTime nowUtc)
@@ -72,6 +82,11 @@ namespace SecondMonitor.Hub.Core.Ai
             if (w == null || b?.Gap is not double gap)
             {
                 return null;
+            }
+
+            if (w.PerLap)
+            {
+                return PerLap(w, b, gap, snap);
             }
 
             if (b.Id != w.TargetId || w.LastAnnounced == null)
@@ -92,6 +107,37 @@ namespace SecondMonitor.Hub.Core.Ai
             string trend = w.Side == "ahead"
                 ? change < 0 ? "tu reprends" : "il s'éloigne"
                 : change < 0 ? "il revient" : "tu creuses";
+            return $"Numéro {b.Number} à {Sec(gap)}, {trend}.";
+        }
+
+        /// <summary>Une annonce à chaque tour bouclé : « Numéro 50 à 27,2 s, plus 1,1 sur le tour. »</summary>
+        private static string PerLap(GapWatch w, BattleDto b, double gap, RaceSnapshot snap)
+        {
+            DriverRow me = snap.Drivers.FirstOrDefault(d => d.IsPlayer);
+            if (me == null || me.InPits)
+            {
+                return null;
+            }
+
+            // Juste après la ligne (premiers 15 % du tour) et une seule fois par tour.
+            if (me.Laps == w.LastLap || me.LapFraction > 0.15)
+            {
+                return null;
+            }
+
+            bool sameCar = b.Id == w.TargetId && w.LastAnnounced.HasValue;
+            double? change = sameCar ? gap - w.LastAnnounced.Value : null;
+            w.LastLap = me.Laps;
+            w.TargetId = b.Id;
+            w.LastAnnounced = gap;
+            if (change is not double c)
+            {
+                return $"Numéro {b.Number} à {Sec(gap)}.";
+            }
+
+            string trend = Math.Abs(c) < 0.1 ? "stable"
+                : w.Side == "ahead" ? (c < 0 ? $"tu reprends {Sec(-c)}" : $"il prend {Sec(c)}")
+                : (c < 0 ? $"il reprend {Sec(-c)}" : $"tu prends {Sec(c)}");
             return $"Numéro {b.Number} à {Sec(gap)}, {trend}.";
         }
     }
