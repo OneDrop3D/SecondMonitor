@@ -235,7 +235,8 @@ public class StrategieCourseTests
         Assert.That(RaceBriefing.DetectTopics("consommation de la batterie").First(), Is.EqualTo(RaceBriefing.Topic.Hybrid));
         Assert.That(RaceBriefing.DetectTopics("Matière d'énergie électrique sur la batterie.").First(), Is.EqualTo(RaceBriefing.Topic.Hybrid));
         Assert.That(RaceBriefing.DetectTopics("Matière d'énergie électrique sur la batterie."), Does.Not.Contain(RaceBriefing.Topic.Energy));
-        Assert.That(RaceBriefing.DetectTopics("je resort en quelle positionn").First(), Is.EqualTo(RaceBriefing.Topic.Strategy));
+        Assert.That(RaceBriefing.DetectTopics("je resort en quelle positionn"), Is.EqualTo(new[] { RaceBriefing.Topic.Strategy }));
+        Assert.That(RaceBriefing.DetectTopics("Est-ce que j'ai plus de batterie au même endroit que le tour précédent ?"), Is.EqualTo(new[] { RaceBriefing.Topic.Hybrid }));
     }
 
     [Test]

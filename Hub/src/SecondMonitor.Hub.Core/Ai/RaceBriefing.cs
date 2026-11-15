@@ -134,6 +134,16 @@ namespace SecondMonitor.Hub.Core.Ai
                 {
                     topics.Remove(Topic.Energy);
                 }
+
+                // « Plus de batterie qu'au tour précédent » : la batterie, pas la liste des tours ni la fin de course.
+                topics.Remove(Topic.Laps);
+                topics.Remove(Topic.Session);
+            }
+
+            // « Je ressors en quelle position ? » : la position à la sortie des stands, pas la position actuelle en plus.
+            if (topics.Contains(Topic.Strategy) && Regex.IsMatch(q, @"ressor|resort|sortir des stands|sors des stands"))
+            {
+                topics.Remove(Topic.Position);
             }
 
             // « Combien de tours d'essence ? » parle de carburant, pas de la fin de course.
