@@ -109,6 +109,7 @@ namespace SecondMonitor.Hub.Core.Ai
                     GapWatch = JsonCopy(GapWatch),
                     NoStopPlanned = NoStopPlanned,
                     WearWatches = _wearWatches.Select(w => w.Copy()).ToList(),
+                    LiftCoast = JsonCopy(LiftCoast),
                 };
             }
 
@@ -138,6 +139,12 @@ namespace SecondMonitor.Hub.Core.Ai
                 GapWatch = state.GapWatch;
                 NoStopPlanned = state.NoStopPlanned;
                 _wearWatches.AddRange((state.WearWatches ?? new List<WearWatch>()).Where(w => w != null));
+                LiftCoast = state.LiftCoast ?? new LiftCoastTest();
+                if (LiftCoast.State == "à valider")
+                {
+                    LiftCoast.State = null; // la question « sans erreur ? » n'est pas reprise : mesure à refaire
+                    LiftCoast.Candidate = null;
+                }
             }
 
             Thread.Import(state.Decisions);
@@ -284,6 +291,9 @@ namespace SecondMonitor.Hub.Core.Ai
         public List<WearWatch> WearWatches { get; set; } = new();
 
         public List<ProposalDecision> Decisions { get; set; } = new();
+
+        /// <summary>Essai de lift and coast : mesure validée et cible au tour gardées après un redémarrage.</summary>
+        public LiftCoastTest LiftCoast { get; set; }
     }
 
     public sealed class PendingQuestion

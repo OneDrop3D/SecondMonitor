@@ -8,6 +8,7 @@ import type { RadioMessage } from '../../radio';
 import { TrackMap } from '../TrackMap';
 import { BattlePanel } from '../BattlePanel';
 import { DamageList } from '../RaceExtras';
+import { RacePlanCard, RacePlanSummary } from '../RacePlanCard';
 import { AlertList, CarStatus, DeltaBar, Icon, MyCarPanel, NextStop, TimingGrid, classBests } from '../Timing';
 import type { Notice } from './notices';
 import { registerBlock, type BlockProps } from './registry';
@@ -264,7 +265,15 @@ function MyCar({ ctx }: BlockProps) {
 function Strategy({ ctx }: BlockProps) {
   const s = ctx.snapshot;
   if (!s.player) return <div className="db-empty muted">Pas de voiture joueur (mode spectateur).</div>;
-  return s.sessionType === 'Race' ? <NextStop snapshot={s} /> : <MyCarPanel snapshot={s} />;
+  return s.sessionType === 'Race'
+    ? <><RacePlanSummary plan={s.player.plan} /><NextStop snapshot={s} /></>
+    : <MyCarPanel snapshot={s} />;
+}
+
+function Plan({ ctx, size }: BlockProps) {
+  const s = ctx.snapshot;
+  if (s.sessionType !== 'Race' || !s.player) return <div className="db-empty muted">Le plan de course (arrêts restants, fenêtre, ±1 tour, ratio, lift and coast) s'affiche en course.</div>;
+  return <div className="db-pad"><RacePlanCard plan={s.player.plan} compact={size.bodyHeight < 260} /></div>;
 }
 
 function Damage({ ctx }: BlockProps) {
@@ -333,6 +342,13 @@ registerBlock({
   size: { w: 3, h: 9 }, medium: { w: 3, h: 8 }, minW: 2, minH: 3,
   badge: ({ ctx }) => <span className="db-sub">{ctx.snapshot.sessionType === 'Race' ? 'prochain arrêt' : 'ma voiture en essais'}</span>,
   render: (p) => <Strategy {...p} />,
+});
+registerBlock({
+  type: 'plan', title: 'Plan de course', icon: 'strategy', order: 5.5, addByDefault: true,
+  description: 'Jusqu’au drapeau : arrêts restants, fenêtre du prochain arrêt, un tour plus tôt ou plus tard, ratio carburant / énergie, un arrêt de moins en lift and coast.',
+  size: { w: 4, h: 9 }, medium: { w: 3, h: 9 }, minW: 2, minH: 4,
+  badge: ({ ctx }) => (ctx.snapshot.player?.plan?.stopsNeeded != null ? <span className="db-badge tnum">{ctx.snapshot.player.plan.stopsNeeded}</span> : null),
+  render: (p) => <Plan {...p} />,
 });
 registerBlock({
   type: 'evenements', title: 'Événements de course', icon: 'flag', order: 6, addByDefault: true,

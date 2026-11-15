@@ -139,6 +139,8 @@ export interface PlayerStrategy {
   damage: DamagePart[];
   damageEvent: { key: string; label: string; percent: number; lap: number; lossPerLap: number | null } | null;
   pitPlan: PitPlan | null;
+  /** Plan jusqu'au drapeau : arrêts restants, fenêtre du prochain, ±1 tour, ratio, un arrêt de moins (null hors course). */
+  plan?: RacePlan | null;
   deltaBest: number | null;
   deltaLast: number | null;
   speed: number;
@@ -639,4 +641,39 @@ export interface RaceEvent {
   text: string | null;
   driverId: string | null;
   isPlayer: boolean;
+}
+
+/** Plan de course calculé par le hub (RacePlanner). */
+export interface RacePlan {
+  completedLaps: number;
+  lapsRemaining: number;
+  limiter: string;
+  rangeNow: number;
+  fullStint: number;
+  stopsNeeded: number | null;
+  canFinish: boolean;
+  spareLaps: number | null;
+  nextStopLap: number | null;
+  plannedByDriver: boolean;
+  windowEarliest: number | null;
+  windowLatest: number | null;
+  stops: { lap: number; fuelLitres: number | null; energyPct: number | null; stopSeconds: number | null; last: boolean }[];
+  shifts: {
+    lap: number; delta: number; feasible: boolean; reason: string | null; stops: number | null; extraStop: boolean;
+    fuelLitres: number | null; energyPct: number | null; stopSeconds: number | null; savingNeededPerLap: number | null; savingUnit: string | null;
+  }[];
+  oneLess: {
+    stops: number; laps: number; limiter: string | null; energyPerLapTarget: number | null; energySavingPerLap: number | null;
+    fuelPerLapTarget: number | null; fuelSavingPerLap: number | null; savingPct: number; realistic: boolean; pitTimeSaved: number | null;
+    liftCoastCoversIt: boolean | null; liftCoastCostPerLap: number | null; liftCoastCost: number | null; netGain: number | null;
+  } | null;
+  idealRatio: number | null;
+  ratioToFinish: number | null;
+  pitLoss: number | null;
+  tyreLife: number | null;
+  tyreLapsLeft: number | null;
+  liftCoast: {
+    testLap: number; referenceLap: number; testTime: number; referenceTime: number; timeLoss: number | null;
+    energySaved: number | null; fuelSaved: number | null; validated: boolean;
+  } | null;
 }

@@ -885,3 +885,24 @@ details.cx-log > summary { cursor: pointer; list-style: none; }
 .calcul-choice:hover, .calcul-choice:focus-visible { border-color: var(--accent); background: var(--surface-hover); }
 .calcul-choice b { font-size: 16px; }
 .calcul-link { padding: 8px 0 4px; border-top: 1px solid var(--border); }
+
+/* Plan de course (RacePlanCard) */
+.rplan { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.rplan-head { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.rplan-big { display: flex; flex-direction: column; gap: 1px; min-width: 64px; }
+.rplan-big > b { font-size: 20px; line-height: 1.1; }
+.rplan.compact .rplan-big > b { font-size: 16px; }
+.rplan-line { padding: 5px 8px; border-radius: var(--radius-sm); background: var(--surface-2); border-left: 3px solid var(--border-strong); }
+.rplan-line.ok { border-left-color: var(--good); }
+.rplan-line.bad { border-left-color: var(--critical); }
+.rplan-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.rplan-table th { text-align: left; font-weight: 500; color: var(--text-muted, inherit); opacity: .75; padding: 2px 6px 2px 0; }
+.rplan-table td { padding: 3px 6px 3px 0; border-top: 1px solid var(--border); }
+.rplan-shifts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.rplan-shift { display: flex; flex-direction: column; gap: 1px; padding: 5px 7px; border-radius: var(--radius-sm); background: var(--surface-2); border-top: 3px solid var(--border-strong); min-width: 0; }
+.rplan-shift.ok { border-top-color: var(--good); }
+.rplan-shift.warn { border-top-color: var(--warning, #d29922); }
+.rplan-shift.bad { border-top-color: var(--critical); }
+.rplan-shift.base { outline: 1px solid var(--border-strong); }
+.rplan-shift .small { overflow-wrap: anywhere; }
+.rplan-summary { font-size: 12px; padding: 2px 0 6px; }

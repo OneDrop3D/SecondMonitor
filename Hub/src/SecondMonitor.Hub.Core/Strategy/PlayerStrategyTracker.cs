@@ -21,6 +21,7 @@ namespace SecondMonitor.Hub.Core.Strategy
         private double? _energyAtLapStart;
         private double[] _wearAtLapStart;
         private readonly List<LapConsumption> _history = new();
+        private bool _partialLap;
         private readonly HybridTracker _hybrid = new();
         private readonly EnergyLapTrace _trace = new();
 
@@ -32,6 +33,7 @@ namespace SecondMonitor.Hub.Core.Strategy
         public void Reset()
         {
             _lastLap = -1;
+            _partialLap = false;
             _fuelAtLapStart = null;
             _energyAtLapStart = null;
             _wearAtLapStart = null;
@@ -88,6 +90,9 @@ namespace SecondMonitor.Hub.Core.Strategy
             if (_lastLap < 0)
             {
                 _lastLap = player.CompletedLaps;
+                // Démarré en plein tour (application lancée ou relancée en course) : ce premier tour n'est mesuré qu'en partie,
+                // il ne compte pas dans la consommation au tour (on lisait 1,5 L au lieu de 7,3 au Mans).
+                _partialLap = player.LapDistance > 150;
                 _fuelAtLapStart = fuelNow;
                 _energyAtLapStart = energyNow;
                 _wearAtLapStart = wearNow;
@@ -106,7 +111,8 @@ namespace SecondMonitor.Hub.Core.Strategy
 
             LapRecord lap = tracker?.Laps.LastOrDefault();
             bool pitLap = lap?.IsPitLap == true || player.InPits;
-            var consumption = new LapConsumption { Lap = player.CompletedLaps, PitLap = pitLap || player.CompletedLaps != _lastLap + 1 };
+            var consumption = new LapConsumption { Lap = player.CompletedLaps, PitLap = pitLap || player.CompletedLaps != _lastLap + 1 || _partialLap };
+            _partialLap = false;
 
             if (_fuelAtLapStart.HasValue)
             {
