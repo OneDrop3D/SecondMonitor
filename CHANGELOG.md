@@ -3,6 +3,23 @@
 SecondMonitor (l'application qui affiche) et SecondMonitor Collecteur (PC de jeu), pour Windows, Mac et Linux/SteamOS.
 Basé sur [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) de winzarten (licence MIT).
 
+## Version 0.7.4
+
+- **Reprise de la course après un redémarrage** : si tu fermes et relances SecondMonitor pendant la même session du jeu, les tours, la consommation au tour, les arrêts, les relais des adversaires, la mémoire de l'ingénieur et le carnet continuent là où ils s'étaient arrêtés. Réglages › « Reprendre la course après un redémarrage » pour le couper ; « Nouvelle session » efface la course enregistrée. Le carnet n'est plus coupé en deux au relancement.
+- **Stratégie : nombre d'arrêts** : « combien d'arrêts ? », « il faudra faire encore deux arrêts ? », « un box ou deux ? », « je suis obligé de faire un quatrième arrêt ? » donnent oui / non, les arrêts restants, la fenêtre du prochain (au plus tôt, au plus tard) et ce qu'il faut économiser par tour pour en faire un de moins.
+- **Stratégie : décaler l'arrêt** : « au tour 21 », « je boxe au tour d'après », « et si je boxe un tour plus tôt ? » : l'ingénieur dit si ça passe (ou à quel tour l'énergie est vide), combien d'arrêts au total, ce qu'on mettra et la durée de l'arrêt ; l'arrêt décidé est retenu.
+- **Stratégie : ratio carburant / énergie** : « le ratio », « je suis à 0,97 » : ratio idéal calculé sur ta consommation (litres par % d'énergie), ce que tu emportes en trop ou en moins, la valeur à mettre.
+- **Stratégie : « qu'est-ce qu'on peut jouer ? »**, « combien de tours avant la fin ? », « on peut finir avec ce plein ? », « c'est quoi l'énergie virtuelle ? » : réponses calculées, courtes.
+- **Lift and coast** : « je fais un tour en lift and coast » (compris aussi « Lyssenko », « live and course »), « le tour 18 c'est ma référence ». À la fin du tour, l'ingénieur donne le temps perdu et l'énergie / l'essence économisées, demande si le tour était propre, puis dit si un arrêt de moins en lift and coast fait gagner ou perdre du temps. Si tu valides, il te donne la consommation cible et te prévient quand tu la dépasses. Il peut aussi te proposer l'essai de lui-même quand un arrêt de moins est à portée.
+- **Batterie** : « batterie », « consommation de la batterie » donnent d'abord le pourcentage (plus l'essence ni l'énergie virtuelle), le bilan du dernier tour et la comparaison au même endroit du tour précédent ; réponse plus courte.
+- **Plan de course à l'écran** : écran Stratégies et nouveau bloc d'accueil « Plan de course » (Disposition › Ajouter un bloc) : arrêts restants, tours à faire, autonomie, ratio idéal, arrêts prévus avec ce qu'on y met, un tour plus tôt / plus tard, un arrêt de moins et le lift and coast mesuré. Le bloc Stratégie affiche un résumé d'une ligne.
+- **Moins bavard** : « l'écart à chaque passage de la ligne » donne une annonce par tour (au lieu d'une par seconde gagnée) ; plus de « pneus froids » à chaque sortie des stands en course ; « dernier tour » annoncé au début du dernier tour.
+- **Corrections** : « box box » ne demande plus 108 % d'énergie (plafonné à ce qui rentre) ; « je ressors en quelle position » (même mal dicté) donne la position à la sortie des stands ; « où je perds du temps » compare à tes meilleurs passages quand tu es déjà le plus rapide de ta catégorie, et « par rapport à mon dernier tour » compare le tour en cours au précédent ; la consommation au tour ne compte plus le premier tour mesuré en partie quand l'application démarre en pleine course.
+- **Le Mans Ultimate, ratio carburant / énergie dans le menu des stands** : « règle le ratio » (ou « mets le ratio à 0,94 ») le règle dans le menu des stands à la valeur conseillée d'après ta consommation ; avec « box », le ratio est réglé en même temps que l'énergie. « Comment je modifie mon ratio ? » explique où il se trouve dans le menu du jeu. Nécessite le collecteur à jour sur le PC de jeu.
+- **Diagnostic du menu des stands sur le Mac** : chaque réglage ou test du menu des stands est maintenant recopié en détail (menu lu, changements, ce que le jeu a gardé ou refusé) dans `menu-stands-lmu.txt` du dossier de données de SecondMonitor, plus seulement sur le PC de jeu.
+
+---
+
 ## Version 0.7.3
 
 - **Ingénieur IA, moins bavard** : un conseil de batterie (attaque ou défense) et une annonce de duel toutes les 10 minutes au plus, quel que soit l'adversaire (il y en avait un par minute) ; une alerte d'usure anormale toutes les 4 minutes au plus, jamais tant que la précédente attend ta réponse, et plus aucune alerte après le drapeau à damier ni au stand.
