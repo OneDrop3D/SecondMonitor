@@ -22,7 +22,8 @@ namespace SecondMonitor.Hub.Core.Update
 
     /// <summary>
     /// Vérification, téléchargement et installation, partagés par SecondMonitor (le hub) et le collecteur.
-    /// Rien de lourd : une petite requête au démarrage puis toutes les 6 h ; le téléchargement ne part que sur demande.
+    /// Rien de lourd : une petite requête au démarrage puis toutes les 6 h ; en mode automatique, la nouvelle version
+    /// est téléchargée et installée toute seule, jamais pendant une session de jeu ; sinon sur demande.
     /// </summary>
     public sealed class UpdateManager : IDisposable
     {
@@ -81,7 +82,7 @@ namespace SecondMonitor.Hub.Core.Update
 
         public string LastCheckError { get; private set; }
 
-        /// <summary>Faux pendant une course (collecteur) : la vérification automatique attend.</summary>
+        /// <summary>Faux pendant une session de jeu : la vérification et l'installation automatiques attendent.</summary>
         public Func<bool> CanCheckNow { get; set; } = () => true;
 
         /// <summary>Après une installation qui demande de quitter : l'application se ferme.</summary>
@@ -115,7 +116,13 @@ namespace SecondMonitor.Hub.Core.Update
                     return;
                 }
 
-                await CheckAsync().ConfigureAwait(false);
+                UpdateOffer offer = await CheckAsync().ConfigureAwait(false);
+
+                // Mode automatique : installée toute seule, jamais pendant une session de jeu (CanCheckNow), sauf version mise de côté.
+                if (offer != null && offer.Version != Preferences.Dismissed)
+                {
+                    InstallInBackground(automatic: true);
+                }
             }
             catch (Exception)
             {
@@ -202,8 +209,12 @@ namespace SecondMonitor.Hub.Core.Update
             }
         }
 
-        /// <summary>Télécharge (si besoin) puis installe : « Installer » en un clic. Ne bloque pas.</summary>
-        public void InstallInBackground()
+        /// <summary>
+        /// Télécharge (si besoin) puis installe : « Installer » en un clic. Ne bloque pas.
+        /// <paramref name="automatic"/> : lancé par la vérification automatique ; si une session de jeu a commencé pendant
+        /// le téléchargement, on garde la version prête et on installera à une prochaine vérification hors session.
+        /// </summary>
+        public void InstallInBackground(bool automatic = false)
         {
             lock (_lock)
             {
@@ -214,7 +225,7 @@ namespace SecondMonitor.Hub.Core.Update
 
                 _download = Task.Run(async () =>
                 {
-                    if (await DownloadAsync().ConfigureAwait(false))
+                    if (await DownloadAsync().ConfigureAwait(false) && (!automatic || CanCheckNow()))
                     {
                         Install();
                     }

@@ -1,4 +1,5 @@
 using System.Net;
+using SecondMonitor.Hub.Core.Race;
 using SecondMonitor.Hub.Core.Update;
 
 namespace SecondMonitor.Hub;
@@ -21,6 +22,9 @@ public static class UpdateApi
         string version = typeof(UpdateApi).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
         var manager = new UpdateManager("hub", version, dataDir, m => HubJournal.Write(dataDir, "mise à jour", m));
         Manager = manager;
+        // Jamais en course : le jeu a envoyé des données dans les 2 dernières minutes.
+        RaceEngine engine = app.Services.GetRequiredService<RaceEngine>();
+        manager.CanCheckNow = () => (DateTime.UtcNow - engine.LastUpdateUtc).TotalMinutes > 2;
         IHostApplicationLifetime life = app.Lifetime;
         manager.QuitRequested += () => _ = Task.Run(async () =>
         {
