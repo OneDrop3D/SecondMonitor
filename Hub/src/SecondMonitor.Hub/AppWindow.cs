@@ -38,8 +38,11 @@ public static class AppWindow
     private static bool _quitting;
     private static bool _reopened;
 
+    /// <summary>Windows : la fenêtre est restée noire avec l'accélération graphique ; Program retient « sans GPU » pour le prochain lancement.</summary>
+    public static Action? GpuSuspected { get; set; }
+
     /// <summary>Délai laissé à la page pour signaler qu'elle a démarré avant d'ouvrir l'interface dans le navigateur.</summary>
-    private static readonly TimeSpan ReadyTimeout = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan ReadyTimeout = TimeSpan.FromSeconds(6); // une page locale démarre en 1 à 2 s ; 15 s, c'était long devant une fenêtre noire
 
     /// <summary>Délai avant d'écrire fenetres.json après un déplacement ou un changement de taille.</summary>
     private static readonly TimeSpan SaveDelay = TimeSpan.FromSeconds(1);
@@ -292,7 +295,14 @@ public static class AppWindow
 
             bool noGpu = _options?.NoGpu ?? false;
             string where = OperatingSystem.IsWindows() ? $", dossier {WebViewFolder()}" : string.Empty;
-            string hint = noGpu || !OperatingSystem.IsWindows() ? string.Empty : " Si elle reste noire, essayez l'option --sans-gpu (ou \"fenetreSansGpu\": true dans settings.json).";
+            // Cause la plus fréquente d'une WebView2 noire : le pilote graphique. Le prochain lancement se fera sans GPU.
+            bool retryWithoutGpu = !noGpu && OperatingSystem.IsWindows() && GpuSuspected != null;
+            if (retryWithoutGpu)
+            {
+                GpuSuspected!.Invoke();
+            }
+
+            string hint = retryWithoutGpu ? " Au prochain lancement, la fenêtre s'ouvrira sans accélération graphique (\"fenetreSansGpu\": true dans settings.json, à remettre à false si ça n'aide pas)." : string.Empty;
             string reason = $"La fenêtre n'a pas affiché l'interface en {ReadyTimeout.TotalSeconds:0} s ({WebViewDescription()}{where}{(noGpu ? ", sans GPU" : string.Empty)}) : "
                 + $"interface ouverte dans le navigateur ({url}).{hint}";
             Console.WriteLine(reason);

@@ -56,6 +56,7 @@ int webPort = settings.Current.WebPort;
 // Mac et Linux gardent « localhost » : les préférences de la fenêtre (disposition, bouton du volant…) dépendent de l'adresse.
 string localUrl = OperatingSystem.IsWindows() ? $"http://127.0.0.1:{webPort}" : $"http://localhost:{webPort}";
 noGpu |= settings.Current.FenetreSansGpu;
+AppWindow.GpuSuspected = () => settings.Update(s => s.FenetreSansGpu = true);
 var (portFree, alreadyRunning) = AppWindow.ProbePort(webPort);
 if (!portFree)
 {
