@@ -78,4 +78,14 @@ public class ProtocolTests
         Assert.That(firstKind, Is.EqualTo(DatagramPayloadKind.SessionStart));
         Assert.That(receiver.GetStatus().IsConnected, Is.True);
     }
+
+    [Test]
+    public void Decouverte_ViseChaqueConnexion_PasLaBoucleLocale()
+    {
+        // Câble direct, pont Thunderbolt / USB4 : chaque connexion active a sa propre adresse de diffusion (x.x.x.255, 169.254.255.255…).
+        var list = RemoteReceiver.InterfaceBroadcasts();
+        TestContext.Out.WriteLine(string.Join(", ", list));
+        Assert.That(list.Any(a => a.ToString().StartsWith("127.", StringComparison.Ordinal)), Is.False);
+        Assert.That(list.All(a => a.GetAddressBytes()[3] == 255), Is.True, "partie machine à 1 (masques /8 à /24 des réseaux courants)");
+    }
 }

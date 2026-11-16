@@ -179,7 +179,8 @@ namespace SecondMonitor.Collector
 
         private void OnDiscovery(IPEndPoint remote, NetPacketReader reader, UnconnectedMessageType type)
         {
-            if (type != UnconnectedMessageType.Broadcast)
+            // Broadcast général, ou envoyé à l'adresse de diffusion d'une connexion précise (câble direct, USB4 / Thunderbolt).
+            if (type is not (UnconnectedMessageType.Broadcast or UnconnectedMessageType.BasicMessage))
             {
                 return;
             }

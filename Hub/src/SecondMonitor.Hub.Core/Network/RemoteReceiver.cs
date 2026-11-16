@@ -208,6 +208,13 @@ namespace SecondMonitor.Hub.Core.Network
                 writer.Put(DatagramPayload.Version4);
                 _client.SendBroadcast(writer, _port);
 
+                // Le broadcast général ne part que par la connexion principale : on vise aussi chaque autre connexion
+                // (câble Ethernet direct, pont Thunderbolt / USB4) par son adresse de diffusion.
+                foreach (IPAddress broadcast in InterfaceBroadcasts())
+                {
+                    _client.SendUnconnectedMessage(writer, new IPEndPoint(broadcast, _port));
+                }
+
                 // 2) Adresses saisies à la main (autre sous-réseau, Tailscale…).
                 foreach (string host in _manualHosts)
                 {
@@ -231,6 +238,44 @@ namespace SecondMonitor.Hub.Core.Network
                     }
                 }
             }
+        }
+
+        /// <summary>Adresses de diffusion IPv4 des connexions actives (hors boucle locale) : 169.254.255.255 pour un câble direct…</summary>
+        public static List<IPAddress> InterfaceBroadcasts()
+        {
+            var list = new List<IPAddress>();
+            try
+            {
+                foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (nic.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up || nic.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
+                    {
+                        continue;
+                    }
+
+                    foreach (var ua in nic.GetIPProperties().UnicastAddresses)
+                    {
+                        if (ua.Address.AddressFamily != AddressFamily.InterNetwork || ua.IPv4Mask == null)
+                        {
+                            continue;
+                        }
+
+                        byte[] ip = ua.Address.GetAddressBytes();
+                        byte[] mask = ua.IPv4Mask.GetAddressBytes();
+                        var b = new IPAddress(ip.Select((x, i) => (byte)(x | ~mask[i])).ToArray());
+                        if (!list.Contains(b))
+                        {
+                            list.Add(b);
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Liste des connexions illisible : le broadcast général et les adresses saisies restent.
+            }
+
+            return list;
         }
 
         private IPEndPoint ParseEndPoint(string host)
