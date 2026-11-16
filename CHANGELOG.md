@@ -3,6 +3,14 @@
 SecondMonitor (l'application qui affiche) et SecondMonitor Collecteur (PC de jeu), pour Windows, Mac et Linux/SteamOS.
 Basé sur [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) de winzarten (licence MIT).
 
+## Version 0.7.5
+
+- **Windows, fenêtre noire au lancement** : l'interface s'ouvre dans le navigateur au bout de 6 s au lieu de 15, et SecondMonitor retient de démarrer la fenêtre sans accélération graphique au lancement suivant (cause habituelle d'une fenêtre WebView2 noire).
+- **Mises à jour automatiques** : avec « Vérifier automatiquement » coché, la nouvelle version se télécharge et s'installe toute seule (SecondMonitor redémarre), jamais pendant une session de jeu : elle attend que le jeu n'envoie plus rien depuis 2 minutes. Même chose pour le collecteur du PC de jeu. Une version mise de côté avec « Plus tard » ne s'installe pas toute seule.
+- **PC de jeu relié par câble** (Ethernet, adaptateur USB-C vers Ethernet, ou câble USB4 / Thunderbolt quand le PC le permet) : SecondMonitor cherche maintenant le collecteur sur toutes les connexions du Mac, pas seulement la principale ; plus besoin de saisir l'adresse du câble. Nécessite le collecteur à jour sur le PC de jeu.
+
+---
+
 ## Version 0.7.4
 
 - **Reprise de la course après un redémarrage** : si tu fermes et relances SecondMonitor pendant la même session du jeu, les tours, la consommation au tour, les arrêts, les relais des adversaires, la mémoire de l'ingénieur et le carnet continuent là où ils s'étaient arrêtés. Réglages › « Reprendre la course après un redémarrage » pour le couper ; « Nouvelle session » efface la course enregistrée. Le carnet n'est plus coupé en deux au relancement.
