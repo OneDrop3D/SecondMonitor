@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { usePoll } from '../live';
-import { delta, lapTime, num, WHEELS, WHEEL_LABEL } from '../format';
+import { delta, lapTick, lapTime, num, WHEELS, WHEEL_LABEL } from '../format';
 import type { DriverLaps, DriverRow, PlayerLap, RaceSnapshot } from '../types';
 import type { Selection } from '../selection';
 import { LineChart, type Series } from '../charts/LineChart';
@@ -119,7 +119,7 @@ function LapTimesChart({ laps, selection, byId }: { laps: DriverLaps[] | null; s
       series={series}
       height={300}
       yDomain={domain}
-      xFormat={(x) => `T${Math.round(x)}`}
+      xFormat={lapTick}
       xTitle={(x) => `Tour ${Math.round(x)}`}
       yFormat={(y) => lapTime(y).replace(/\.\d+$/, (m) => m.slice(0, 2))}
       valueFormat={lapTime}
@@ -217,7 +217,7 @@ function WearChart({ telemetry, snapshot }: { telemetry: ReturnType<typeof useTe
     <LineChart
       series={series}
       height={240}
-      xFormat={(x) => `T${Math.round(x)}`}
+      xFormat={lapTick}
       xTitle={(x) => `Tour ${x.toFixed(1)}`}
       yFormat={(y) => `${Math.round(y)} %`}
       valueFormat={(y) => `${y.toFixed(1)} %`}
@@ -259,7 +259,7 @@ function FuelChart({ telemetry, snapshot }: { telemetry: ReturnType<typeof useTe
       series={series}
       height={240}
       legend={false}
-      xFormat={(x) => `T${Math.round(x)}`}
+      xFormat={lapTick}
       xTitle={(x) => `Tour ${x.toFixed(1)}`}
       yFormat={(y) => (hasEnergy ? `${Math.round(y)} %` : `${Math.round(y)} L`)}
       valueFormat={(y) => (hasEnergy ? `${y.toFixed(1)} %` : `${y.toFixed(1)} L`)}

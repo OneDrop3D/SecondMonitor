@@ -4,6 +4,7 @@ using System.Diagnostics;
 using SecondMonitor.Hub.Core.Ai;
 using SecondMonitor.Hub.Core.Demo;
 using SecondMonitor.Hub.Core.Race;
+using SecondMonitor.Hub.Core.Strategy;
 
 /// <summary>
 /// Ingénieur de course IA : écoute (modèle « écoute »), réfléchit (modèle « réflexion ») avec une fiche de faits
@@ -295,11 +296,20 @@ public sealed class EngineerService
         // Stratégie calculée : essai de lift and coast (lancer, référence, « pas d'erreur »), nombre d'arrêts, « au tour 21 »,
         // ratio carburant / énergie, options, tours restants. Avant les demandes d'arrêt : « je boxe au tour d'après » décale l'arrêt.
         IReadOnlyList<LapDto>? laps = !test && snapshot.HasData ? _engine.PlayerLaps() : null;
-        if ((LiftCoast.Handle(q, memory, snapshot, laps) ?? StrategyRadio.Answer(q, snapshot, memory, laps)) is string strategy)
+        int? stopBefore = memory.PlannedStopLap;
+        // Où lever le pied (relais allongé) : meilleur tour gardé et virages, lus seulement si la phrase en a besoin.
+        (LapDetailDto Lap, IReadOnlyList<TrackSegment> Segments) Track() => (_engine.BuildLapComparison(new[] { "best" }).Traces.FirstOrDefault()!, _engine.BuildSpeedTraces(Array.Empty<string>(), true).Segments);
+        if ((LiftCoast.Handle(q, memory, snapshot, laps) ?? StrategyRadio.Answer(q, snapshot, memory, laps, test ? null : Track)) is string strategy)
         {
             prep.Answer = strategy;
             prep.Kind = "calculée";
             prep.Category = ExchangeCategorizer.Strategy;
+            // Relais rallongé ou raccourci à la radio : le menu des stands suit le nouvel arrêt.
+            if (memory.PlannedStopLap != stopBefore && memory.PitPlan?.Fuel == "plan")
+            {
+                prep.Answer = await PitMenuAsync(prep.Answer, memory, snapshot, prep.Lap, test, ct);
+            }
+
             return prep;
         }
 
@@ -326,28 +336,9 @@ public sealed class EngineerService
         if (dialog == null && answer == null && PitOrders.Parse(q) is PitOrder order)
         {
             // « Je boxe », « je veux des softs neufs », « la réparation aussi » : confirmé tout de suite et gardé pour l'arrêt.
-            prep.Answer = PitOrders.Confirm(order, memory, snapshot, prep.Lap);
+            prep.Answer = await PitMenuAsync(PitOrders.Confirm(order, memory, snapshot, prep.Lap), memory, snapshot, prep.Lap, test, ct);
             prep.Kind = "commande";
             prep.Category = ExchangeCategorizer.Strategy;
-            bool lmu = snapshot.Source?.Contains("LM Ultimate", StringComparison.OrdinalIgnoreCase) == true;
-            bool hasMenuItems = memory.PitPlan is { } plan && (plan.Tyres != null || plan.NoTyres || plan.Repair || plan.Fuel != null || plan.FuelRatio != null);
-            if (!test && lmu && hasMenuItems && _hub.HasPitStation)
-            {
-                if (ai.LmuPitMenu)
-                {
-                    await SendPitMenuAsync(memory.PitPlan!, snapshot, ct);
-                    prep.Answer = prep.Answer.Replace(" Vérifie le menu des stands avant l'entrée.", string.Empty) + " Je règle le menu des stands.";
-                }
-                else if (!memory.PitAutoAsked)
-                {
-                    // Première demande de la session : l'ingénieur propose de régler le menu lui-même.
-                    memory.PitAutoAsked = true;
-                    const string offer = "Je peux remplir le menu des stands moi-même. Je l'active ?";
-                    memory.Ask(new PendingQuestion { Key = "stand-auto", Topic = "stand-auto", Text = offer, Lap = prep.Lap ?? 0 });
-                    prep.Answer = prep.Answer.Replace(" Vérifie le menu des stands avant l'entrée.", string.Empty) + " " + offer;
-                }
-            }
-
             return prep;
         }
 
@@ -625,15 +616,54 @@ public sealed class EngineerService
     }
 
     /// <summary>
+    /// Plan d'arrêt changé (demande d'arrêt, relais rallongé) : en LMU, le menu des stands suit s'il est activé ;
+    /// sinon l'ingénieur propose une fois par session de le remplir lui-même.
+    /// </summary>
+    private async Task<string> PitMenuAsync(string answer, RaceMemory memory, RaceSnapshot snapshot, int? lap, bool test, CancellationToken ct)
+    {
+        bool lmu = snapshot.Source?.Contains("LM Ultimate", StringComparison.OrdinalIgnoreCase) == true;
+        bool hasMenuItems = memory.PitPlan is { } plan && (plan.Tyres != null || plan.NoTyres || plan.Repair || plan.Fuel != null || plan.FuelRatio != null);
+        if (test || !lmu || !hasMenuItems || !_hub.HasPitStation)
+        {
+            return answer;
+        }
+
+        if (_settings.Current.Ai.LmuPitMenu)
+        {
+            await SendPitMenuAsync(memory.PitPlan!, snapshot, ct);
+            return answer.Replace(" Vérifie le menu des stands avant l'entrée.", string.Empty) + " Je règle le menu des stands.";
+        }
+
+        if (memory.PitAutoAsked)
+        {
+            return answer;
+        }
+
+        // Première demande de la session : l'ingénieur propose de régler le menu lui-même.
+        memory.PitAutoAsked = true;
+        const string offer = "Je peux remplir le menu des stands moi-même. Je l'active ?";
+        memory.Ask(new PendingQuestion { Key = "stand-auto", Topic = "stand-auto", Text = offer, Lap = lap ?? 0 });
+        return answer.Replace(" Vérifie le menu des stands avant l'entrée.", string.Empty) + " " + offer;
+    }
+
+    /// <summary>
     /// Demande au collecteur de régler le menu des stands de Le Mans Ultimate selon le plan du pilote.
-    /// Carburant : « le plein » = maximum, « jusqu'à la fin » = ce qu'il manque calculé par SecondMonitor.
+    /// Carburant : « le plein » = maximum, « jusqu'à la fin » = ce qu'il manque calculé par SecondMonitor,
+    /// « plan » = les niveaux après l'arrêt décidé, d'après le plan de course (sinon comme « jusqu'à la fin »).
     /// </summary>
     private async Task<bool> SendPitMenuAsync(PitOrder plan, RaceSnapshot snap, CancellationToken ct)
     {
         PlayerStrategy? p = snap.Player;
         double? energyTarget = null;
         double? fuelTarget = null;
-        if (plan.Fuel == "plein")
+        // Plan recalculé avec l'arrêt qui vient d'être décidé (l'instantané date d'avant la décision).
+        PlannedStopDto? planned = plan.Fuel == "plan" ? RacePlanner.Build(snap, LiftCoast.Context(Memory))?.Stops.FirstOrDefault(s => s.Lap == Memory.PlannedStopLap) : null;
+        if (planned != null)
+        {
+            energyTarget = planned.EnergyAfterPct;
+            fuelTarget = planned.FuelAfterLitres;
+        }
+        else if (plan.Fuel == "plein")
         {
             energyTarget = 100;
             fuelTarget = 9999;

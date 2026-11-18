@@ -3,6 +3,15 @@
 SecondMonitor (l'application qui affiche) et SecondMonitor Collecteur (PC de jeu), pour Windows, Mac et Linux/SteamOS.
 Basé sur [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) de winzarten (licence MIT).
 
+## Version 0.7.6
+
+- **Relais rallongé à la voix** : dites « on rallonge le relais de deux tours », « je veux faire deux tours de plus » ou « et si on fait trois tours de moins ? » ; l'ingénieur donne le nouveau tour d'arrêt, la consommation à viser par tour (énergie et essence), dit si c'est jouable (à une question, il demande « On le fait ? » : répondez « oui », « on le fait », « vas-y » ou « ok » pour décider), règle le menu des stands de LMU sur ce nouveau plan, indique où lever le pied (virages, distance avant le freinage, d'après votre essai de lift and coast ou en estimation) et vous dit à chaque tour si vous êtes dans la cible.
+- **Carnet, bilan par tour** : pour une session passée, ouvrez les catégories Temps au tour, Essence, Énergie virtuelle et Pneus (usure de chaque roue) : la valeur de chaque tour, la moyenne de chaque relais (avec sa gomme) et celle de la course. Décochez un tour (accident, safety car…) pour le retirer des moyennes, recochez-le pour l'y remettre ; le choix est enregistré dans le carnet. Les tours au stand et les tours invalides hors du rythme sont retirés d'office. Les anciens carnets n'ont que les temps : l'essence, l'énergie et l'usure par tour sont enregistrées à partir de cette version.
+- **Carte des zones de vitesse** : dans Vitesses & trajectoires › Zones et profils, une carte du circuit montre les lignes droites (vert, Vmax) et les virages (orange, Vmin) avec leur numéro ; survolez ou touchez une zone, sur la carte ou dans le tableau, pour la mettre en évidence des deux côtés et lire sa valeur pour les pilotes comparés (un clic la garde, et sa colonne vient au milieu du tableau). Au Mans, les zones portent leur nom : Dunlop, Esses de la Forêt, Tertre Rouge, Hunaudières et ses deux chicanes, Mulsanne, Indianapolis, Arnage, Virages Porsche, Chicane Ford.
+- **Écart avec la voiture de devant** : en course, le bandeau du haut (sur tous les écrans, dont le Chronométrage) affiche la voiture devant vous dans votre catégorie, l'écart, et ce que vous reprenez ou perdez par tour (moyenne des 3 derniers tours).
+
+---
+
 ## Version 0.7.5
 
 - **Windows, fenêtre noire au lancement** : l'interface s'ouvre dans le navigateur au bout de 6 s au lieu de 15, et SecondMonitor retient de démarrer la fenêtre sans accélération graphique au lancement suivant (cause habituelle d'une fenêtre WebView2 noire).

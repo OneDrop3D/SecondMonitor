@@ -274,6 +274,9 @@ namespace SecondMonitor.Hub.Core.Race
 
         public string Description { get; set; }
 
+        /// <summary>Nom du lieu sur un circuit connu (Hunaudières, Mulsanne…, voir TrackPlaces), sinon null.</summary>
+        public string Place { get; set; }
+
         public bool IsMain { get; set; }
 
         /// <summary>Début et fin de la zone (m depuis la ligne ; Start &gt; End si la zone chevauche la ligne).</summary>

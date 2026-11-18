@@ -10,7 +10,7 @@ import { useStoredChoice } from '../prefs';
 import { DriverPicker } from './DriverPicker';
 import { ClassSwatch } from './Common';
 import { LapCompare } from './LapCompare';
-import { inZone } from '../track';
+import { distanceLabel, inZone } from '../track';
 
 interface Props {
   snapshot: RaceSnapshot;
@@ -116,6 +116,20 @@ function SpeedTable({ snapshot, data, kind, classColor, selection }: { snapshot:
   const segments = data?.segments ?? [];
   const rows = snapshot.drivers.filter((d) => !classFilter || d.classId === classFilter);
   const stat = (id: string) => data?.drivers.find((x) => x.id === id);
+  // Zone mise en évidence sur la carte et dans le tableau : survolée, sinon choisie d'un clic.
+  const [pinned, setPinned] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const active = hovered ?? pinned;
+  const scroller = useRef<HTMLDivElement>(null);
+  const pick = (id: string) => setPinned((p) => (p === id ? null : id));
+  // Choisie sur la carte : sa colonne vient au milieu (au Mans, le tableau est bien plus large que l'écran).
+  useEffect(() => {
+    const box = scroller.current;
+    const th = pinned ? box?.querySelector<HTMLElement>(`th[data-zone="${pinned}"]`) : null;
+    // Centrée dans ce qui reste visible à droite de la colonne « Pilote », qui ne défile pas.
+    const fixed = box?.querySelector<HTMLElement>('th.sticky-col')?.offsetWidth ?? 0;
+    if (box && th) box.scrollTo({ left: th.offsetLeft - fixed - (box.clientWidth - fixed - th.offsetWidth) / 2, behavior: 'smooth' });
+  }, [pinned]);
 
   // Échelle par colonne (catégorie affichée) : intensité de fond proportionnelle à la vitesse.
   const ranges = useMemo(() => {
@@ -131,13 +145,13 @@ function SpeedTable({ snapshot, data, kind, classColor, selection }: { snapshot:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, kind, classFilter, snapshot.drivers.length]);
 
-  const cell = (segId: string, v: number | null | undefined) => {
-    if (v == null) return <td key={segId} className="r muted">—</td>;
+  const cell = (segId: string, v: number | null | undefined, zone = '') => {
+    if (v == null) return <td key={segId} data-zone={zone ? segId : undefined} className={`r muted ${zone}`}>—</td>;
     const [lo, hi] = ranges.get(segId) ?? [v, v];
     const f = hi - lo < 0.05 ? 1 : (v - lo) / (hi - lo);
     const isBest = Math.abs(v - hi) < 0.05 && rows.length > 1;
     return (
-      <td key={segId} className={`r tnum speed-cell ${isBest ? 'best' : ''}`} style={{ background: `color-mix(in oklab, var(--accent) ${Math.round(4 + f * 30)}%, transparent)` }} title={isBest ? 'Meilleure valeur de la catégorie' : undefined}>
+      <td key={segId} data-zone={zone ? segId : undefined} className={`r tnum speed-cell ${isBest ? 'best' : ''} ${zone}`} style={{ background: `color-mix(in oklab, var(--accent) ${Math.round(4 + f * 30)}%, transparent)` }} title={isBest ? 'Meilleure valeur de la catégorie' : undefined}>
         {v.toFixed(0)}{isBest ? ' ◆' : ''}
       </td>
     );
@@ -156,15 +170,19 @@ function SpeedTable({ snapshot, data, kind, classColor, selection }: { snapshot:
       {segments.length === 0 ? (
         <div className="card-body muted">{data?.message ?? 'Chargement…'}</div>
       ) : (
-        <div className="table-scroll">
-          <table className="lb speed-table">
+        <>
+        <ZoneMap snapshot={snapshot} segments={segments} data={data} kind={kind} selection={selection} active={active} pinned={pinned} onHover={setHovered} onPick={pick} />
+        <div className="table-scroll" ref={scroller}>
+          <table className="lb speed-table" onMouseOver={(e) => setHovered((e.target as HTMLElement).closest<HTMLElement>('[data-zone]')?.dataset.zone ?? null)} onMouseLeave={() => setHovered(null)}>
             <thead>
               <tr>
                 <th className="sticky-col">Pilote</th>
                 <th className="r" title="Vitesse maximale sur le tour">Vmax tour</th>
                 {segments.map((s) => (
-                  <th key={s.id} className="r" title={`${s.name}${s.description ? ` (${s.description})` : ''} — ${s.kind === 'corner' ? 'vitesse minimale' : 'vitesse maximale'}`}>
+                  <th key={s.id} data-zone={s.id} className={`r zone-th ${s.kind} ${active === s.id ? 'zone-on' : ''}`} onClick={() => pick(s.id)}
+                    title={`${s.place ? `${s.place} — ` : ''}${s.name}${s.description ? ` (${s.description})` : ''} — ${s.kind === 'corner' ? 'vitesse minimale' : 'vitesse maximale'} · cliquer pour la garder en évidence`}>
                     {s.kind === 'corner' ? `${s.id} ↓` : `${s.id} ↑`}
+                    {s.place && <span className="zone-place">{s.place}</span>}
                   </th>
                 ))}
               </tr>
@@ -182,19 +200,150 @@ function SpeedTable({ snapshot, data, kind, classColor, selection }: { snapshot:
                       </span>
                     </td>
                     {cell('__top', kind === 'best' ? st?.topSpeedBest : st?.topSpeedLast)}
-                    {segments.map((s) => cell(s.id, st?.[kind][s.id]))}
+                    {segments.map((s) => cell(s.id, st?.[kind][s.id], `zone-col ${s.kind} ${active === s.id ? 'zone-on' : ''}`))}
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+        </>
       )}
       {segments.length > 0 && (
         <div className="chart-note muted card-foot">
-          Zones détectées automatiquement d'après le profil de vitesse{data?.reference ? ` de ${data.reference}` : ''} · ↑ = Vmax de la ligne droite · ↓ = Vmin du virage · ◆ meilleure valeur · km/h · cliquer une ligne pour l'ajouter aux graphiques.
+          Zones détectées automatiquement d'après le profil de vitesse{data?.reference ? ` de ${data.reference}` : ''} · ↑ = Vmax de la ligne droite (vert) · ↓ = Vmin du virage (orange) · ◆ meilleure valeur · km/h · survoler une zone, sur la carte ou dans le tableau, la montre des deux côtés ; un clic la garde · cliquer une ligne pour ajouter le pilote aux graphiques.
         </div>
       )}
+    </div>
+  );
+}
+
+/** Carte des zones sur le tracé appris : lignes droites et virages en deux couleurs, reliée au tableau ; à côté, la valeur de la zone pour les pilotes comparés. */
+function ZoneMap({ snapshot, segments, data, kind, selection, active, pinned, onHover, onPick }: {
+  snapshot: RaceSnapshot;
+  segments: TrackSegment[];
+  data: SpeedAnalysis | null;
+  kind: 'best' | 'last';
+  selection: Selection;
+  active: string | null;
+  pinned: string | null;
+  onHover: (id: string | null) => void;
+  onPick: (id: string) => void;
+}) {
+  const { ref, width } = useWidth<HTMLDivElement>(320);
+  const outline = snapshot.track.outline;
+  const L = snapshot.track.length;
+  const segKey = segments.map((s) => `${s.id}:${s.start}:${s.end}:${s.apex}`).join(',');
+
+  const drawn = useMemo(() => {
+    if (!outline || outline.length < 10 || !(L > 0)) return null;
+    const pad = 22, maxH = 420, n = outline.length;
+    const xs = outline.map((p) => p[0]), zs = outline.map((p) => p[1]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs);
+    const scale = Math.min((width - pad * 2) / Math.max(1, maxX - minX), (maxH - pad * 2) / Math.max(1, maxZ - minZ));
+    const h = Math.round((maxZ - minZ) * scale + pad * 2);
+    const ox = (width - (maxX - minX) * scale) / 2;
+    // Le tracé appris est régulier en distance (comme pour placer les voitures sur la carte de l'accueil).
+    const at = (m: number): [number, number] => {
+      const f = ((((m / L) % 1) + 1) % 1) * (n - 1);
+      const i = Math.floor(f), t = f - i, a = outline[i], b = outline[Math.min(n - 1, i + 1)];
+      return [ox + (a[0] + (b[0] - a[0]) * t - minX) * scale, pad + (a[1] + (b[1] - a[1]) * t - minZ) * scale];
+    };
+    const line = (pts: [number, number][]) => pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join('');
+    const step = L / (n - 1);
+    const placed: [number, number][] = [];
+    const zones = segments.map((s) => {
+      const len = (((s.end - s.start) % L) + L) % L;
+      const k = Math.max(2, Math.ceil(len / step) + 1);
+      const d = line(Array.from({ length: k + 1 }, (_, i) => at(s.start + (len * i) / k)));
+      // Étiquette au point de corde (virage) ou au milieu (ligne droite), poussée vers l'extérieur du circuit.
+      const [x, y] = at(s.kind === 'corner' ? s.apex : s.start + len / 2);
+      const [x2, y2] = at((s.kind === 'corner' ? s.apex : s.start + len / 2) + step);
+      let nx = y - y2, ny = x2 - x;
+      const nl = Math.hypot(nx, ny) || 1;
+      nx /= nl; ny /= nl;
+      if (nx * (x - width / 2) + ny * (y - h / 2) < 0) { nx = -nx; ny = -ny; }
+      const lx = Math.min(width - 18, Math.max(18, x + nx * 18)), ly = Math.min(h - 10, Math.max(10, y + ny * 18));
+      return { s, d, lx, ly };
+    });
+    // Étiquettes qui se chevaucheraient (enchaînements serrés) : d'abord les virages les plus lents (Arnage, Mulsanne…),
+    // puis les lignes droites les plus rapides ; les autres apparaissent au survol.
+    const shown = new Set<string>();
+    const rank = (s: TrackSegment) => (s.kind === 'corner' ? s.referenceSpeed : 1000 - s.referenceSpeed);
+    for (const z of [...zones].sort((a, b) => rank(a.s) - rank(b.s))) {
+      if (placed.some(([px, py]) => Math.abs(px - z.lx) < 32 && Math.abs(py - z.ly) < 18)) continue;
+      placed.push([z.lx, z.ly]);
+      shown.add(z.s.id);
+    }
+    return { h, track: line(outline.map((_, i) => at(i * step))) + 'Z', zones, shown, start: at(0) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outline, L, width, segKey]);
+
+  const seg = segments.find((s) => s.id === active) ?? null;
+  const byId = new Map(snapshot.drivers.map((d) => [d.id, d]));
+  const values = seg ? selection.ids.map((id) => ({ id, v: data?.drivers.find((x) => x.id === id)?.[kind][seg.id] })).filter((r): r is { id: string; v: number } => r.v != null).sort((a, b) => b.v - a.v) : [];
+  const zoneTitle = (s: TrackSegment) => `${s.id}${s.place ? ` · ${s.place}` : ''} — ${s.kind === 'corner' ? 'virage, vitesse minimale' : 'ligne droite, vitesse maximale'}`;
+  const bind = (id: string) => ({ onPointerEnter: () => onHover(id), onPointerLeave: () => onHover(null), onClick: () => onPick(id) });
+  const tag = (z: { s: TrackSegment; lx: number; ly: number }, copy: boolean) => (
+    <g key={copy ? 'copie' : z.s.id} className={`zone-tag ${z.s.kind} ${active === z.s.id ? 'on' : active ? 'dim' : ''}`} transform={`translate(${z.lx.toFixed(1)},${z.ly.toFixed(1)})`}
+      {...(copy ? { pointerEvents: 'none' } : bind(z.s.id))}>
+      {!copy && <title>{zoneTitle(z.s)}</title>}
+      <rect x={-15} y={-8} width={30} height={16} rx={4} />
+      <text x={0} y={3.5} textAnchor="middle">{z.s.id}</text>
+    </g>
+  );
+
+  return (
+    <div className="zone-wrap">
+      <div className="zone-grid">
+        <div ref={ref}>
+          {!drawn ? (
+            <div className="chart-empty" style={{ height: 120 }}>La carte des zones apparaît une fois le tracé appris (un tour complet).</div>
+          ) : (
+            <svg width={width} height={drawn.h} className="zone-svg" role="img" aria-label="Carte des zones : lignes droites et virages">
+              <path d={drawn.track} className="zone-track" />
+              {drawn.zones.map((z) => (
+                <g key={z.s.id} className={`zone ${z.s.kind} ${active === z.s.id ? 'on' : active ? 'dim' : ''}`} {...bind(z.s.id)}>
+                  <title>{zoneTitle(z.s)}</title>
+                  <path d={z.d} className="zone-hit" />
+                  <path d={z.d} className="zone-line" />
+                </g>
+              ))}
+              <rect x={drawn.start[0] - 2} y={drawn.start[1] - 9} width={4} height={18} fill="var(--text-primary)" rx={1} pointerEvents="none" />
+              {drawn.zones.filter((z) => drawn.shown.has(z.s.id)).map((z) => tag(z, false))}
+              {/* La zone en évidence repasse devant en copie inerte : déplacer l'étiquette sous le doigt ferait perdre le clic. */}
+              {drawn.zones.filter((z) => z.s.id === active).map((z) => tag(z, true))}
+            </svg>
+          )}
+        </div>
+        <div className="zone-panel">
+          {seg ? (
+            <>
+              <div className="zone-panel-title"><span className={`zone-key ${seg.kind}`} /><b>{seg.id}</b><span>{seg.place ?? seg.name}</span></div>
+              <div className="muted small">{seg.kind === 'corner' ? 'Virage : vitesse minimale (Vmin)' : 'Ligne droite : vitesse maximale (Vmax)'} · à {distanceLabel(seg.apex)} de la ligne</div>
+              {values.length === 0 ? (
+                <div className="muted small">Aucune valeur pour les pilotes comparés : cliquez une ligne du tableau pour en ajouter.</div>
+              ) : values.map((r, i) => {
+                const d = byId.get(r.id);
+                return (
+                  <div key={r.id} className="tip-row">
+                    <span className="legend-line" style={{ borderColor: selection.colorOf(r.id) }} />
+                    <span className="tip-label">{d ? driverLabel(d) : r.id}</span>
+                    <b className="tnum">{kph(r.v)}{i === 0 && values.length > 1 ? ' ◆' : ''}</b>
+                  </div>
+                );
+              })}
+              {pinned === seg.id && <button className="chip tiny zone-clear" onClick={() => onPick(seg.id)}>Ne plus garder</button>}
+            </>
+          ) : (
+            <div className="muted small">Survolez ou touchez une zone, sur la carte ou dans le tableau, pour voir sa valeur pour les pilotes comparés ({kind === 'best' ? 'meilleure de la session' : 'dernier tour'}).</div>
+          )}
+          <div className="legend">
+            <span className="legend-item"><span className="zone-key straight" />Ligne droite ↑ Vmax</span>
+            <span className="legend-item"><span className="zone-key corner" />Virage ↓ Vmin</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

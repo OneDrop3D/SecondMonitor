@@ -51,6 +51,14 @@ namespace SecondMonitor.Hub.Core.Ai
 
         public CarnetRecap Recap { get; set; }
 
+        /// <summary>
+        /// Choix du pilote dans le bilan, gardés comme écarts aux exclusions d'office (et non comme liste complète) :
+        /// pendant une session en cours, les arrêts suivants restent ainsi retirés d'office.
+        /// </summary>
+        public List<int> ToursRetires { get; set; } = new();
+
+        public List<int> ToursRemis { get; set; } = new();
+
         public bool HasContent => Radios.Count > 0 || Laps.Count > 0 || Notes.Count > 0;
     }
 
@@ -104,6 +112,55 @@ namespace SecondMonitor.Hub.Core.Ai
         public bool Pit { get; set; }
 
         public bool Valid { get; set; }
+
+        /// <summary>Essence, énergie et usure prises sur le tour (mêmes noms que <see cref="LapDto"/>) : absentes des carnets plus anciens, qui n'ont que les temps.</summary>
+        public double? Fuel { get; set; }
+
+        public double? Energy { get; set; }
+
+        public double[] WearDelta { get; set; }
+
+        public string Compound { get; set; }
+
+        public int? Stint { get; set; }
+    }
+
+    /// <summary>Bilan d'une session par catégorie (temps, essence, énergie, usure) : tours, moyennes par relais et de la course.</summary>
+    public sealed class CarnetBilan
+    {
+        public List<CarnetLap> Tours { get; set; } = new();
+
+        /// <summary>Tours retirés des moyennes (d'office ou par le pilote).</summary>
+        public List<int> Exclus { get; set; } = new();
+
+        public List<int> ExclusDOffice { get; set; } = new();
+
+        public List<CarnetMoyenne> Relais { get; set; } = new();
+
+        public CarnetMoyenne Course { get; set; }
+    }
+
+    public sealed class CarnetMoyenne
+    {
+        /// <summary>Numéro du relais ; 0 pour toute la course.</summary>
+        public int Relais { get; set; }
+
+        public string Gomme { get; set; }
+
+        public int Premier { get; set; }
+
+        public int Dernier { get; set; }
+
+        /// <summary>Tours comptés dans les moyennes.</summary>
+        public int Comptes { get; set; }
+
+        public double? Temps { get; set; }
+
+        public double? Essence { get; set; }
+
+        public double? Energie { get; set; }
+
+        public double[] Usure { get; set; }
     }
 
     public sealed class CarnetResult
@@ -283,7 +340,18 @@ namespace SecondMonitor.Hub.Core.Ai
 
             if (laps != null)
             {
-                var list = laps.Where(l => l.Time is > 0).Select(l => new CarnetLap { Lap = l.Lap, Time = l.Time.HasValue ? Math.Round(l.Time.Value, 3) : null, Pit = l.Pit, Valid = l.Valid }).ToList();
+                var list = laps.Where(l => l.Time is > 0).Select(l => new CarnetLap
+                {
+                    Lap = l.Lap,
+                    Time = l.Time.HasValue ? Math.Round(l.Time.Value, 3) : null,
+                    Pit = l.Pit,
+                    Valid = l.Valid,
+                    Fuel = l.Fuel.HasValue ? Math.Round(l.Fuel.Value, 3) : null,
+                    Energy = l.Energy.HasValue ? Math.Round(l.Energy.Value, 2) : null,
+                    WearDelta = l.WearDelta,
+                    Compound = l.Compound,
+                    Stint = l.Stint,
+                }).ToList();
                 if (list.Count >= c.Laps.Count)
                 {
                     c.Laps = list;
@@ -519,6 +587,77 @@ namespace SecondMonitor.Hub.Core.Ai
             }
 
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Tours retirés d'office : au stand (l'arrêt et le ravitaillement faussent temps et consommation), et tours invalides
+        /// à plus de 2 % du rythme médian (sortie de piste, raccourci). Un tour invalide dans le rythme reste compté :
+        /// son essence et son usure sont vraies.
+        /// </summary>
+        public static HashSet<int> ExclusDOffice(CarnetSession c)
+        {
+            var rythme = c.Laps.Where(l => !l.Pit && l.Time > 0).Select(l => l.Time.Value).OrderBy(t => t).ToList();
+            double mediane = rythme.Count == 0 ? 0 : rythme[rythme.Count / 2];
+            return c.Laps.Where(l => l.Pit || (!l.Valid && mediane > 0 && l.Time is double t && Math.Abs(t - mediane) > mediane * 0.02)).Select(l => l.Lap).ToHashSet();
+        }
+
+        /// <summary>Le pilote compte ou retire un tour des moyennes du bilan.</summary>
+        public static void CompterTour(CarnetSession c, int tour, bool compte)
+        {
+            c.ToursRetires.Remove(tour);
+            c.ToursRemis.Remove(tour);
+            bool dOffice = ExclusDOffice(c).Contains(tour);
+            if (compte && dOffice)
+            {
+                c.ToursRemis.Add(tour);
+            }
+            else if (!compte && !dOffice)
+            {
+                c.ToursRetires.Add(tour);
+            }
+        }
+
+        /// <summary>Valeurs de chaque tour, moyennes par relais (donc par train de pneus) et de la course, sans les tours exclus.</summary>
+        public static CarnetBilan Bilan(CarnetSession c)
+        {
+            HashSet<int> dOffice = ExclusDOffice(c);
+            var exclus = dOffice.Where(t => !c.ToursRemis.Contains(t)).Concat(c.ToursRetires).ToHashSet();
+            // Carnets plus anciens sans relais par tour : chaque sortie des stands (tours d'arrêt du résultat) ouvre un relais.
+            List<int> arrets = c.Result?.PitLaps ?? new List<int>();
+            var relais = c.Laps.GroupBy(l => l.Stint ?? 1 + arrets.Count(p => p < l.Lap)).OrderBy(g => g.Key).ToList();
+            return new CarnetBilan
+            {
+                Tours = c.Laps.ToList(),
+                Exclus = exclus.Where(t => c.Laps.Any(l => l.Lap == t)).OrderBy(t => t).ToList(),
+                ExclusDOffice = dOffice.OrderBy(t => t).ToList(),
+                // La gomme du dernier relais est connue même dans les anciens carnets : c'est celle de l'état des pneus en fin de session.
+                Relais = relais.Select(g => Moyenne(g.Key, g.ToList(), exclus, g == relais[^1] ? c.Tyres?.Compound : null)).ToList(),
+                Course = c.Laps.Count == 0 ? null : Moyenne(0, c.Laps, exclus, null),
+            };
+        }
+
+        private static CarnetMoyenne Moyenne(int relais, List<CarnetLap> tours, HashSet<int> exclus, string gommeConnue)
+        {
+            var comptes = tours.Where(l => !exclus.Contains(l.Lap)).ToList();
+            var usure = comptes.Where(l => l.WearDelta?.Length == 4).ToList();
+            return new CarnetMoyenne
+            {
+                Relais = relais,
+                Gomme = relais == 0 ? null : tours.Select(l => l.Compound).FirstOrDefault(g => g != null) ?? gommeConnue,
+                Premier = tours.Min(l => l.Lap),
+                Dernier = tours.Max(l => l.Lap),
+                Comptes = comptes.Count,
+                Temps = Moy(comptes.Select(l => l.Time), 3),
+                Essence = Moy(comptes.Select(l => l.Fuel), 3),
+                Energie = Moy(comptes.Select(l => l.Energy), 2),
+                Usure = usure.Count == 0 ? null : Enumerable.Range(0, 4).Select(i => Math.Round(usure.Average(l => l.WearDelta[i]), 3)).ToArray(),
+            };
+        }
+
+        private static double? Moy(IEnumerable<double?> valeurs, int chiffres)
+        {
+            var v = valeurs.Where(x => x.HasValue).Select(x => x.Value).ToList();
+            return v.Count == 0 ? null : Math.Round(v.Average(), chiffres);
         }
 
         private static string Laps(IEnumerable<CarnetNote> notes)

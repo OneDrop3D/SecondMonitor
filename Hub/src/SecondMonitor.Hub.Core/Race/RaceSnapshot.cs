@@ -523,5 +523,10 @@ namespace SecondMonitor.Hub.Core.Race
 
         /// <summary>Usure prise sur ce tour (points de %) FL, FR, RL, RR.</summary>
         public double[] WearDelta { get; set; }
+
+        public string Compound { get; set; }
+
+        /// <summary>Relais (1 = premier) dans lequel le tour a été fait.</summary>
+        public int? Stint { get; set; }
     }
 }

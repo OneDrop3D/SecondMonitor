@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LineChart, type Series } from '../charts/LineChart';
 import { api } from '../live';
-import { gap, lapTime } from '../format';
+import { gap, lapTick, lapTime } from '../format';
 import type { DriverRow, LapEntry } from '../types';
 import { TyreBadge } from './Common';
 import { BrandLogo } from './BrandLogo';
@@ -69,7 +69,7 @@ export function DriverDrawer({ driver, onClose }: { driver: DriverRow; onClose: 
               height={220}
               yDomain={domain}
               legend={false}
-              xFormat={(x) => `T${Math.round(x)}`}
+              xFormat={lapTick}
               xTitle={(x) => `Tour ${Math.round(x)}`}
               yFormat={(y) => lapTime(y).replace(/\.\d+$/, (m) => m.slice(0, 2))}
               valueFormat={lapTime}

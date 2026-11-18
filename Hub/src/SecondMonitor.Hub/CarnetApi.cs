@@ -9,6 +9,8 @@ namespace SecondMonitor.Hub;
 ///   GET    /api/carnets/{id}            un carnet complet (radios, notes, réglages, tours, résultat, récapitulatif)
 ///   POST   /api/carnets/{id}/recap      (re)générer le récapitulatif (IA si disponible, sinon calculé)
 ///   POST   /api/carnets/{id}/notes      ajouter une note { text, source }
+///   GET    /api/carnets/{id}/bilan      tours (temps, essence, énergie, usure) et moyennes par relais et de la course
+///   POST   /api/carnets/{id}/bilan/tours compter ou retirer un tour des moyennes { tour, compte } ; renvoie le bilan
 ///   DELETE /api/carnets/{id}            supprimer un carnet
 ///   POST   /api/session/end             terminer la session en cours (carnet fermé et récapitulé)
 ///   POST   /api/session/new             nouvelle session (carnet, mémoire et calculs repartent de zéro)
@@ -33,6 +35,10 @@ public static class CarnetApi
         app.MapPost("/api/carnets/{id}/notes", (CarnetService carnets, string id, CarnetNoteRequest note) =>
             string.IsNullOrWhiteSpace(note.Text) ? Results.BadRequest()
                 : carnets.AddNote(id, note.Text.Trim(), note.Source ?? "ingénieur") is { } c ? Results.Json(c, LiveHub.Json) : Results.NotFound());
+        app.MapGet("/api/carnets/{id}/bilan", (CarnetService carnets, string id) =>
+            carnets.Bilan(id) is { } b ? Results.Json(b, LiveHub.Json) : Results.NotFound());
+        app.MapPost("/api/carnets/{id}/bilan/tours", (CarnetService carnets, string id, CarnetTourRequest r) =>
+            carnets.CompterTour(id, r.Tour, r.Compte) is { } b ? Results.Json(b, LiveHub.Json) : Results.NotFound());
         // Boutons « Terminer la session » / « Nouvelle session » (écrans Ingénieur IA et Carnet).
         app.MapPost("/api/session/end", (CarnetService carnets) => Results.Json(new { id = carnets.EndCurrent() }));
         app.MapPost("/api/session/new", (CarnetService carnets, SecondMonitor.Hub.Core.Race.RaceEngine engine) =>
@@ -46,3 +52,5 @@ public static class CarnetApi
 }
 
 public sealed record CarnetNoteRequest(string? Text, string? Source = null);
+
+public sealed record CarnetTourRequest(int Tour, bool Compte);

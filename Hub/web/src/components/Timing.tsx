@@ -60,6 +60,7 @@ export function TimingHeader({ snapshot, tools }: { snapshot: RaceSnapshot; tool
   const flagTexts = [...s.flags.map(flagLabel), ...(s.safetyCar && s.safetyCar !== 'None' ? ['Safety car'] : [])];
   const flags = useDismissable(flagTexts, 'drapeau', 5000);
   const w = s.weather;
+  const ahead = s.player?.battles?.find((b) => b.side === 'ahead');
 
   return (
     <header className="tm-head">
@@ -90,6 +91,19 @@ export function TimingHeader({ snapshot, tools }: { snapshot: RaceSnapshot; tool
         <DeltaBar label="Δ meilleur tour perso" value={s.player?.deltaBest ?? null} />
         <DeltaBar label="Δ tour précédent" value={s.player?.deltaLast ?? null} />
       </div>
+      {s.sessionType === 'Race' && me && (
+        <div className="tm-box tm-ahead" title={`Voiture devant vous${s.isMultiClass ? ' dans votre catégorie' : ''} ; rythme : moyenne des 3 derniers tours`}>
+          <div className="tm-label">Devant{ahead ? ` · ${ahead.number != null ? `#${ahead.number} ` : ''}${ahead.name}` : ''}</div>
+          <div className="tm-ahead-line">
+            {ahead ? <>
+              <b className="tnum">{gap(ahead.gap)}</b>
+              {ahead.paceDelta != null && Math.abs(ahead.paceDelta) >= 0.05 && (
+                <span className={`tnum ${ahead.paceDelta > 0 ? 'faster' : 'slower'}`}>vous {ahead.paceDelta > 0 ? 'reprenez' : 'perdez'} {Math.abs(ahead.paceDelta).toFixed(2)} s/tour</span>
+              )}
+            </> : <b>{me.classPosition === 1 ? 'En tête' : '—'}</b>}
+          </div>
+        </div>
+      )}
       <div className="tm-box tm-best tm-sectors" title={`Meilleurs secteurs${className}`}>
         {bestSectors.map((b, i) => (
           <div key={i} className="tm-best-line">

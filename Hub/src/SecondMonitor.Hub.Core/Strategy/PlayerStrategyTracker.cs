@@ -146,6 +146,8 @@ namespace SecondMonitor.Hub.Core.Strategy
                 lap.WearDeltaPct = consumption.WearDelta;
                 consumption.LapTime = lap.Time;
                 consumption.Valid = lap.Valid;
+                consumption.Compound = lap.Compound;
+                consumption.Stint = lap.Stint;
             }
 
             _history.Add(consumption);
@@ -314,6 +316,8 @@ namespace SecondMonitor.Hub.Core.Strategy
             Pit = h.PitLap,
             Valid = h.Valid,
             WearDelta = h.WearDelta?.Select(v => Math.Round(v, 2)).ToArray(),
+            Compound = h.Compound,
+            Stint = h.Stint,
         }).ToList();
 
         private static EngineDto BuildEngine(CarInfo car)
@@ -477,6 +481,11 @@ namespace SecondMonitor.Hub.Core.Strategy
         public double? Energy { get; set; }
 
         public double[] WearDelta { get; set; }
+
+        /// <summary>Gomme et relais du tour : le carnet en tire les moyennes par train de pneus après la course.</summary>
+        public string Compound { get; set; }
+
+        public int? Stint { get; set; }
 
         public LapConsumption Copy()
         {

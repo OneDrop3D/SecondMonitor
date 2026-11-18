@@ -19,7 +19,10 @@ namespace SecondMonitor.Hub.Core.Ai
 
         public bool Repair { get; set; }
 
-        /// <summary>Carburant / énergie : « plein », « jusqu'à la fin », « tours » (voir <see cref="FuelLaps"/>), ou null.</summary>
+        /// <summary>
+        /// Carburant / énergie : « plein », « jusqu'à la fin », « tours » (voir <see cref="FuelLaps"/>), « plan » (ce que le plan de course
+        /// remet à l'arrêt décidé, après un relais rallongé ou raccourci à la radio), ou null.
+        /// </summary>
         public string Fuel { get; set; }
 
         /// <summary>« deux tours de carburant » : tours à ajouter à ce qu'il reste.</summary>
@@ -227,6 +230,7 @@ namespace SecondMonitor.Hub.Core.Ai
             {
                 parts.Add(plan.Fuel == "plein" ? "le plein"
                     : plan.Fuel == "tours" ? $"carburant pour {plan.FuelLaps} tour{(plan.FuelLaps > 1 ? "s" : string.Empty)} de plus"
+                    : plan.Fuel == "plan" ? "carburant et énergie selon le plan"
                     : autoFuel ?? "carburant jusqu'à la fin");
             }
 

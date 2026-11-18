@@ -31,6 +31,9 @@ namespace SecondMonitor.Hub.Core.Ai
 
         public string TargetUnit { get; set; }
 
+        /// <summary>Relais allongé (« deux tours de plus ») : cible valable jusqu'à l'arrêt de ce tour, dite à chaque tour. Null : jusqu'à la fin.</summary>
+        public int? UntilLap { get; set; }
+
         public int LastCheckedLap { get; set; }
 
         public DateTime? ProposedAtUtc { get; set; }
@@ -234,6 +237,11 @@ namespace SecondMonitor.Hub.Core.Ai
 
                 test.LastCheckedLap = me.Laps;
                 double? used = test.TargetUnit == "L" ? last.Fuel : last.Energy;
+                if (test.UntilLap is int until)
+                {
+                    return Stint(test, until, used, last, snap, me);
+                }
+
                 double tolerance = test.TargetUnit == "L" ? 0.15 : 0.2;
                 if (!last.Pit && used is double u && u > target + tolerance && me.Laps % 2 == 0)
                 {
@@ -243,6 +251,145 @@ namespace SecondMonitor.Hub.Core.Ai
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Relais allongé : à chaque tour jusqu'à l'arrêt, la consommation du tour contre la cible (« dans la cible », « il manque 0,3 % »),
+        /// puis la cible recalculée sur ce qui reste à bord. Effacée une fois l'arrêt passé.
+        /// </summary>
+        private static RadioLine Stint(LiftCoastTest test, int until, double? used, LapDto last, RaceSnapshot snap, DriverRow me)
+        {
+            if (me.Laps >= until || last.Pit || test.TargetPerLap is not double target)
+            {
+                test.TargetPerLap = null;
+                test.UntilLap = null;
+                return null;
+            }
+
+            if (used is not double u)
+            {
+                return null;
+            }
+
+            int digits = test.TargetUnit == "L" ? 2 : 1;
+            string unit = test.TargetUnit == "L" ? " L" : " %";
+            string head = $"Tour {last.Lap} : {N(u, digits)}{unit}";
+            RacePlanner.Resource r = RacePlanner.Resources(snap.Player).FirstOrDefault(x => x.Unit == test.TargetUnit);
+            double fraction = Math.Clamp(me.LapFraction, 0, 0.999);
+            double lapsToGo = until - me.Laps - fraction;
+            if (r != null && lapsToGo > 0.3)
+            {
+                test.TargetPerLap = Math.Round(r.Remaining / lapsToGo, 2);
+            }
+
+            if (Math.Round(u, digits) <= Math.Round(target, digits))
+            {
+                return new RadioLine($"{head}, dans la cible.", Topic, false);
+            }
+
+            string next = test.TargetPerLap is double t2 && t2 < target ? $" Cible {N(t2, digits)}{unit} jusqu'au tour {until}." : string.Empty;
+            // Plus d'économie à faire que le tour qui vient d'être fait, déjà en lift and coast : on ne tiendra pas, on rentre avant.
+            string tight = r != null && test.TargetPerLap < u * (1 - RacePlanner.MaxRealisticSaving)
+                ? $" Trop juste à ce rythme : box au tour {me.Laps + Math.Max(1, (int)Math.Floor((r.Remaining / u) + fraction - 0.05))}."
+                : string.Empty;
+            return new RadioLine($"{head}, il manque {N(u - target, digits)}{unit}. Lève le pied plus tôt.{next}{tight}", Topic, false);
+        }
+
+        /// <summary>
+        /// Où et de combien lever le pied pour économiser <paramref name="saving"/> par tour (dans l'unité <paramref name="unit"/>) :
+        /// les plus gros freinages du tour (arrivée à pleins gaz), nommés par le découpage du circuit, et la distance de roue libre avant.
+        /// Essai mesuré : le geste de l'essai (100 à 150 m) mis à l'échelle. Sans essai : estimation, en comptant que la voiture
+        /// consomme à pleins gaz et rien en roue libre ; dite comme telle.
+        /// </summary>
+        public static string Where(LapDetailDto lap, IReadOnlyList<TrackSegment> segments, double saving, double perLap, string unit, LiftCoastMeasure measure)
+        {
+            var zones = BrakingZones(lap, segments);
+            double? measured = unit == "L" ? measure?.FuelSaved : measure?.EnergySaved;
+            double? meters = null;
+            string basis = "pour commencer, je corrige à chaque tour";
+            if (measured is > 0.01)
+            {
+                meters = 125 * saving / measured.Value;
+                basis = $"ton essai : {N(measured.Value, unit == "L" ? 2 : 1)}{(unit == "L" ? " L" : " %")} pour 100 à 150 m";
+            }
+            else if (zones.Count > 0 && FullThrottleSeconds(lap) is double full && full > 10 && perLap > 0)
+            {
+                double seconds = saving / (perLap / full) / zones.Count;
+                meters = seconds * zones.Average(z => z.Speed) / 3.6;
+                basis = $"estimation sur ton tour {lap.Lap}, je corrige à chaque tour";
+            }
+
+            string how = meters is double m ? $"{N(Math.Max(10, Math.Round(m / 10) * 10), 0)} m" : "100 à 150 m";
+            // Circuit pas encore découpé en virages : les freinages par leur distance depuis la ligne.
+            bool unnamed = zones.Count > 0 && zones[0].Name == null;
+            var names = zones.Select(z => z.Name ?? N(z.Distance / 1000, 1)).ToList();
+            string where = zones.Count == 0 ? "les gros freinages"
+                : (unnamed ? "les freinages à " : string.Empty)
+                  + (names.Count == 1 ? names[0] : string.Join(", ", names.Take(names.Count - 1)) + " et " + names[^1])
+                  + (unnamed ? " km" : string.Empty);
+            return $"Lève le pied {how} avant {where} ({basis}).";
+        }
+
+        /// <summary>
+        /// Gros freinages d'un tour : frein appuyé juste après des pleins gaz, 40 km/h perdus au moins ; les 4 plus rapides, dans l'ordre du tour.
+        /// Nom : le virage qui suit (null tant que le circuit n'est pas découpé).
+        /// </summary>
+        public static List<(string Name, double Distance, double Speed)> BrakingZones(LapDetailDto lap, IReadOnlyList<TrackSegment> segments)
+        {
+            var zones = new List<(string Name, double Distance, double Speed)>();
+            int n = lap?.Brake?.Count ?? 0;
+            if (n < 20 || lap.Throttle.Count != n || lap.Speed.Count != n)
+            {
+                return zones;
+            }
+
+            var corners = (segments ?? Array.Empty<TrackSegment>()).Where(s => s.Kind == "corner").OrderBy(s => s.Apex).ToList();
+            for (int i = 1; i < n; i++)
+            {
+                if (lap.Brake[i] is not >= 20 || lap.Brake[i - 1] is >= 20 || lap.Speed[i] is not double v)
+                {
+                    continue;
+                }
+
+                bool fullBefore = Enumerable.Range(Math.Max(0, i - 8), Math.Min(8, i)).Any(k => lap.Throttle[k] is >= 90);
+                double? slowest = lap.Speed.Skip(i).Take(40).Where(s => s.HasValue).Min();
+                if (!fullBefore || slowest is not double low || v - low < 40)
+                {
+                    continue;
+                }
+
+                double at = i * DrivingWatch.BinMeters;
+                TrackSegment corner = corners.FirstOrDefault(c => c.Apex >= at) ?? corners.FirstOrDefault();
+                zones.Add((corner == null ? null : Named(corner), at, v));
+            }
+
+            return zones.GroupBy(z => z.Name ?? z.Distance.ToString(System.Globalization.CultureInfo.InvariantCulture)).Select(g => g.OrderByDescending(z => z.Speed).First())
+                .OrderByDescending(z => z.Speed).Take(4).OrderBy(z => z.Distance).ToList();
+        }
+
+        /// <summary>« avant Mulsanne », « avant la 1re chicane », « avant le virage 5 » : le lieu connu du circuit, sinon le numéro du virage.</summary>
+        private static string Named(TrackSegment c)
+        {
+            string p = c.Place ?? c.Name ?? string.Empty;
+            string lower = p.Length > 0 ? char.ToLowerInvariant(p[0]) + p[1..] : p;
+            return Regex.IsMatch(p, @"^(\d|Chicane|Courbe|Virage )") ? (p.StartsWith("Virage ", StringComparison.Ordinal) ? "le " : "la ") + lower
+                : Regex.IsMatch(p, @"^(Virages|Esses)") ? "les " + lower
+                : p;
+        }
+
+        /// <summary>Temps passé à pleins gaz sur le tour (s), d'après la vitesse de chaque tranche.</summary>
+        private static double? FullThrottleSeconds(LapDetailDto lap)
+        {
+            double total = 0;
+            for (int i = 0; i < lap.Throttle.Count && i < lap.Speed.Count; i++)
+            {
+                if (lap.Throttle[i] is >= 95 && lap.Speed[i] is double v && v > 30)
+                {
+                    total += DrivingWatch.BinMeters / (v / 3.6);
+                }
+            }
+
+            return total > 0 ? total : null;
         }
 
         /// <summary>
@@ -397,6 +544,7 @@ namespace SecondMonitor.Hub.Core.Ai
             bool energy = o.Limiter == RacePlanner.Resource.EnergyName;
             test.TargetPerLap = energy ? o.EnergyPerLapTarget : o.FuelPerLapTarget;
             test.TargetUnit = energy ? "%" : "L";
+            test.UntilLap = null;
             test.LastCheckedLap = me.Laps;
             memory.Add("pilote", "stratégie", $"lift and coast jusqu'à la fin pour {Stops(o.Stops)} : cible {N(test.TargetPerLap ?? 0, 1)} {test.TargetUnit} par tour", me.Laps);
             string unit = energy ? " % d'énergie" : " L";
@@ -406,6 +554,7 @@ namespace SecondMonitor.Hub.Core.Ai
         private static string Decline(LiftCoastTest test, RaceSnapshot snap)
         {
             test.TargetPerLap = null;
+            test.UntilLap = null;
             int? stops = snap?.Player?.Plan?.StopsNeeded;
             return stops is int s && s > 0 ? $"Copy, on garde {Stops(s)}, attaque." : "Copy, on reste en attaque.";
         }
@@ -454,7 +603,7 @@ namespace SecondMonitor.Hub.Core.Ai
             : o.FuelSavingPerLap is double f ? $"{N(f, 2)} L" : $"{N(o.SavingPct, 0)} %";
 
         public static PlanContext Context(RaceMemory memory, LiftCoastMeasure measure = null) =>
-            new() { LiftCoast = measure ?? memory?.LiftCoast?.Measure, PlannedStopLap = memory?.PlannedStopLap };
+            new() { LiftCoast = measure ?? memory?.LiftCoast?.Measure, PlannedStopLap = memory?.PlannedStopLap, StretchLap = memory?.LiftCoast?.UntilLap };
 
         public static string Stops(int n) => n switch
         {

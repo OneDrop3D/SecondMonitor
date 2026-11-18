@@ -6,6 +6,7 @@ namespace SecondMonitor.Hub.Core.Race
     using SecondMonitor.DataModel.Snapshot.Drivers;
     using SecondMonitor.Hub.Core.Strategy;
     using SecondMonitor.Hub.Core.Telemetry;
+    using SecondMonitor.Hub.Core.Track;
 
     /// <summary>Analyses détaillées servies à la demande (pas dans le flux 5 Hz) : vitesses, trajectoires, micro-secteurs, tours, télémétrie, météo.</summary>
     public sealed partial class RaceEngine
@@ -447,6 +448,7 @@ namespace SecondMonitor.Hub.Core.Race
                 List<TrackSegment> segments = TrackSegmenter.Detect(trace.Speed, tracker.Analysis.LapLength);
                 if (segments.Count >= 2)
                 {
+                    TrackPlaces.Apply(segments, _last?.SessionInfo?.TrackInfo?.TrackName, tracker.Analysis.LapLength);
                     _segments = segments;
                     _segmentsVersion++;
                     _segmentsReference = tracker.Latest?.DriverLongName;

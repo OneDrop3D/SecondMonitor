@@ -444,6 +444,8 @@ export interface TrackSegment {
   kind: 'corner' | 'straight';
   name: string;
   description: string | null;
+  /** Nom du lieu sur un circuit connu (Hunaudières, Mulsanne…), sinon null. */
+  place?: string | null;
   isMain: boolean;
   start: number;
   end: number;

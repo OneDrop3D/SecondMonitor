@@ -17,10 +17,14 @@ namespace SecondMonitor.Hub.Core.Ai
     /// </summary>
     public static class StrategyRadio
     {
+        /// <summary>Question en attente « On le fait ? » après un relais allongé ou raccourci jouable (arrêt prévu, arrêt proposé).</summary>
+        public const string PendingStint = "relais-radio";
+
         private static readonly Regex StopWords = new(@"\b(arrets?|box|boxs|stops?|pit stops?|passages? au stand|ravitaillements?)\b", RegexOptions.Compiled);
 
         /// <summary>Réponse calculée, ou null si la phrase n'est pas une question de stratégie reconnue ici.</summary>
-        public static string Answer(string question, RaceSnapshot snap, RaceMemory memory, IReadOnlyList<LapDto> laps = null)
+        /// <param name="track">Meilleur tour gardé (pédales, vitesse) et virages du circuit, lus seulement pour dire où lever le pied.</param>
+        public static string Answer(string question, RaceSnapshot snap, RaceMemory memory, IReadOnlyList<LapDto> laps = null, Func<(LapDetailDto Lap, IReadOnlyList<TrackSegment> Segments)> track = null)
         {
             if (snap?.HasData != true)
             {
@@ -54,13 +58,20 @@ namespace SecondMonitor.Hub.Core.Ai
 
             RacePlanDto plan = RacePlanner.Build(snap, LiftCoast.Context(memory));
 
+            // Réponse à « On le fait ? » (moins de 2 minutes) : « oui » décide l'arrêt proposé, comme la phrase de décision ; « non » ne change rien.
+            if (memory?.Pending(120) is { Topic: PendingStint, ProposedLap: int proposed } asked && words <= 12 && RadioCommands.YesNo(question) is bool go)
+            {
+                memory.ClearPending();
+                return go ? Agreed(proposed, proposed - (asked.PlannedLap ?? proposed), snap, memory, plan, me, track) : "Copy, on garde le plan.";
+            }
+
             // « Mets le ratio à 0,94 » : une demande pour le menu des stands (PitOrders), pas une question.
             if (Regex.IsMatch(t, @"\bratio\b") && !RatioCommand(t))
             {
                 return Ratio(t, snap, plan);
             }
 
-            if (Shift(t, words, question, snap, memory, plan, me) is string shift)
+            if (Shift(t, words, question, snap, memory, plan, me, track) is string shift)
             {
                 return shift;
             }
@@ -188,12 +199,18 @@ namespace SecondMonitor.Hub.Core.Ai
             return $"{fewer} : {LiftCoast.Saving(o)} de moins par tour, à mesurer en lift and coast.";
         }
 
-        /// <summary>« Au tour 21 », « je boxe au tour d'après », « un tour plus tôt ? », « et si je rentre au 19 ? ».</summary>
-        private static string Shift(string t, int words, string question, RaceSnapshot snap, RaceMemory memory, RacePlanDto plan, DriverRow me)
+        /// <summary>
+        /// « Au tour 21 », « je boxe au tour d'après », « un tour plus tôt ? », « et si je rentre au 19 ? »,
+        /// « deux tours de plus », « on rallonge le relais de deux tours », « et si on fait trois tours de moins ? ».
+        /// </summary>
+        private static string Shift(string t, int words, string question, RaceSnapshot snap, RaceMemory memory, RacePlanDto plan, DriverRow me, Func<(LapDetailDto Lap, IReadOnlyList<TrackSegment> Segments)> track)
         {
             bool pitContext = Regex.IsMatch(t, @"\b(box\w*|stand|stands|arret|rentre|rentrer|rentrerai|pit)\b");
             bool shortReply = words <= 7 && Regex.IsMatch(t, @"^(non |plutot |alors |ok |et |bon |ben |euh |non plutot )*(au|le|a|pour le) tour\b|^(un|1) tour (plus tot|plus tard|de plus|de moins|avant|apres)\b");
-            if (!pitContext && !shortReply)
+            // « Mets deux tours de plus », « deux tours de carburant » : une demande de carburant pour l'arrêt (PitOrders), pas le relais.
+            int? relative = Regex.IsMatch(t, @"\b(carburant|essence|fuel|rajout\w*|ajout\w*|mets|met)\b") ? null : Relative(t);
+            bool stint = relative != null && Regex.IsMatch(t, @"\b(relais|strateg\w*|faire|fait|fais|tenir|tirer|rallong\w*|prolong\w*|allong\w*|raccourci\w*)\b");
+            if (!pitContext && !shortReply && !stint)
             {
                 return null;
             }
@@ -204,6 +221,11 @@ namespace SecondMonitor.Hub.Core.Ai
             if (lapNumber.Success)
             {
                 target = int.Parse(lapNumber.Groups[2].Success ? lapNumber.Groups[2].Value : lapNumber.Groups[3].Value, CultureInfo.InvariantCulture);
+                relative = null;
+            }
+            else if (relative is int rel)
+            {
+                target = (baseLap ?? me.Laps + 1) + rel;
             }
             else if (Regex.IsMatch(t, @"\b(au tour (suivant|d apres)|(un|1) tour (plus tard|de plus|apres)|le tour (suivant|d apres)|au prochain tour)\b"))
             {
@@ -240,6 +262,11 @@ namespace SecondMonitor.Hub.Core.Ai
             var resources = RacePlanner.Resources(snap.Player);
             bool lmu = snap.Player?.Energy != null;
             StopShiftDto s = RacePlanner.Shift(plan, resources, me.Laps, lap - me.Laps, Math.Clamp(me.LapFraction, 0, 0.999), plan.LapsRemaining, PlayerStrategyTracker.FuelMarginLaps, plan.FullStint, lmu);
+            if (!s.Feasible && relative > 0 && s.SavingPct.HasValue)
+            {
+                return Stretch(s, relative.Value, question0, snap, memory, plan, me, track);
+            }
+
             if (!s.Feasible)
             {
                 string fix = s.SavingNeededPerLap is double sv && sv > 0
@@ -256,17 +283,136 @@ namespace SecondMonitor.Hub.Core.Ai
             string when = lap == me.Laps + 1 ? "box ce tour" : $"box au tour {lap}";
             if (question0)
             {
-                return $"Oui, tour {lap} ça passe{stops}.{load}";
+                // Relais rallongé ou raccourci en question : « On le fait ? », un « oui » décide (voir Agreed).
+                return $"Oui, tour {lap} ça passe{stops}.{load}" + (relative != null ? AskGo(memory, me, lap, relative.Value) : string.Empty);
             }
 
             if (memory != null)
             {
-                memory.PlannedStopLap = lap;
-                memory.NoStopPlanned = false;
-                memory.Add("pilote", "stand", $"arrêt décidé au tour {lap}", me.Laps);
+                Decide(memory, snap, me, lap, relative != null);
             }
 
             return $"Copy, {when}{stops}.{load}";
+        }
+
+        /// <summary>Arrêt décidé avec le pilote. Relais rallongé ou raccourci : le menu des stands suit le plan (EngineerService l'envoie).</summary>
+        private static void Decide(RaceMemory memory, RaceSnapshot snap, DriverRow me, int lap, bool menu)
+        {
+            memory.PlannedStopLap = lap;
+            memory.NoStopPlanned = false;
+            memory.Add("pilote", "stand", $"arrêt décidé au tour {lap}", me.Laps);
+            if (memory.LiftCoast?.UntilLap != null)
+            {
+                // L'arrêt a changé : la cible du relais allongé ne vaut plus.
+                memory.LiftCoast.UntilLap = null;
+                memory.LiftCoast.TargetPerLap = null;
+            }
+
+            if (menu)
+            {
+                PitOrders.Confirm(new PitOrder { Fuel = "plan" }, memory, snap, me.Laps);
+            }
+        }
+
+        /// <summary>« On le fait ? » après un relais rallongé ou raccourci jouable, gardé comme question en attente.</summary>
+        private static string AskGo(RaceMemory memory, DriverRow me, int lap, int relative)
+        {
+            if (memory == null)
+            {
+                return string.Empty;
+            }
+
+            memory.Ask(new PendingQuestion { Key = PendingStint + lap, Topic = PendingStint, Text = "On le fait ?", Lap = me.Laps, PlannedLap = lap - relative, ProposedLap = lap });
+            return " On le fait ?";
+        }
+
+        /// <summary>« Oui » à « On le fait ? » : l'arrêt proposé, recalculé maintenant, décidé comme par la phrase de décision.</summary>
+        private static string Agreed(int lap, int relative, RaceSnapshot snap, RaceMemory memory, RacePlanDto plan, DriverRow me, Func<(LapDetailDto Lap, IReadOnlyList<TrackSegment> Segments)> track)
+        {
+            if (plan?.StopsNeeded is null || lap <= me.Laps)
+            {
+                return $"Le tour {lap} n'est plus jouable : redis-moi le plan.";
+            }
+
+            StopShiftDto s = RacePlanner.Shift(plan, RacePlanner.Resources(snap.Player), me.Laps, lap - me.Laps, Math.Clamp(me.LapFraction, 0, 0.999), plan.LapsRemaining, PlayerStrategyTracker.FuelMarginLaps, plan.FullStint, snap.Player?.Energy != null);
+            if (s.SavingPct.HasValue && relative > 0)
+            {
+                return Stretch(s, relative, false, snap, memory, plan, me, track);
+            }
+
+            if (!s.Feasible)
+            {
+                return $"Le tour {lap} n'est plus jouable : {s.Reason ?? "trop tard"}. Redis-moi le plan.";
+            }
+
+            Decide(memory, snap, me, lap, true);
+            return $"Copy, box au tour {lap}.{Load(s)}";
+        }
+
+        /// <summary>« Deux tours de plus », « rallonge le relais de deux tours » : +2 ; « trois tours de moins », « raccourcis d'un tour » : −3, −1.</summary>
+        private static int? Relative(string t)
+        {
+            Match m = Regex.Match(t, @"\b(un|\d{1,2}) tours? (de plus|plus tard|supplementaires?|de moins|plus tot)\b|\b(rallong|prolong|allong|raccourci)\w* (?:(?:le |ce |mon |notre )?relais )?(?:de |d )(un|\d{1,2}) tours?\b");
+            if (!m.Success)
+            {
+                return null;
+            }
+
+            string count = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[4].Value;
+            int n = count == "un" ? 1 : Math.Clamp(int.Parse(count, CultureInfo.InvariantCulture), 1, 30);
+            bool less = m.Groups[2].Value is "de moins" or "plus tot" || m.Groups[3].Value == "raccourci";
+            return less ? -n : n;
+        }
+
+        /// <summary>
+        /// Relais allongé au-delà de ce que permet la consommation (« deux tours de plus ») : consommation à viser par tour,
+        /// économie, jouable ou non, où et de combien lever le pied. Décidé : arrêt et cible gardés (dite à chaque tour
+        /// par <see cref="LiftCoast.Check"/>), menu des stands réglé sur le nouveau plan. En question : rien n'est décidé.
+        /// </summary>
+        private static string Stretch(StopShiftDto s, int extra, bool question, RaceSnapshot snap, RaceMemory memory, RacePlanDto plan, DriverRow me, Func<(LapDetailDto Lap, IReadOnlyList<TrackSegment> Segments)> track)
+        {
+            var targets = new List<string>();
+            if (s.EnergyPerLapTarget is double et)
+            {
+                targets.Add($"{N(et, 1)} % d'énergie");
+            }
+
+            if (s.FuelPerLapTarget is double ft)
+            {
+                targets.Add($"{N(ft, 2)} L");
+            }
+
+            string laps = extra == 1 ? "un tour de plus" : $"{extra} tours de plus";
+            string aim = $"cible {string.Join(" et ", targets)} par tour, {N(s.SavingPct ?? 0, 0)} % de moins";
+            if (s.SavingPct > RacePlanner.MaxRealisticSaving * 100)
+            {
+                string latest = plan.WindowLatest is int wl ? $" Au plus tard : tour {wl}." : string.Empty;
+                return $"Tour {s.Lap}, {laps} : {aim}, pas jouable.{latest}";
+            }
+
+            double saving = s.SavingNeededPerLap ?? 0;
+            double perLap = RacePlanner.Resources(snap.Player).FirstOrDefault(r => r.Unit == s.SavingUnit)?.PerLap ?? 0;
+            LiftCoastMeasure measure = memory?.LiftCoast?.Measure;
+            var (lap, segments) = track?.Invoke() ?? default;
+            string lift = LiftCoast.Where(lap, segments, saving, perLap, s.SavingUnit, measure);
+            double? measured = s.SavingUnit == "L" ? measure?.FuelSaved : measure?.EnergySaved;
+            string cost = measure?.TimeLoss is double loss && measured is > 0.01 ? $" Environ {Sec(Math.Max(0, loss) * saving / measured.Value)} perdue par tour." : string.Empty;
+            string stops = s.Stops < plan.StopsNeeded ? $" Ça fait {LiftCoast.Stops(s.Stops.Value)} au lieu de {LiftCoast.Stops(plan.StopsNeeded.Value)}." : string.Empty;
+            if (question || memory == null)
+            {
+                return $"Oui, tour {s.Lap} jouable : {aim}. {lift}{cost}{stops}{AskGo(memory, me, s.Lap, extra)}";
+            }
+
+            memory.PlannedStopLap = s.Lap;
+            memory.NoStopPlanned = false;
+            LiftCoastTest test = memory.LiftCoast ??= new LiftCoastTest();
+            test.TargetPerLap = s.SavingUnit == "L" ? s.FuelPerLapTarget : s.EnergyPerLapTarget;
+            test.TargetUnit = s.SavingUnit;
+            test.UntilLap = s.Lap;
+            test.LastCheckedLap = me.Laps;
+            memory.Add("pilote", "stratégie", $"relais allongé de {extra} tour{(extra > 1 ? "s" : string.Empty)} : arrêt au tour {s.Lap}, {aim}", me.Laps);
+            PitOrders.Confirm(new PitOrder { Fuel = "plan" }, memory, snap, me.Laps);
+            return $"Copy, box au tour {s.Lap} : {aim}. {lift}{cost}{stops}{Load(s)} Je te donne la conso à chaque tour.";
         }
 
         private static string Load(StopShiftDto s)

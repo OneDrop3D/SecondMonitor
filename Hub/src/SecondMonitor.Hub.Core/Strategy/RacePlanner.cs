@@ -94,7 +94,14 @@ namespace SecondMonitor.Hub.Core.Strategy
             plan.WindowLatest = me.Laps + latest;
             // Arrêt décidé avec le pilote (« au tour 21 ») s'il est dans la fenêtre, sinon l'arrêt conseillé, sinon le plus tard possible.
             int? wanted = context?.PlannedStopLap is int decided && decided > me.Laps ? decided : p.RecommendedStopLap;
-            int chosen = wanted is int rec && rec >= plan.WindowEarliest && rec <= plan.WindowLatest ? rec - me.Laps : latest;
+            // Relais allongé à la radio en économisant (« deux tours de plus ») : l'arrêt décidé, même après la fenêtre, et les arrêts qui en découlent.
+            bool stretched = context?.StretchLap is int st && st == context.PlannedStopLap && st > plan.WindowLatest;
+            int chosen = stretched ? context.StretchLap.Value - me.Laps : wanted is int rec && rec >= plan.WindowEarliest && rec <= plan.WindowLatest ? rec - me.Laps : latest;
+            if (stretched)
+            {
+                plan.StopsNeeded = Math.Max(1, (int)Math.Ceiling(((need - (chosen - fraction)) / fullStint) - 1e-9));
+            }
+
             plan.PlannedByDriver = context?.PlannedStopLap is int d2 && d2 == me.Laps + chosen;
             plan.NextStopLap = me.Laps + chosen;
 
@@ -117,10 +124,12 @@ namespace SecondMonitor.Hub.Core.Strategy
                     if (r.Name == Resource.EnergyName)
                     {
                         stop.EnergyPct = Math.Round(add, 1);
+                        stop.EnergyAfterPct = Math.Round(levels[r.Name], 1);
                     }
                     else
                     {
                         stop.FuelLitres = Math.Round(add, 1);
+                        stop.FuelAfterLitres = Math.Round(levels[r.Name], 1);
                     }
                 }
 
@@ -159,24 +168,35 @@ namespace SecondMonitor.Hub.Core.Strategy
             }
 
             Resource dry = resources.Where(r => r.Remaining - (r.PerLap * distance) < 0).OrderBy(r => r.RangeNow).FirstOrDefault();
+            s.Feasible = dry == null;
             if (dry != null)
             {
-                s.Feasible = false;
                 s.Reason = dry.Name == Resource.EnergyName ? "énergie virtuelle vide avant" : "panne d'essence avant";
-                // Économie à faire d'ici là pour tenir jusqu'à ce tour.
+                // Économie à faire d'ici là pour tenir jusqu'à ce tour, et consommation à viser par tour pour tout ce qui ne suffit pas.
                 s.SavingNeededPerLap = Math.Round(dry.PerLap - (dry.Remaining / distance), 2);
                 s.SavingUnit = dry.Unit;
-                return s;
+                s.SavingPct = Math.Round((1 - (dry.RangeNow / distance)) * 100, 1);
+                foreach (Resource r in resources.Where(r => r.Remaining < r.PerLap * distance))
+                {
+                    if (r.Name == Resource.EnergyName)
+                    {
+                        s.EnergyPerLapTarget = Math.Round(r.Remaining / distance, 2);
+                    }
+                    else
+                    {
+                        s.FuelPerLapTarget = Math.Round(r.Remaining / distance, 2);
+                    }
+                }
             }
 
-            s.Feasible = true;
+            // Arrêts et ce qu'on remet : en économisant, on arrive à vide.
             double toFinish = Math.Max(0, left - distance + margin);
             int stops = 1 + Math.Max(0, (int)Math.Ceiling(((toFinish - fullStint) / fullStint) - 1e-9));
             s.Stops = stops;
             s.ExtraStop = stops > (plan.StopsNeeded ?? stops);
             foreach (Resource r in resources)
             {
-                double arrival = r.Remaining - (r.PerLap * distance);
+                double arrival = Math.Max(0, r.Remaining - (r.PerLap * distance));
                 double add = Math.Max(0, Math.Min(r.Capacity - arrival, (toFinish * r.PerLap) - arrival));
                 if (r.Name == Resource.EnergyName)
                 {
@@ -319,6 +339,9 @@ namespace SecondMonitor.Hub.Core.Strategy
         public LiftCoastMeasure LiftCoast { get; set; }
 
         public int? PlannedStopLap { get; set; }
+
+        /// <summary>Arrêt repoussé à la radio en économisant d'ici là : gardé même après la fenêtre.</summary>
+        public int? StretchLap { get; set; }
     }
 
     /// <summary>Plan de course jusqu'au drapeau (voir <see cref="RacePlanner"/>).</summary>
@@ -385,6 +408,11 @@ namespace SecondMonitor.Hub.Core.Strategy
         public double? StopSeconds { get; set; }
 
         public bool Last { get; set; }
+
+        /// <summary>Niveaux après l'arrêt : ce que règle le menu des stands de LMU.</summary>
+        public double? EnergyAfterPct { get; set; }
+
+        public double? FuelAfterLitres { get; set; }
     }
 
     public sealed class StopShiftDto
@@ -412,6 +440,13 @@ namespace SecondMonitor.Hub.Core.Strategy
         public double? SavingNeededPerLap { get; set; }
 
         public string SavingUnit { get; set; }
+
+        /// <summary>Arrêt trop tard : économie en % de la consommation actuelle, et consommation à viser par tour d'ici là.</summary>
+        public double? SavingPct { get; set; }
+
+        public double? EnergyPerLapTarget { get; set; }
+
+        public double? FuelPerLapTarget { get; set; }
     }
 
     public sealed class OneLessStopDto

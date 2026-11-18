@@ -41,6 +41,9 @@ TIENT_VERROU=""
 prendre_verrou() { until mkdir "$VERROU" 2>/dev/null; do sleep 1; done; TIENT_VERROU=1; }
 rendre_verrou() { if [ -n "$TIENT_VERROU" ]; then rmdir "$VERROU" 2>/dev/null || true; TIENT_VERROU=""; fi; }
 trap 'rendre_verrou; rm -rf "$TMP"' EXIT
+# « Arrêter » (OneDrop3D) envoie SIGTERM : sans ces pièges, zsh quitte sans passer par EXIT, le verrou reste
+# et la construction suivante attend sans fin et sans rien dire (vérifié le 18/11).
+trap 'exit 130' INT; trap 'exit 143' TERM; trap 'exit 129' HUP
 
 interface_web() {
   if [ -n "$INTERFACE_FAITE" ]; then return; fi

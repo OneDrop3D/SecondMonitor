@@ -1,4 +1,7 @@
 /** 83.456 → « 1:23.456 » */
+/** Graduation d'un axe en tours : rien entre deux tours (sinon « T3 T3 T4 T4 » sur une session courte). */
+export const lapTick = (x: number) => (Math.abs(x - Math.round(x)) < 1e-6 ? `T${Math.round(x)}` : '');
+
 export function lapTime(s: number | null | undefined): string {
   if (s == null || !isFinite(s) || s <= 0) return '—';
   const m = Math.floor(s / 60);

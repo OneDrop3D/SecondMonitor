@@ -249,6 +249,37 @@ table.lb { width: 100%; border-collapse: collapse; font-variant-numeric: tabular
 .speed-table td.speed-cell { font-weight: 550; }
 .speed-table td.speed-cell.best { font-weight: 800; }
 
+/* Carte des zones (Vitesses › Zones et profils) : mêmes couleurs que les en-têtes du tableau, la zone survolée ressort des deux côtés. */
+:root { --zone-straight: var(--series-3); --zone-corner: var(--series-2); }
+.zone-wrap { container-type: inline-size; padding: 12px 16px 6px; }
+.zone-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 12px 18px; align-items: start; }
+@container (max-width: 620px) { .zone-grid { grid-template-columns: minmax(0, 1fr); } }
+.zone-svg { display: block; margin: 0 auto; }
+.zone-track { fill: none; stroke: var(--track); stroke-width: 12; stroke-linejoin: round; }
+.zone, .zone-tag { cursor: pointer; }
+.zone-hit { fill: none; stroke: transparent; stroke-width: 18; }
+.zone-line { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-width 0.15s, opacity 0.15s; }
+.zone.straight, .zone-tag.straight, .zone-key.straight, .zone-col.straight, .zone-th.straight { --zone-c: var(--zone-straight); }
+.zone.corner, .zone-tag.corner, .zone-key.corner, .zone-col.corner, .zone-th.corner { --zone-c: var(--zone-corner); }
+.zone-line { stroke: var(--zone-c); }
+.zone.on .zone-line { stroke-width: 10; }
+.zone.dim .zone-line, .zone-tag.dim { opacity: 0.35; }
+.zone-tag rect { fill: var(--surface-1); stroke: var(--zone-c); stroke-width: 1.5; }
+.zone-tag text { font-size: 10px; font-weight: 700; fill: var(--text-primary); }
+.zone-tag.on rect { fill: var(--zone-c); }
+.zone-tag.on text { fill: #fff; }
+.zone-key { display: inline-block; width: 14px; height: 6px; border-radius: 3px; background: var(--zone-c); flex: none; }
+.zone-panel { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 13px; }
+.zone-panel-title { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.zone-panel .legend { margin-top: 6px; }
+.zone-panel .tip-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.zone-panel .tip-row b { white-space: nowrap; }
+.zone-clear { align-self: flex-start; margin-left: 0; }
+.speed-table th.zone-th { border-top: 3px solid var(--zone-c); cursor: pointer; vertical-align: bottom; }
+.zone-place { display: block; max-width: 110px; margin-left: auto; overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--text-secondary); }
+.speed-table .zone-on { box-shadow: inset 2px 0 0 var(--zone-c), inset -2px 0 0 var(--zone-c); }
+.speed-table th.zone-on { color: var(--text-primary); background: color-mix(in oklab, var(--zone-c) 22%, var(--surface-1)); }
+
 /* ───────────── Pneus (badges) ───────────── */
 .tyre { display: inline-flex; align-items: center; gap: 6px; }
 .tyre-dot {
@@ -637,6 +668,12 @@ details summary { cursor: pointer; }
 .tm-wx { display: inline-flex; align-items: center; gap: 6px; font-size: 18px; white-space: nowrap; }
 .tm-wx b { font-weight: 700; }
 .tm-deltas { flex: 1 1 240px; gap: 3px; }
+.tm-ahead { flex: 0 1 210px; gap: 2px; }
+.tm-ahead .tm-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tm-ahead-line { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; font-size: 12px; }
+.tm-ahead-line b { font-size: 20px; }
+.tm-ahead-line .faster { color: var(--tm-green); }
+.tm-ahead-line .slower { color: var(--critical); }
 .tm-delta-label { font-size: 11px; text-align: center; font-weight: 650; color: var(--text-secondary); }
 .tm-delta-track { position: relative; height: 20px; background: var(--tm-row); border: 1px solid var(--tm-line); overflow: hidden; }
 .tm-delta-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--axis); }

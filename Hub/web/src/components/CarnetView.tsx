@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { LineChart, type Series } from '../charts/LineChart';
+import { lapTick, lapTime, WHEELS, WHEEL_SHORT } from '../format';
 import { api, usePoll } from '../live';
 import { readPref, writePref } from '../prefs';
+import { TyreBadge } from './Common';
 import './carnet.css';
 
 // ───── Types du carnet (GET /api/carnets, /api/carnets/{id}) ─────
@@ -185,6 +188,8 @@ function CarnetDetail({ id, live, onChanged }: { id: string; live: boolean; onCh
         </div>
       </section>
 
+      <BilanCarnet id={id} live={live} />
+
       <div className="layout-carnet-detail">
         <section className="card">
           <div className="card-head">
@@ -258,5 +263,148 @@ function CarnetDetail({ id, live, onChanged }: { id: string; live: boolean; onCh
         </div>
       </div>
     </div>
+  );
+}
+
+// ───── Bilan par tour (GET /api/carnets/{id}/bilan) ─────
+interface BilanTour { lap: number; time?: number | null; pit: boolean; valid: boolean; fuel?: number | null; energy?: number | null; wearDelta?: number[] | null }
+interface Moyenne { relais: number; gomme?: string | null; premier: number; dernier: number; comptes: number; temps?: number | null; essence?: number | null; energie?: number | null; usure?: number[] | null }
+interface Bilan { tours: BilanTour[]; exclus: number[]; relais: Moyenne[]; course?: Moyenne | null }
+
+type Valeurs = (number | null | undefined)[];
+interface Rubrique { id: string; label: string; cols: string[]; tour: (t: BilanTour) => Valeurs; moyenne: (m: Moyenne) => Valeurs; fmt: (v: number) => string; axe: (v: number) => string; note?: string }
+
+const QUATRE: Valeurs = [null, null, null, null];
+const RUBRIQUES: Rubrique[] = [
+  { id: 'temps', label: 'Temps au tour', cols: ['Temps'], tour: (t) => [t.time], moyenne: (m) => [m.temps], fmt: lapTime, axe: (v) => lapTime(v).replace(/\.\d+$/, (x) => x.slice(0, 2)) },
+  { id: 'essence', label: 'Essence', cols: ['Essence'], tour: (t) => [t.fuel], moyenne: (m) => [m.essence], fmt: (v) => `${v.toFixed(2)} L`, axe: (v) => v.toFixed(2) },
+  { id: 'energie', label: 'Énergie virtuelle', cols: ['Énergie'], tour: (t) => [t.energy], moyenne: (m) => [m.energie], fmt: (v) => `${v.toFixed(2)} %`, axe: (v) => v.toFixed(2) },
+  { id: 'pneus', label: 'Pneus (usure)', cols: WHEELS.map((w) => WHEEL_SHORT[w]), tour: (t) => t.wearDelta ?? QUATRE, moyenne: (m) => m.usure ?? QUATRE, fmt: (v) => v.toFixed(2), axe: (v) => v.toFixed(2),
+    // Unité dite une fois : avec « % » dans chaque case, les quatre roues ne tiennent pas sur un téléphone.
+    note: 'Usure prise à chaque tour, en points de pourcentage.' },
+];
+const COULEURS = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)'];
+const valeur = (v: number | null | undefined, fmt: (v: number) => string) => (v == null || !isFinite(v) ? '—' : fmt(v));
+
+/** Bilan d'une session par catégorie : chaque tour, moyenne par relais et de la course ; un tour décoché sort des moyennes. */
+function BilanCarnet({ id, live }: { id: string; live: boolean }) {
+  const url = `/api/carnets/${encodeURIComponent(id)}/bilan`;
+  const { data, reload } = usePoll<Bilan>(url, live ? 5000 : 60000);
+  const [choix, setChoix] = useState(() => readPref('smhub-carnet-bilan', 'temps'));
+  const [envoi, setEnvoi] = useState<number | null>(null);
+  const disponible = (x: Rubrique) => data?.tours.some((t) => x.tour(t).some((v) => v != null)) ?? false;
+  const r = RUBRIQUES.find((x) => x.id === choix && disponible(x)) ?? RUBRIQUES[0];
+  const exclus = useMemo(() => new Set(data?.exclus), [data]);
+  const series = useMemo<Series[]>(() => r.cols.map((c, i) => ({
+    id: c, label: c, color: COULEURS[i],
+    points: (data?.tours ?? []).map((t) => ({ x: t.lap, y: exclus.has(t.lap) ? null : r.tour(t)[i] ?? null })),
+  })), [data, r, exclus]);
+
+  if (!data) return null;
+  const choisir = (x: string) => { setChoix(x); writePref('smhub-carnet-bilan', x); };
+  const compter = async (tour: number, compte: boolean) => {
+    setEnvoi(tour);
+    await api(`${url}/tours`, { method: 'POST', body: JSON.stringify({ tour, compte }) }).catch(() => undefined);
+    setEnvoi(null);
+    reload();
+  };
+  const relaisDe = (lap: number) => data.relais.find((m) => lap >= m.premier && lap <= m.dernier)?.relais;
+  const tempsSeuls = data.tours.length > 0 && !data.tours.some((t) => t.fuel != null || t.energy != null || t.wearDelta != null);
+  const moyenneCourse = data.course && r.cols.length === 1 ? r.moyenne(data.course)[0] : null;
+
+  return (
+    <section className="card">
+      <div className="card-head">
+        <span className="card-title">Bilan par tour</span>
+        <span className="muted">chaque tour, moyenne par relais et sur la course</span>
+      </div>
+      <div className="card-toolbar row">
+        {RUBRIQUES.map((x) => (
+          <button key={x.id} className={`chip ${x.id === r.id ? 'on' : ''}`} onClick={() => choisir(x.id)} disabled={!disponible(x)}>{x.label}</button>
+        ))}
+      </div>
+      <div className="card-body stack-sm">
+        {data.tours.length === 0 ? (
+          <div className="muted small">Aucun tour enregistré dans ce carnet.</div>
+        ) : (
+          <>
+            {tempsSeuls && <div className="muted small">Ce carnet ne contient que les temps au tour : l'essence, l'énergie et l'usure par tour sont enregistrées à partir de cette version.</div>}
+            <LineChart
+              series={series}
+              height={200}
+              xFormat={lapTick}
+              xTitle={(x) => `Tour ${Math.round(x)}`}
+              yFormat={r.axe}
+              valueFormat={r.fmt}
+              refLines={[
+                ...data.relais.slice(1).map((m) => ({ x: m.premier - 0.5 })),
+                ...(moyenneCourse != null ? [{ y: moyenneCourse, label: 'moyenne' }] : []),
+              ]}
+              ariaLabel={`${r.label} à chaque tour`}
+              emptyText="Pas assez de tours comptés pour tracer la courbe."
+              footer={<div className="chart-note muted">Traits verticaux : arrêts au stand. Les tours exclus n'apparaissent pas.{r.note ? ` ${r.note}` : ''}</div>}
+            />
+            <div className="bilan-scroll">
+              <table className="mini-table">
+                <thead>
+                  <tr>
+                    <th>Relais</th><th className="hide-xs">Tours</th><th className="r">Comptés</th>
+                    {r.cols.map((c) => <th key={c} className="r">{r.cols.length > 1 ? c : 'Moyenne'}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.relais.map((m) => (
+                    <tr key={m.relais}>
+                      <td><span className="row nowrap">{m.relais}<TyreBadge compound={m.gomme ?? null} /></span></td>
+                      <td className="tnum hide-xs">T{m.premier} → T{m.dernier}</td>
+                      <td className="r tnum">{m.comptes}</td>
+                      {r.moyenne(m).map((v, i) => <td key={i} className="r tnum">{valeur(v, r.fmt)}</td>)}
+                    </tr>
+                  ))}
+                  {data.course && (
+                    <tr className="bilan-course">
+                      <td>Course</td>
+                      <td className="tnum hide-xs">T{data.course.premier} → T{data.course.dernier}</td>
+                      <td className="r tnum">{data.course.comptes}</td>
+                      {r.moyenne(data.course).map((v, i) => <td key={i} className="r tnum">{valeur(v, r.fmt)}</td>)}
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="muted small">
+              Exclus d'office : les tours au stand (l'arrêt et le ravitaillement faussent temps et consommation) et les tours invalides
+              à plus de 2 % du rythme médian. Décochez un tour pour le retirer des moyennes (accident, safety car…), cochez-le pour l'y remettre :
+              le choix est enregistré dans le carnet.
+            </div>
+            <div className="bilan-scroll bilan-tours">
+              <table className="mini-table">
+                <thead>
+                  <tr>
+                    <th>Compté</th><th>Tour</th><th className="hide-xs">Relais</th>
+                    {r.cols.map((c) => <th key={c} className="r">{c}</th>)}
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.tours.map((t) => (
+                    <tr key={t.lap} className={exclus.has(t.lap) ? 'bilan-exclu' : ''}>
+                      <td>
+                        <input type="checkbox" className="bilan-case" checked={!exclus.has(t.lap)} disabled={envoi === t.lap}
+                          onChange={(e) => compter(t.lap, e.target.checked)} aria-label={`Compter le tour ${t.lap} dans les moyennes`} />
+                      </td>
+                      <td className="tnum">{t.lap}</td>
+                      <td className="tnum hide-xs">{relaisDe(t.lap)}</td>
+                      {r.tour(t).map((v, i) => <td key={i} className="r tnum">{valeur(v, r.fmt)}</td>)}
+                      <td className="muted">{[t.pit && 'stand', !t.valid && 'invalide'].filter(Boolean).join(' · ')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
   );
 }

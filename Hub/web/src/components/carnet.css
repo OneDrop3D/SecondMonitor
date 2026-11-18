@@ -44,6 +44,15 @@
 .cat-dot.cat-setup { background: var(--series-7); }
 .cat-dot.cat-info { background: var(--text-muted); }
 
+/* Bilan par tour : tableaux qui défilent sur petit écran plutôt que la page ; tours exclus estompés et barrés. */
+.bilan-scroll { overflow-x: auto; }
+.bilan-tours { max-height: 380px; overflow-y: auto; }
+.bilan-tours thead th { position: sticky; top: 0; background: var(--surface-1); z-index: 1; }
+.mini-table tr.bilan-exclu td { color: var(--text-muted); }
+.mini-table tr.bilan-exclu td.r { text-decoration: line-through; }
+.mini-table tr.bilan-course td { font-weight: 650; border-top: 1px solid var(--border-strong); }
+.bilan-case { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+
 .decision-yes { color: var(--good); }
 .decision-no { color: var(--critical); }
 .decision-meh { color: var(--warning); }

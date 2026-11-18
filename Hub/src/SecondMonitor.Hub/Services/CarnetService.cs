@@ -123,6 +123,32 @@ public sealed class CarnetService : BackgroundService
         return c;
     }
 
+    public CarnetBilan? Bilan(string id) => Get(id) is { } c ? CarnetBuilder.Bilan(c) : null;
+
+    /// <summary>Le pilote compte ou retire un tour des moyennes du bilan ; le choix est enregistré dans le carnet.</summary>
+    public CarnetBilan? CompterTour(string id, int tour, bool compte)
+    {
+        lock (_lock)
+        {
+            if (_current != null && _current.Id == id)
+            {
+                CarnetBuilder.CompterTour(_current, tour, compte);
+                Save(_current);
+                return CarnetBuilder.Bilan(_current);
+            }
+        }
+
+        CarnetSession? c = Store.Load(id);
+        if (c == null)
+        {
+            return null;
+        }
+
+        CarnetBuilder.CompterTour(c, tour, compte);
+        Store.Save(c);
+        return CarnetBuilder.Bilan(c);
+    }
+
     public bool Delete(string id)
     {
         lock (_lock)

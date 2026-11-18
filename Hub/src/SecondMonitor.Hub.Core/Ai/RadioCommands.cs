@@ -212,7 +212,7 @@ namespace SecondMonitor.Hub.Core.Ai
                 return false;
             }
 
-            if (Regex.IsMatch(t, @"\b(oui|ouais|ok|okay|d accord|affirmatif|ca va|ca tient|on y va|vas y|go|on peut|on continue|on tente|on allonge|aucun probleme|pas de probleme|ils sont bons|elles sont bonnes|nickel|ca passe)\b"))
+            if (Regex.IsMatch(t, @"\b(oui|ouais|ok|okay|d accord|affirmatif|ca va|ca tient|on y va|vas y|go|on peut|on continue|on tente|on allonge|on le fait(?! pas)|aucun probleme|pas de probleme|ils sont bons|elles sont bonnes|nickel|ca passe)\b"))
             {
                 return true;
             }
