@@ -392,6 +392,15 @@ table.lb { width: 100%; border-collapse: collapse; font-variant-numeric: tabular
 .legend-line.dashed { border-top-style: dashed; }
 .legend-band { display: inline-block; width: 14px; height: 10px; background: var(--band); border-radius: 2px; }
 .chart-note { font-size: 12px; margin-top: 6px; }
+.chart-means { margin-top: 6px; font-size: 12px; }
+.pedal-throttle { color: var(--good); }
+.pedal-brake { color: var(--critical); }
+.debrief-stint { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid var(--border); }
+.debrief-stint-btn { flex: none; min-width: 110px; justify-content: center; }
+.zoom-bar { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.zoom-track { position: relative; flex: 1; height: 10px; border-radius: 5px; background: var(--surface-2); cursor: pointer; touch-action: none; }
+.zoom-thumb { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: var(--border-strong); cursor: grab; }
+.zoom-bar .chip.tiny { flex: none; }
 .chart-box { min-width: 0; }
 .chart-title { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
 .tooltip {
@@ -943,3 +952,11 @@ details.cx-log > summary { cursor: pointer; list-style: none; }
 .rplan-shift.base { outline: 1px solid var(--border-strong); }
 .rplan-shift .small { overflow-wrap: anywhere; }
 .rplan-summary { font-size: 12px; padding: 2px 0 6px; }
+
+/* ───── Préparer la course ───── */
+.prep-source { flex-wrap: wrap; gap: 8px; }
+.prep-source .select { flex: 1 1 260px; }
+.prep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0 14px; }
+.prep-field { margin-bottom: 8px; }
+.prep-summary { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; }
+.prep-table td, .prep-table th { white-space: nowrap; }

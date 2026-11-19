@@ -93,7 +93,8 @@ namespace SecondMonitor.Hub.Core.Strategy
             plan.WindowEarliest = me.Laps + Math.Min(earliest, latest);
             plan.WindowLatest = me.Laps + latest;
             // Arrêt décidé avec le pilote (« au tour 21 ») s'il est dans la fenêtre, sinon l'arrêt conseillé, sinon le plus tard possible.
-            int? wanted = context?.PlannedStopLap is int decided && decided > me.Laps ? decided : p.RecommendedStopLap;
+            // Puis l'arrêt du plan préparé avant la course (même circuit), puis l'arrêt conseillé.
+            int? wanted = context?.PlannedStopLap is int decided && decided > me.Laps ? decided : context?.Prepared?.NextStop(snap.Track?.Name, me.Laps) ?? p.RecommendedStopLap;
             // Relais allongé à la radio en économisant (« deux tours de plus ») : l'arrêt décidé, même après la fenêtre, et les arrêts qui en découlent.
             bool stretched = context?.StretchLap is int st && st == context.PlannedStopLap && st > plan.WindowLatest;
             int chosen = stretched ? context.StretchLap.Value - me.Laps : wanted is int rec && rec >= plan.WindowEarliest && rec <= plan.WindowLatest ? rec - me.Laps : latest;
@@ -339,6 +340,9 @@ namespace SecondMonitor.Hub.Core.Strategy
         public LiftCoastMeasure LiftCoast { get; set; }
 
         public int? PlannedStopLap { get; set; }
+
+        /// <summary>Plan préparé avant la course : son prochain arrêt sert quand rien n'a été décidé à la radio.</summary>
+        public SecondMonitor.Hub.Core.Ai.PreparedPlan Prepared { get; set; }
 
         /// <summary>Arrêt repoussé à la radio en économisant d'ici là : gardé même après la fenêtre.</summary>
         public int? StretchLap { get; set; }

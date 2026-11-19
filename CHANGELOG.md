@@ -3,6 +3,15 @@
 SecondMonitor (l'application qui affiche) et SecondMonitor Collecteur (PC de jeu), pour Windows, Mac et Linux/SteamOS.
 Basé sur [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) de winzarten (licence MIT).
 
+## Version 0.7.7
+
+- **Analyse de course** (nouvel écran, marche sans le PC de jeu) : choisissez une course enregistrée, puis des tours, un ou plusieurs relais ; affichez la moyenne par relais, la moyenne de tous les tours choisis, ou comparez jusqu'à 6 tours. Vitesse, écart cumulé, accélérateur et frein, rapports et régime le long du tour, avec un tableau temps moyen, Vmax, essence, énergie et usure de chaque pneu, puis le bilan par tour du carnet. Les tracés de chaque tour sont désormais gardés avec la course (les sessions plus anciennes n'ont que le bilan). Depuis l'écran d'attente, « Analyser une course passée » y mène directement.
+- **Préparer la course** (nouvel écran, marche sans le PC de jeu) : durée ou nombre de tours, temps au tour, essence, énergie, réservoir, temps au stand et vie des pneus (repris en un clic des moyennes d'une course passée) donnent le plan d'arrêts relais par relais (tour d'arrêt, essence et énergie à remettre, ratio, pneus, temps immobile), et les variantes un arrêt de moins / de plus. « Garder ce plan pour la course » : l'ingénieur le connaît en course sur ce circuit et vise ses tours d'arrêt tant qu'ils restent dans la fenêtre ; ce que vous décidez à la radio passe avant.
+- **Accélérateur en vert, frein en rouge** dans les graphiques de pédales (Mes tours comparés, Analyse de course) ; quand plusieurs tours sont tracés, chacun a son trait (plein, tirets, points).
+- **Zoom et défilement dans tous les graphiques** : glissez sur un graphique pour agrandir une zone, Ctrl/⌘ + molette ou pincement du trackpad pour zoomer, barre sous le graphique (ou glissement à deux doigts) pour défiler, double-clic ou « Tout » pour revenir. Dans Mes tours comparés et Analyse de course, tous les graphiques suivent le même zoom ; la moyenne de chaque courbe sur la partie affichée s'écrit dessous.
+
+---
+
 ## Version 0.7.6
 
 - **Relais rallongé à la voix** : dites « on rallonge le relais de deux tours », « je veux faire deux tours de plus » ou « et si on fait trois tours de moins ? » ; l'ingénieur donne le nouveau tour d'arrêt, la consommation à viser par tour (énergie et essence), dit si c'est jouable (à une question, il demande « On le fait ? » : répondez « oui », « on le fait », « vas-y » ou « ok » pour décider), règle le menu des stands de LMU sur ce nouveau plan, indique où lever le pied (virages, distance avant le freinage, d'après votre essai de lift and coast ou en estimation) et vous dit à chaque tour si vous êtes dans la cible.

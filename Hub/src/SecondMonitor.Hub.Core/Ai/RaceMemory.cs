@@ -20,6 +20,9 @@ namespace SecondMonitor.Hub.Core.Ai
         /// <summary>Arrêt décidé avec le pilote (remplace l'arrêt conseillé tant qu'il n'est pas passé).</summary>
         public int? PlannedStopLap { get; set; }
 
+        /// <summary>Plan préparé avant la course (preparation.json) : gardé d'une session à l'autre, jamais effacé par <see cref="Clear"/>.</summary>
+        public PreparedPlan Prepared { get; set; }
+
         /// <summary>Ce que le pilote a demandé pour le prochain arrêt (pneus, réparation, carburant).</summary>
         public PitOrder PitPlan { get; set; }
 
@@ -213,16 +216,22 @@ namespace SecondMonitor.Hub.Core.Ai
         }
 
         /// <summary>Texte ajouté à la fiche de faits de l'IA.</summary>
-        public string Facts()
+        public string Facts(string track = null)
         {
             List<MemoryEntry> list = Entries.TakeLast(12).ToList();
             string decisions = Thread.Facts();
-            if (list.Count == 0 && PlannedStopLap == null && !NoStopPlanned && decisions == null)
+            string prepared = track != null && Prepared?.Matches(track) == true ? Prepared.Fact() : null;
+            if (list.Count == 0 && PlannedStopLap == null && !NoStopPlanned && decisions == null && prepared == null)
             {
                 return null;
             }
 
             var sb = new StringBuilder("MÉMOIRE DE LA COURSE (retours du pilote et décisions) :");
+            if (prepared != null)
+            {
+                sb.Append("\n- " + prepared);
+            }
+
             if (NoStopPlanned)
             {
                 sb.Append("\n- Décision avec le pilote : finir sans s'arrêter.");

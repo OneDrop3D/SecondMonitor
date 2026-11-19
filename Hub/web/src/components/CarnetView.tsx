@@ -59,8 +59,8 @@ export function CategoryPill({ category }: { category: string }) {
 }
 
 const SESSION: Record<string, string> = { Race: 'Course', Qualification: 'Qualification', Practice: 'Essais', WarmUp: 'Warm-up' };
-const sessionName = (t?: string | null) => (t && SESSION[t]) || 'Session';
-const dateTime = (s: string) => new Date(s).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+export const sessionName = (t?: string | null) => (t && SESSION[t]) || 'Session';
+export const dateTime = (s: string) => new Date(s).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const time = (s: string) => new Date(s).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
 
@@ -287,7 +287,7 @@ const COULEURS = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(
 const valeur = (v: number | null | undefined, fmt: (v: number) => string) => (v == null || !isFinite(v) ? '—' : fmt(v));
 
 /** Bilan d'une session par catégorie : chaque tour, moyenne par relais et de la course ; un tour décoché sort des moyennes. */
-function BilanCarnet({ id, live }: { id: string; live: boolean }) {
+export function BilanCarnet({ id, live }: { id: string; live: boolean }) {
   const url = `/api/carnets/${encodeURIComponent(id)}/bilan`;
   const { data, reload } = usePoll<Bilan>(url, live ? 5000 : 60000);
   const [choix, setChoix] = useState(() => readPref('smhub-carnet-bilan', 'temps'));

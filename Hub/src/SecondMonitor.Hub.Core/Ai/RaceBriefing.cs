@@ -377,7 +377,7 @@ namespace SecondMonitor.Hub.Core.Ai
             string carFacts = CarContext.From(snap, extras.WetThresholdPct).Describe();
             sb.AppendLine("- " + carFacts);
 
-            string memory = extras.Memory?.Facts();
+            string memory = extras.Memory?.Facts(snap.SessionType == "Race" ? snap.Track?.Name : null);
             if (memory != null)
             {
                 sb.AppendLine().AppendLine(memory);

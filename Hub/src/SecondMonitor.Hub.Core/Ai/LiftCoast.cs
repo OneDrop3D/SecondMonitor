@@ -603,7 +603,7 @@ namespace SecondMonitor.Hub.Core.Ai
             : o.FuelSavingPerLap is double f ? $"{N(f, 2)} L" : $"{N(o.SavingPct, 0)} %";
 
         public static PlanContext Context(RaceMemory memory, LiftCoastMeasure measure = null) =>
-            new() { LiftCoast = measure ?? memory?.LiftCoast?.Measure, PlannedStopLap = memory?.PlannedStopLap, StretchLap = memory?.LiftCoast?.UntilLap };
+            new() { LiftCoast = measure ?? memory?.LiftCoast?.Measure, PlannedStopLap = memory?.PlannedStopLap, Prepared = memory?.Prepared, StretchLap = memory?.LiftCoast?.UntilLap };
 
         public static string Stops(int n) => n switch
         {

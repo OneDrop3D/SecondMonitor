@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { niceTicks, useWidth } from './useSize';
 
 export interface Point { x: number; y: number | null }
@@ -17,7 +17,13 @@ export interface Series {
   companion?: boolean;
   /** Valeurs en paliers (rapport engagé) : pas de pente entre deux points. */
   step?: boolean;
+  /** Motif de pointillés propre (ex. « 2 3 ») : distingue des tours de même couleur. */
+  dash?: string;
+  opacity?: number;
 }
+
+/** Fenêtre zoomée sur l'axe X (null : tout). */
+export type XZoom = [number, number] | null;
 
 interface Props {
   series: Series[];
@@ -46,6 +52,11 @@ interface Props {
   onHoverX?: (x: number | null) => void;
   /** Graduations imposées sur l'axe Y (ex. rapports 1 à 7). */
   yTicks?: number[];
+  /** Zoom partagé entre plusieurs graphiques (même axe X) ; sans ces deux props, chaque graphique a le sien. */
+  zoom?: XZoom;
+  onZoom?: (z: XZoom) => void;
+  /** Moyenne de chaque courbe sur la partie affichée, sous le graphique. */
+  means?: boolean;
 }
 
 const M = { l: 54, r: 14, t: 10, b: 26 };
@@ -54,8 +65,26 @@ const M = { l: 54, r: 14, t: 10, b: 26 };
  * Graphique en courbes : un seul axe Y, réticule + infobulle au survol, légende dès 2 séries,
  * pointillés pour les projections. Dessiné à la largeur réelle du conteneur.
  */
-export function LineChart({ series, height = 240, xFormat = (x) => String(x), yFormat = (y) => String(y), valueFormat, xTitle, yDomain, xDomain, band, refLines, emptyText = 'Pas encore de données.', legend, ariaLabel, footer, dashedLabel = 'projection', hoverX: sharedHoverX, onHoverX, yTicks }: Props) {
+export function LineChart({ series, height = 240, xFormat = (x) => String(x), yFormat = (y) => String(y), valueFormat, xTitle, yDomain, xDomain: baseDomain, band, refLines, emptyText = 'Pas encore de données.', legend, ariaLabel, footer, dashedLabel = 'projection', hoverX: sharedHoverX, onHoverX, yTicks, zoom: sharedZoom, onZoom, means }: Props) {
   const { ref, width } = useWidth<HTMLDivElement>();
+  const [localZoom, setLocalZoom] = useState<XZoom>(null);
+  const zoomShared = onZoom !== undefined;
+  // Étendue entière de l'axe X : la fenêtre imposée (zone du circuit), sinon toutes les données.
+  const full = useMemo<[number, number] | null>(() => {
+    if (baseDomain) return baseDomain;
+    let lo = Infinity, hi = -Infinity;
+    for (const s of series) for (const p of s.points) if (p.y != null) { if (p.x < lo) lo = p.x; if (p.x > hi) hi = p.x; }
+    return hi > lo ? [lo, hi] : null;
+  }, [series, baseDomain]);
+  const rawZoom = zoomShared ? sharedZoom ?? null : localZoom;
+  const zoomed = full && rawZoom ? clampZoom(rawZoom, full) : null;
+  const xDomain = zoomed ?? baseDomain;
+  const setZoom = (z: XZoom) => {
+    const c = z && full ? clampZoom(z, full) : null;
+    const next = c && full && c[1] - c[0] < (full[1] - full[0]) * 0.995 ? c : null;
+    if (zoomShared) onZoom!(next); else setLocalZoom(next);
+  };
+  const [brush, setBrush] = useState<{ a: number; b: number } | null>(null);
   const [localHoverX, setLocalHoverX] = useState<number | null>(null);
   const [pointerInside, setPointerInside] = useState(false);
   const shared = onHoverX !== undefined;
@@ -111,11 +140,76 @@ export function LineChart({ series, height = 240, xFormat = (x) => String(x), yF
     });
   }, [series, scale, xDomain]);
 
+  // Zoom : Ctrl/⌘ + molette ou pincement autour du pointeur ; molette horizontale ou Maj + molette pour défiler.
+  const live = useRef({ scale, full, view: xDomain, setZoom });
+  live.current = { scale, full, view: xDomain, setZoom };
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const zoomAt = (clientX: number, factor: number) => {
+      const { scale: sc, full: f, view, setZoom: set } = live.current;
+      if (!sc || !f) return;
+      const [v0, v1] = view ?? f;
+      const at = sc.x0 + ((clientX - el.getBoundingClientRect().left - M.l) / sc.plotW) * (sc.x1 - sc.x0);
+      const c = Math.min(v1, Math.max(v0, at));
+      set([c - (c - v0) * factor, c + (v1 - c) * factor]);
+    };
+    const onWheel = (e: WheelEvent) => {
+      const { full: f, view, setZoom: set } = live.current;
+      if (!f) return;
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        zoomAt(e.clientX, Math.exp(Math.max(-0.5, Math.min(0.5, e.deltaY * 0.01))));
+        return;
+      }
+      const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.shiftKey ? e.deltaY : 0;
+      if (!view || dx === 0 || view === f) return; // pas zoomé : la page défile normalement
+      e.preventDefault();
+      const shift = (dx / Math.max(60, el.clientWidth)) * (view[1] - view[0]);
+      set([view[0] + shift, view[1] + shift]);
+    };
+    // Safari et la fenêtre Mac : le pincement du trackpad arrive en « gesture ».
+    let g0 = 1;
+    const onGestureStart = (e: Event) => { e.preventDefault(); g0 = 1; };
+    const onGestureChange = (e: Event) => {
+      e.preventDefault();
+      const ge = e as Event & { scale: number; clientX: number };
+      zoomAt(ge.clientX, g0 / ge.scale);
+      g0 = ge.scale;
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('gesturestart', onGestureStart);
+    el.addEventListener('gesturechange', onGestureChange);
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('gesturestart', onGestureStart);
+      el.removeEventListener('gesturechange', onGestureChange);
+    };
+  }, [ref]);
+
+  const xAtPointer = (e: React.PointerEvent<Element>) => {
+    if (!scale) return null;
+    const rect = e.currentTarget.getBoundingClientRect();
+    return scale.x0 + ((e.clientX - rect.left - M.l) / scale.plotW) * (scale.x1 - scale.x0);
+  };
+  // Glisser sur le graphique : la zone choisie est agrandie.
+  const onDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    const x = xAtPointer(e);
+    if (x == null || e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setBrush({ a: x, b: x });
+  };
+  const onUp = () => {
+    if (!brush || !scale) { setBrush(null); return; }
+    const lo = Math.min(brush.a, brush.b), hi = Math.max(brush.a, brush.b);
+    setBrush(null);
+    if (((hi - lo) / (scale.x1 - scale.x0)) * scale.plotW >= 8) setZoom([lo, hi]);
+  };
+
   const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
     if (!scale || scale.allX.length === 0) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const px = e.clientX - rect.left;
-    const xVal = scale.x0 + ((px - M.l) / scale.plotW) * (scale.x1 - scale.x0);
+    const xVal = xAtPointer(e)!;
+    if (brush) setBrush({ a: brush.a, b: xVal });
     setPointerInside(true);
     let lo = 0, hi = scale.allX.length - 1;
     while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (scale.allX[mid] < xVal) lo = mid; else hi = mid; }
@@ -141,7 +235,7 @@ export function LineChart({ series, height = 240, xFormat = (x) => String(x), yF
         <div className="legend chart-legend">
           {series.filter((s) => !s.companion).map((s) => (
             <span key={s.id} className="legend-item">
-              <span className={`legend-line ${s.dashed ? 'dashed' : ''}`} style={{ borderColor: s.color }} />
+              <span className={`legend-line ${s.dashed || s.dash ? 'dashed' : ''}`} style={{ borderColor: s.color, opacity: s.opacity }} />
               {s.label}
             </span>
           ))}
@@ -155,7 +249,7 @@ export function LineChart({ series, height = 240, xFormat = (x) => String(x), yF
         {!scale ? (
           <div className="chart-empty" style={{ height: Math.min(H, 160) }}>{emptyText}</div>
         ) : (
-          <svg width={width} height={H} role="img" aria-label={ariaLabel} onPointerMove={onMove} onPointerLeave={() => { setPointerInside(false); setHoverX(null); }} style={{ touchAction: 'pan-y' }}>
+          <svg width={width} height={H} role="img" aria-label={ariaLabel} onPointerMove={onMove} onPointerDown={onDown} onPointerUp={onUp} onPointerCancel={() => setBrush(null)} onDoubleClick={() => setZoom(null)} onPointerLeave={() => { setPointerInside(false); setHoverX(null); }} style={{ touchAction: 'pan-y', cursor: brush ? 'col-resize' : 'crosshair' }}>
             <defs>
               <clipPath id={clipId}><rect x={M.l} y={0} width={scale.plotW} height={H - M.b} /></clipPath>
             </defs>
@@ -185,12 +279,15 @@ export function LineChart({ series, height = 240, xFormat = (x) => String(x), yF
             ) : null)}
             <g clipPath={`url(#${clipId})`}>
               {paths.map(({ s, d }) => (
-                <path key={s.id} d={d} fill="none" stroke={s.color} strokeWidth={s.width ?? 2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray={s.dashed ? '5 4' : undefined} opacity={s.companion ? 0.85 : 1} />
+                <path key={s.id} d={d} fill="none" stroke={s.color} strokeWidth={s.width ?? 2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray={s.dash ?? (s.dashed ? '5 4' : undefined)} opacity={s.opacity ?? (s.companion ? 0.85 : 1)} />
               ))}
               {series.flatMap((s) => (s.markers ?? []).filter((m) => isFinite(m.y) && isFinite(m.x)).map((m, i) => (
                 <circle key={`${s.id}m${i}`} cx={scale.sx(m.x)} cy={scale.sy(m.y)} r={4.5} fill={s.color} stroke="var(--surface-1)" strokeWidth={2}><title>{m.title}</title></circle>
               )))}
             </g>
+            {brush && (
+              <rect pointerEvents="none" x={scale.sx(Math.min(brush.a, brush.b))} y={M.t} width={Math.abs(scale.sx(brush.b) - scale.sx(brush.a))} height={scale.plotH} fill="var(--text-muted)" opacity={0.15} />
+            )}
             {hover && (
               <g pointerEvents="none">
                 <line x1={scale.sx(hover.x)} x2={scale.sx(hover.x)} y1={M.t} y2={M.t + scale.plotH} stroke="var(--text-muted)" />
@@ -213,8 +310,63 @@ export function LineChart({ series, height = 240, xFormat = (x) => String(x), yF
             ))}
           </div>
         )}
+        {zoomed && full && scale && <ZoomBar full={full} view={zoomed} left={M.l} width={scale.plotW} onChange={setZoom} />}
       </div>
+      {means && scale && <Means series={series} domain={[scale.x0, scale.x1]} format={fmtValue} />}
       {footer}
+    </div>
+  );
+}
+
+function clampZoom([a, b]: [number, number], [f0, f1]: [number, number]): [number, number] {
+  const minSpan = (f1 - f0) / 400;
+  let lo = Math.min(a, b), hi = Math.max(a, b);
+  if (hi - lo < minSpan) { const c = (lo + hi) / 2; lo = c - minSpan / 2; hi = c + minSpan / 2; }
+  const span = Math.min(hi - lo, f1 - f0);
+  lo = Math.min(Math.max(lo, f0), f1 - span);
+  return [lo, lo + span];
+}
+
+/** Barre de défilement sous un graphique zoomé : glisser la poignée, cliquer ailleurs pour y aller, « Tout » pour revenir. */
+function ZoomBar({ full: [f0, f1], view: [v0, v1], left, width, onChange }: { full: [number, number]; view: [number, number]; left: number; width: number; onChange: (z: XZoom) => void }) {
+  const drag = useRef<{ x: number; v0: number; k: number } | null>(null);
+  const span = v1 - v0;
+  const pct = (v: number) => `${(v / (f1 - f0)) * 100}%`;
+  return (
+    <div className="zoom-bar" style={{ marginLeft: left, width }}>
+      <div className="zoom-track"
+        onPointerDown={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const k = rect.width / (f1 - f0);
+          const at = f0 + (e.clientX - rect.left) / k;
+          const start = at < v0 || at > v1 ? at - span / 2 : v0;
+          if (start !== v0) onChange([start, start + span]);
+          drag.current = { x: e.clientX, v0: start, k };
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={(e) => { const d = drag.current; if (d) { const s0 = d.v0 + (e.clientX - d.x) / d.k; onChange([s0, s0 + span]); } }}
+        onPointerUp={() => { drag.current = null; }}>
+        <div className="zoom-thumb" style={{ left: pct(v0 - f0), width: pct(span), minWidth: 12 }} />
+      </div>
+      <button className="chip tiny" onClick={() => onChange(null)} title="Revenir à la vue entière (ou double-clic sur le graphique)">Tout</button>
+    </div>
+  );
+}
+
+/** Moyenne de chaque courbe sur la partie affichée (le zoom compris). */
+function Means({ series, domain: [x0, x1], format }: { series: Series[]; domain: [number, number]; format: (y: number) => string }) {
+  const rows = series.filter((s) => !s.companion).map((s) => {
+    let sum = 0, n = 0;
+    for (const p of s.points) if (p.y != null && isFinite(p.y) && p.x >= x0 && p.x <= x1) { sum += p.y; n++; }
+    return n ? { s, v: sum / n } : null;
+  }).filter((r): r is { s: Series; v: number } => r != null);
+  if (rows.length === 0) return null;
+  return (
+    <div className="legend chart-means" aria-label="Moyennes sur la partie affichée">
+      <span className="muted">Moyenne affichée :</span>
+      {rows.map(({ s, v }) => (
+        <span key={s.id} className="legend-item"><span className={`legend-line ${s.dashed || s.dash ? 'dashed' : ''}`} style={{ borderColor: s.color }} />{rows.length > 1 ? `${s.label} ` : ''}<b className="tnum">{format(v)}</b></span>
+      ))}
     </div>
   );
 }

@@ -100,6 +100,8 @@ builder.WebHost.ConfigureKestrel(k =>
 builder.Services.AddSingleton(settings);
 var raceEngine = new RaceEngine(dataDir) { ThermalProfiles = () => settings.Current.ThermalProfiles };
 var raceMemory = new SecondMonitor.Hub.Core.Ai.RaceMemory();
+string preparationPath = Path.Combine(dataDir, "preparation.json");
+raceMemory.Prepared = SecondMonitor.Hub.Core.Ai.PreparedPlan.Load(preparationPath); // plan préparé avant la course (écran « Préparer la course »)
 // Reprise de course : la sauvegarde est proposée au moteur avant la première donnée du jeu (SessionResumeService).
 var raceResume = new RaceResumeKeeper(raceEngine, raceMemory, new RaceResumeStore(Path.Combine(dataDir, "reprise", "session.json")), () => settings.Current.ResumeSession);
 raceResume.Resumed += s => HubJournal.Write(dataDir, "reprise", $"Course reprise après le redémarrage : {s.Track} ({s.SessionType}), {s.Summary()}, {s.Drivers.Count} pilotes, sauvegarde de {s.SavedAtUtc.ToLocalTime():HH:mm:ss}{(s.CarnetId != null ? $", carnet {s.CarnetId}" : string.Empty)}");
@@ -296,6 +298,26 @@ app.MapPost("/api/quit", (IHostApplicationLifetime life, HttpContext ctx) =>
     }
 
     _ = Task.Run(async () => { await Task.Delay(300); life.StopApplication(); AppWindow.Close(); });
+    return Results.Ok();
+});
+// ───── Préparer la course : plan gardé pour la course (l'ingénieur s'en sert tant que rien n'est décidé à la radio) ─────
+app.MapGet("/api/preparation", (SecondMonitor.Hub.Core.Ai.RaceMemory memory) => memory.Prepared is { } p ? Results.Json(p, LiveHub.Json) : Results.NoContent());
+app.MapPut("/api/preparation", (SecondMonitor.Hub.Core.Ai.RaceMemory memory, SecondMonitor.Hub.Core.Ai.PreparedPlan plan) =>
+{
+    var clean = SecondMonitor.Hub.Core.Ai.PreparedPlan.Sanitize(plan);
+    if (clean == null)
+    {
+        return Results.BadRequest();
+    }
+
+    SecondMonitor.Hub.Core.Ai.PreparedPlan.Save(preparationPath, clean);
+    memory.Prepared = clean;
+    return Results.Json(clean, LiveHub.Json);
+});
+app.MapDelete("/api/preparation", (SecondMonitor.Hub.Core.Ai.RaceMemory memory) =>
+{
+    SecondMonitor.Hub.Core.Ai.PreparedPlan.Save(preparationPath, null);
+    memory.Prepared = null;
     return Results.Ok();
 });
 // ───── Fenêtres de l'application (une par écran : AppWindow.cs) ─────

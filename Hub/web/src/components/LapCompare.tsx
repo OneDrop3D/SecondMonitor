@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePoll } from '../live';
 import { delta, kph, lapTime } from '../format';
 import type { CarControls, LapComparison, LapDetail, RaceSnapshot, ShiftPoint, TrackSegment } from '../types';
-import { LineChart, type Series } from '../charts/LineChart';
+import { LineChart, type Series, type XZoom } from '../charts/LineChart';
+import { pedalSeries } from '../charts/pedals';
 import { useStoredState } from '../prefs';
 import { distanceLabel, zoneAt } from '../track';
 import { TyreBadge } from './Common';
@@ -48,6 +49,8 @@ export function LapCompare({ snapshot, segments }: { snapshot: RaceSnapshot; seg
   const live = tokens.includes('current');
   const { data } = usePoll<LapComparison>(`/api/analysis/lapcompare?laps=${encodeURIComponent(tokens.join(','))}`, live ? 2000 : 5000);
   const [hoverX, setHoverX] = useState<number | null>(null);
+  const [zoom, setZoom] = useState<XZoom>(null);
+  useEffect(() => setZoom(null), [prefs.zone]);
 
   const laps = data?.laps ?? [];
   const traces = data?.traces ?? [];
@@ -93,10 +96,7 @@ export function LapCompare({ snapshot, segments }: { snapshot: RaceSnapshot; seg
       points: t.gear.map((g, j) => ({ x: x(j), y: g != null && g >= 1 ? g : null })),
       markers: t.shifts.map((s) => ({ x: s.distance, y: s.to, title: `T${t.lap} : ${s.from} → ${s.to} à ${distanceLabel(s.distance)}, ${kph(s.speed)}, ${s.to > s.from ? s.rpmBefore : s.rpmAfter} tr/min` })),
     }));
-    const pedals: Series[] = traces.flatMap((t, i) => [
-      { id: `t${t.lap}`, label: `${label(t)} accélérateur`, color: COLORS[i], width: 1.6, points: t.throttle.map((v, j) => ({ x: x(j), y: v })) },
-      { id: `b${t.lap}`, label: `${label(t)} frein`, color: COLORS[i], width: 1.6, dashed: true, points: t.brake.map((v, j) => ({ x: x(j), y: v })) },
-    ]);
+    const pedals = pedalSeries(traces.map((t) => ({ id: String(t.lap), label: `T${t.lap}`, throttle: t.throttle, brake: t.brake })), x);
     const rpm: Series[] = traces.map((t, i) => ({ id: `r${t.lap}`, label: label(t), color: COLORS[i], width: 1.4, points: t.rpm.map((v, j) => ({ x: x(j), y: v && v > 0 ? v : null })) }));
     return { speed, gaps, gears, pedals, rpm, hasGaps: gaps.some((s) => s.points.some((p) => p.y != null)), hasGears: gears.some((s) => s.points.some((p) => p.y != null)), hasRpm: rpm.some((s) => s.points.some((p) => p.y != null)) };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -118,7 +118,7 @@ export function LapCompare({ snapshot, segments }: { snapshot: RaceSnapshot; seg
   const corners = segments.filter((s) => s.kind === 'corner');
   const straights = segments.filter((s) => s.kind === 'straight' && s.start < s.end);
   const refLines = corners.map((s) => ({ x: s.apex, label: s.id }));
-  const shared = { hoverX, onHoverX: setHoverX, xDomain, xFormat: (v: number) => distanceLabel(v), xTitle: (v: number) => `${Math.round(v)} m depuis la ligne${zoneAt(segments, v, lapLength) ? ` · ${zoneAt(segments, v, lapLength)!.id}` : ''}` };
+  const shared = { hoverX, onHoverX: setHoverX, zoom, onZoom: setZoom, xDomain, xFormat: (v: number) => distanceLabel(v), xTitle: (v: number) => `${Math.round(v)} m depuis la ligne${zoneAt(segments, v, lapLength) ? ` · ${zoneAt(segments, v, lapLength)!.id}` : ''}` };
 
   const hz = snapshot.dataRate.playerHz;
   const precision = hz > 0 ? Math.round(250 / 3.6 / hz / 2) : null;
@@ -210,7 +210,7 @@ export function LapCompare({ snapshot, segments }: { snapshot: RaceSnapshot; seg
       <section className="card">
         <div className="card-head">
           <span className="card-title">Le long du tour</span>
-          <span className="muted hide-xs">survolez un graphique : le même point s'affiche sur tous</span>
+          <span className="muted hide-xs">survol et zoom communs à tous les graphiques · glisser : agrandir une zone · Ctrl/⌘ + molette ou pincement : zoom · double-clic : tout</span>
         </div>
         <div className="card-body stack-sm">
           <div className="row" role="group" aria-label="Zone affichée">
@@ -227,7 +227,7 @@ export function LapCompare({ snapshot, segments }: { snapshot: RaceSnapshot; seg
             )}
           </div>
           <div className="chart-title">Vitesse</div>
-          <LineChart series={charts.speed} height={260} {...shared} refLines={refLines} yFormat={(y) => `${Math.round(y)}`} valueFormat={(y) => kph(y)} ariaLabel="Vitesse de chaque tour le long du tour" emptyText="Choisissez au moins un tour complet." />
+          <LineChart series={charts.speed} height={260} {...shared} means refLines={refLines} yFormat={(y) => `${Math.round(y)}`} valueFormat={(y) => kph(y)} ariaLabel="Vitesse de chaque tour le long du tour" emptyText="Choisissez au moins un tour complet." />
           {traces.length >= 2 && (
             <>
               <div className="chart-title">Écart cumulé par rapport à T{ref?.lap} <span className="muted small">(au-dessus de 0 : plus lent à cet endroit)</span></div>
@@ -247,8 +247,8 @@ export function LapCompare({ snapshot, segments }: { snapshot: RaceSnapshot; seg
               <LineChart series={charts.gears} height={Math.max(150, 26 * maxGear)} {...shared} legend={false} yTicks={Array.from({ length: maxGear }, (_, i) => i + 1)} yFormat={(y) => String(y)} valueFormat={(y) => `${y}e`} ariaLabel="Rapport engagé le long du tour" />
             </>
           )}
-          <div className="chart-title">Accélérateur et frein <span className="muted small">(trait plein : accélérateur · pointillés : frein)</span></div>
-          <LineChart series={charts.pedals} height={170} {...shared} legend={false} dashedLabel={null} yDomain={[0, 100]} yFormat={(y) => `${Math.round(y)}`} valueFormat={(y) => `${Math.round(y)} %`} ariaLabel="Accélérateur et frein le long du tour" />
+          <div className="chart-title">Accélérateur <span className="pedal-throttle">(vert)</span> et frein <span className="pedal-brake">(rouge)</span>{traces.length > 1 && <span className="muted small"> · un trait par tour : T{traces[0].lap} plein, puis tirets, points…</span>}</div>
+          <LineChart series={charts.pedals} height={230} {...shared} legend={traces.length > 1} dashedLabel={null} means yDomain={[0, 100]} yFormat={(y) => `${Math.round(y)}`} valueFormat={(y) => `${Math.round(y)} %`} ariaLabel="Accélérateur et frein le long du tour" />
           {charts.hasRpm && (
             <>
               <div className="chart-title">Régime moteur</div>

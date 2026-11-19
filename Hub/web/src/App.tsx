@@ -28,6 +28,8 @@ import { useRaceEvents } from './components/dashboard/raceEvents';
 import { ConnectionView, ConnectionHero } from './components/ConnectionView';
 import { GuideView } from './components/GuideView';
 import { CarnetView } from './components/CarnetView';
+import { DebriefView } from './components/DebriefView';
+import { PrepView } from './components/PrepView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { collectorAddress, linkStage, useHubStatus } from './status';
 import { UpdateBanner } from './components/UpdateBanner';
@@ -35,7 +37,7 @@ import { hasWindowParam, isExtraWindow, readDevicePref, readOwnPref, readPref, w
 import { inAppWindow, openNewWindow } from './windows';
 import { ComputeServerView, ModeChoice } from './components/ComputeServer';
 
-type Tab = 'timing' | 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'ai' | 'carnet' | 'connection' | 'settings';
+type Tab = 'timing' | 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'prep' | 'debrief' | 'ai' | 'carnet' | 'connection' | 'settings';
 
 // Même organisation que SecondMonitor d'origine : le chronométrage d'abord, les autres écrans dans la barre de droite.
 const TABS: { id: Tab; label: string; icon: string }[] = [
@@ -47,6 +49,8 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'car', label: 'Voiture', icon: 'car' },
   { id: 'weather', label: 'Météo', icon: 'weather' },
   { id: 'strategy', label: 'Stratégies', icon: 'strategy' },
+  { id: 'prep', label: 'Préparer la course', icon: 'prep' },
+  { id: 'debrief', label: 'Analyse de course', icon: 'debrief' },
   { id: 'ai', label: 'Ingénieur IA', icon: 'ai' },
   { id: 'carnet', label: 'Carnet', icon: 'carnet' },
   { id: 'connection', label: 'Connexion au PC de jeu', icon: 'link' },
@@ -186,7 +190,7 @@ function Shell({ status }: { status: HubStatus | null }) {
   const selection = useSelection(snapshot);
   const selected = snapshot?.drivers.find((d) => d.id === selectedId) ?? null;
   const onSelect = (d: DriverRow) => setSelectedId(d.id);
-  const needsData = !['ai', 'carnet', 'settings', 'connection'].includes(tab);
+  const needsData = !['ai', 'carnet', 'prep', 'debrief', 'settings', 'connection'].includes(tab);
 
   return (
     <div className="app sm-shell">
@@ -209,10 +213,14 @@ function Shell({ status }: { status: HubStatus | null }) {
             <EngineerView radio={radio} hasLiveData={!!snapshot?.hasData} sessionType={snapshot?.sessionType} />
           ) : tab === 'carnet' ? (
             <CarnetView />
+          ) : tab === 'prep' ? (
+            <PrepView />
+          ) : tab === 'debrief' ? (
+            <DebriefView />
           ) : tab === 'connection' ? (
             <ConnectionView status={status} snapshot={snapshot} />
           ) : needsData && !snapshot?.hasData ? (
-            <Waiting link={link} status={status} snapshot={snapshot} onConnection={() => setTab('connection')} onSettings={() => setTab('settings')} onGuide={() => setGuide(true)} />
+            <Waiting link={link} status={status} snapshot={snapshot} onConnection={() => setTab('connection')} onSettings={() => setTab('settings')} onGuide={() => setGuide(true)} onDebrief={() => setTab('debrief')} onPrep={() => setTab('prep')} />
           ) : snapshot && tab === 'timing' ? (
             <Dashboard
               ctx={{ snapshot, classColor, onSelect, classView, setClassView, radio, events: raceEvents, noticeHistory: notices.history }}
@@ -281,13 +289,15 @@ function WindowBadge({ onSettings }: { onSettings: () => void }) {
   );
 }
 
-function Waiting({ link, status, snapshot, onConnection, onSettings, onGuide }: {
+function Waiting({ link, status, snapshot, onConnection, onSettings, onGuide, onDebrief, onPrep }: {
   link: string;
   status: ReturnType<typeof useHubStatus>;
   snapshot: Parameters<typeof linkStage>[1];
   onConnection: () => void;
   onSettings: () => void;
   onGuide: () => void;
+  onDebrief: () => void;
+  onPrep: () => void;
 }) {
   if (link !== 'open') {
     return <div className="empty"><div className="empty-icon" aria-hidden>…</div><h2>Connexion à SecondMonitor…</h2></div>;
@@ -299,6 +309,10 @@ function Waiting({ link, status, snapshot, onConnection, onSettings, onGuide }: 
         <button className="btn primary" onClick={onConnection}>Voir la connexion en détail</button>
         <button className="btn" onClick={onGuide}>Guide de mise en route</button>
         <button className="btn" onClick={onSettings}>Essayer avec la démo</button>
+      </div>
+      <div className="row" style={{ justifyContent: 'center' }}>
+        <button className="btn" onClick={onDebrief}>Analyser une course passée</button>
+        <button className="btn" onClick={onPrep}>Préparer la prochaine course</button>
       </div>
     </div>
   );

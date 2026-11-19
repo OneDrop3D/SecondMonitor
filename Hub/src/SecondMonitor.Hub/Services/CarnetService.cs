@@ -285,6 +285,8 @@ public sealed class CarnetService : BackgroundService
                 Save(c);
             }
 
+            SaveTraces(c);
+
             // Course finie : récapitulatif 20 s après l'arrivée (le temps de la radio d'arrivée).
             if (c.Finished && c.Recap == null)
             {
@@ -471,6 +473,46 @@ public sealed class CarnetService : BackgroundService
             CarnetBuilder.Update(c, snap, _engine.PlayerLaps(), _engineer.Memory);
         }
     }
+
+    private string? _tracesOf;
+    private readonly HashSet<int> _tracesSaved = new();
+
+    /// <summary>Tracés des tours bouclés (pédales, vitesse, rapports…) copiés dans le carnet : ils restent consultables après la session.</summary>
+    private void SaveTraces(CarnetSession c)
+    {
+        if (_tracesOf != c.Id)
+        {
+            _tracesOf = c.Id;
+            _tracesSaved.Clear();
+            _tracesSaved.UnionWith(Store.TraceLaps(c.Id)); // reprise après redémarrage : déjà enregistrés
+        }
+
+        var list = _engine.BuildLapComparison(Array.Empty<string>()).Laps;
+        int lastLap = list.Count == 0 ? 0 : list.Max(l => l.Lap);
+        // Temps au tour pas encore connu au passage de la ligne : on attend le tour suivant, sauf s'il ne viendra pas.
+        var todo = list.Where(l => l.Complete && !_tracesSaved.Contains(l.Lap) && (l.Time != null || l.Lap < lastLap - 1)).Select(l => l.Lap.ToString()).ToList();
+        foreach (var chunk in todo.Chunk(6)) // BuildLapComparison rend 6 tours au plus
+        {
+            foreach (var lap in _engine.BuildLapComparison(chunk).Traces)
+            {
+                try
+                {
+                    Store.SaveLap(c.Id, lap);
+                    _tracesSaved.Add(lap.Lap);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Carnet {Id} : tracé du tour {Lap} non enregistré", c.Id, lap.Lap);
+                }
+            }
+        }
+    }
+
+    /// <summary>Tracés enregistrés d'un carnet : liste des tours, ou le détail de ceux demandés.</summary>
+    public List<int> TraceLaps(string id) => Store.TraceLaps(id);
+
+    public List<LapDetailDto> Traces(string id, IEnumerable<int> laps) =>
+        laps.Distinct().Take(200).Select(l => Store.LoadLap(id, l)).Where(l => l != null).ToList();
 
     private void Save(CarnetSession c)
     {

@@ -10,6 +10,7 @@ namespace SecondMonitor.Hub;
 ///   POST   /api/carnets/{id}/recap      (re)générer le récapitulatif (IA si disponible, sinon calculé)
 ///   POST   /api/carnets/{id}/notes      ajouter une note { text, source }
 ///   GET    /api/carnets/{id}/bilan      tours (temps, essence, énergie, usure) et moyennes par relais et de la course
+///   GET    /api/carnets/{id}/traces      tours dont le tracé est enregistré ; ?laps=3,4 : leur tracé (vitesse, pédales, rapport…)
 ///   POST   /api/carnets/{id}/bilan/tours compter ou retirer un tour des moyennes { tour, compte } ; renvoie le bilan
 ///   DELETE /api/carnets/{id}            supprimer un carnet
 ///   POST   /api/session/end             terminer la session en cours (carnet fermé et récapitulé)
@@ -37,6 +38,11 @@ public static class CarnetApi
                 : carnets.AddNote(id, note.Text.Trim(), note.Source ?? "ingénieur") is { } c ? Results.Json(c, LiveHub.Json) : Results.NotFound());
         app.MapGet("/api/carnets/{id}/bilan", (CarnetService carnets, string id) =>
             carnets.Bilan(id) is { } b ? Results.Json(b, LiveHub.Json) : Results.NotFound());
+        // Tracés des tours (analyse après la course) : sans « laps », la liste des tours enregistrés ; avec « laps=3,4,5 », leur détail.
+        app.MapGet("/api/carnets/{id}/traces", (CarnetService carnets, string id, string? laps) =>
+            string.IsNullOrEmpty(laps)
+                ? Results.Json(new { step = SecondMonitor.Hub.Core.Race.DrivingWatch.BinMeters, laps = carnets.TraceLaps(id) }, LiveHub.Json)
+                : Results.Json(carnets.Traces(id, laps.Split(',').Select(t => int.TryParse(t, out int n) ? n : 0).Where(n => n > 0)), LiveHub.Json));
         app.MapPost("/api/carnets/{id}/bilan/tours", (CarnetService carnets, string id, CarnetTourRequest r) =>
             carnets.CompterTour(id, r.Tour, r.Compte) is { } b ? Results.Json(b, LiveHub.Json) : Results.NotFound());
         // Boutons « Terminer la session » / « Nouvelle session » (écrans Ingénieur IA et Carnet).

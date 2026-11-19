@@ -744,9 +744,54 @@ namespace SecondMonitor.Hub.Core.Ai
             lock (_lock)
             {
                 File.Delete(PathOf(id));
+                if (System.IO.Directory.Exists(TracesDir(id)))
+                {
+                    System.IO.Directory.Delete(TracesDir(id), recursive: true);
+                }
+
                 return true;
             }
         }
+
+        private static readonly JsonSerializerOptions TraceJson = new(JsonSerializerDefaults.Web);
+
+        private static bool ValidId(string id) => !string.IsNullOrWhiteSpace(id) && id.IndexOfAny(Path.GetInvalidFileNameChars()) < 0 && !id.Contains("..");
+
+        /// <summary>Tracé d'un tour (vitesse, pédales, rapport, régime… tous les 10 m), gardé pour l'analyse après la course : un fichier par tour.</summary>
+        public void SaveLap(string id, LapDetailDto lap)
+        {
+            if (!ValidId(id) || lap == null)
+            {
+                return;
+            }
+
+            string dir = TracesDir(id);
+            System.IO.Directory.CreateDirectory(dir);
+            string path = Path.Combine(dir, $"{lap.Lap}.json");
+            File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(lap, TraceJson));
+            File.Move(path + ".tmp", path, overwrite: true);
+        }
+
+        /// <summary>Numéros des tours dont le tracé est enregistré.</summary>
+        public List<int> TraceLaps(string id) =>
+            ValidId(id) && System.IO.Directory.Exists(TracesDir(id))
+                ? System.IO.Directory.GetFiles(TracesDir(id), "*.json").Select(f => int.TryParse(Path.GetFileNameWithoutExtension(f), out int n) ? n : -1).Where(n => n > 0).OrderBy(n => n).ToList()
+                : new List<int>();
+
+        public LapDetailDto LoadLap(string id, int lap)
+        {
+            string path = ValidId(id) ? Path.Combine(TracesDir(id), $"{lap}.json") : null;
+            try
+            {
+                return path != null && File.Exists(path) ? JsonSerializer.Deserialize<LapDetailDto>(File.ReadAllText(path), TraceJson) : null;
+            }
+            catch (Exception)
+            {
+                return null; // fichier abîmé : ignoré
+            }
+        }
+
+        private string TracesDir(string id) => Path.Combine(Directory, id + ".tours");
 
         public List<CarnetSummary> List()
         {
