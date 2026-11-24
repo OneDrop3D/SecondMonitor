@@ -8,7 +8,7 @@ import { PlayerPanel } from './components/PlayerPanel';
 import { StrategyView } from './components/StrategyView';
 import { DriverDrawer } from './components/DriverDrawer';
 import { SettingsView } from './components/SettingsView';
-import { EngineerView } from './components/EngineerView';
+import { EngineerView, ProvidersView } from './components/EngineerView';
 import { AnalysisView } from './components/AnalysisView';
 import { SpeedView } from './components/SpeedView';
 import { SectorsView } from './components/SectorsView';
@@ -37,7 +37,7 @@ import { hasWindowParam, isExtraWindow, readDevicePref, readOwnPref, readPref, w
 import { inAppWindow, openNewWindow } from './windows';
 import { ComputeServerView, ModeChoice } from './components/ComputeServer';
 
-type Tab = 'timing' | 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'prep' | 'debrief' | 'ai' | 'carnet' | 'connection' | 'settings';
+type Tab = 'timing' | 'race' | 'analysis' | 'speeds' | 'sectors' | 'car' | 'weather' | 'strategy' | 'prep' | 'debrief' | 'ai' | 'providers' | 'carnet' | 'connection' | 'settings';
 
 // Même organisation que SecondMonitor d'origine : le chronométrage d'abord, les autres écrans dans la barre de droite.
 const TABS: { id: Tab; label: string; icon: string }[] = [
@@ -52,6 +52,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'prep', label: 'Préparer la course', icon: 'prep' },
   { id: 'debrief', label: 'Analyse de course', icon: 'debrief' },
   { id: 'ai', label: 'Ingénieur IA', icon: 'ai' },
+  { id: 'providers', label: 'Fournisseurs IA', icon: 'providers' },
   { id: 'carnet', label: 'Carnet', icon: 'carnet' },
   { id: 'connection', label: 'Connexion au PC de jeu', icon: 'link' },
   { id: 'settings', label: 'Réglages', icon: 'settings' },
@@ -190,7 +191,7 @@ function Shell({ status }: { status: HubStatus | null }) {
   const selection = useSelection(snapshot);
   const selected = snapshot?.drivers.find((d) => d.id === selectedId) ?? null;
   const onSelect = (d: DriverRow) => setSelectedId(d.id);
-  const needsData = !['ai', 'carnet', 'prep', 'debrief', 'settings', 'connection'].includes(tab);
+  const needsData = !['ai', 'providers', 'carnet', 'prep', 'debrief', 'settings', 'connection'].includes(tab);
 
   return (
     <div className="app sm-shell">
@@ -211,6 +212,8 @@ function Shell({ status }: { status: HubStatus | null }) {
             <SettingsView theme={theme} setTheme={setThemeState} snapshot={snapshot} />
           ) : tab === 'ai' ? (
             <EngineerView radio={radio} hasLiveData={!!snapshot?.hasData} sessionType={snapshot?.sessionType} />
+          ) : tab === 'providers' ? (
+            <ProvidersView />
           ) : tab === 'carnet' ? (
             <CarnetView />
           ) : tab === 'prep' ? (

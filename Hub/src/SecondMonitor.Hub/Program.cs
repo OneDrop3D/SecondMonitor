@@ -137,7 +137,10 @@ var app = builder.Build();
 app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(15) });
 ComputeServerApi.UseGuard(app, settings); // serveur de calcul : le réseau n'atteint que le relais protégé
 app.UseDefaultFiles();
-app.UseStaticFiles();
+// Sans « Cache-Control », WebKit garde l'ancien index.html des heures après une mise à jour (l'application affichait l'ancienne interface) :
+// « no-cache » = il redemande à chaque fois, et le serveur répond 304 tant que le fichier n'a pas changé.
+var staticFiles = new StaticFileOptions { OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = "no-cache" };
+app.UseStaticFiles(staticFiles);
 
 app.Map("/ws", async (HttpContext ctx, LiveHub hub) =>
 {
@@ -333,6 +336,22 @@ app.MapDelete("/api/ai/memory/plan", (EngineerService engineer) =>
     engineer.Memory.NoStopPlanned = false;
     return Results.Ok();
 });
+// Lien « obtenir une clé » : la fenêtre de l'application n'a pas d'onglets, la page s'ouvre dans le navigateur (depuis cet ordinateur, https seulement).
+app.MapPost("/api/ouvrir", (HttpContext ctx, string url) =>
+{
+    if (ctx.Connection.RemoteIpAddress is { } ip && !IPAddress.IsLoopback(ip))
+    {
+        return Results.StatusCode(403);
+    }
+
+    if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri.Scheme != Uri.UriSchemeHttps)
+    {
+        return Results.BadRequest();
+    }
+
+    AppWindow.OpenBrowser(uri.AbsoluteUri);
+    return Results.Ok();
+});
 app.MapPost("/api/quit", (IHostApplicationLifetime life, HttpContext ctx) =>
 {
     // Arrêt demandé depuis Réglages (application installée sans fenêtre) : seulement depuis cet ordinateur.
@@ -410,7 +429,7 @@ CarnetApi.Map(app); // carnet de session : /api/carnets
 ComputeServerApi.Map(app); // serveur de calcul : /calcul/* (relais protégé), /api/calcul/*, /api/mode
 
 // Toute autre route → l'application web (navigation côté client).
-app.MapFallbackToFile("index.html");
+app.MapFallbackToFile("index.html", staticFiles);
 
 try
 {

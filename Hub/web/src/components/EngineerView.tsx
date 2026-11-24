@@ -6,6 +6,7 @@ import type { HubSettings, MemoryState, NodeStatus, OllamaModel } from '../types
 import { CategoryPill, type CarnetSummary } from './CarnetView';
 import { useStations } from '../stations';
 import { ComputeLinkPanel } from './ComputeServer';
+import { inAppWindow } from '../windows';
 
 interface Diagnostic {
   step: string;
@@ -178,7 +179,6 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
         <ModelsCard settings={settings} save={save} models={models} reload={loadModels} />
         <SpecialistsCard settings={settings} save={save} models={models} />
         <MachinesCard settings={settings} save={save} models={models} reload={loadModels} reloadSettings={reloadSettings} />
-        <ProvidersCard settings={settings} models={models} reload={loadModels} reloadSettings={reloadSettings} />
       </div>
     </div>
   );
@@ -861,7 +861,7 @@ function MachinesCard({ settings, save, models, reload, reloadSettings }: { sett
             </div>
           );
         })}
-        {gatewaysOf(settings).map((g) => <GatewayRow key={g.name} gateway={g} settings={settings} save={save} reload={reload} />)}
+        <div className="secondary small">Fournisseurs d'API (NVIDIA, Claude, DeepSeek, Kimi, GLM…) : onglet « Fournisseurs IA » dans la barre de droite.</div>
         <ComputeLinkPanel onLinked={() => { reloadSettings().then(reload); }} />
         <div className="secondary small">Ou un Ollama ouvert au réseau (Raspberry Pi, autre PC…) :</div>
         <form className="row" onSubmit={(e) => { e.preventDefault(); add(); }}>
@@ -895,57 +895,123 @@ function MachinesCard({ settings, save, models, reload, reloadSettings }: { sett
   );
 }
 
-/** Passerelles compatibles OpenAI : leurs modèles gratuits arrivent du meilleur au moins bon (classement fait par le Hub). */
-const GATEWAYS = [
-  { name: 'Experiential', label: 'Experiential Labs', url: 'https://api.experientiallabs.ai', hint: 'clé xpl_…' },
-  { name: 'NVIDIA', label: 'NVIDIA (build.nvidia.com)', url: 'https://integrate.api.nvidia.com', hint: 'clé nvapi-…' },
+/**
+ * Fournisseurs connus : il suffit de coller la clé. « url » + « apiPath » = adresse de l'API avant « /models » et « /chat/completions »
+ * (« /messages » pour Claude). Les plateformes (NVIDIA, OpenRouter, Groq…) donnent accès à beaucoup de modèles d'autres marques.
+ */
+const GATEWAYS: { name: string; label: string; url: string; apiPath: string; api: 'openai' | 'anthropic'; hint: string; desc: string; site: string }[] = [
+  { name: 'NVIDIA', label: 'NVIDIA', url: 'https://integrate.api.nvidia.com', apiPath: '/v1', api: 'openai', hint: 'nvapi-…', desc: 'plateforme gratuite : Nemotron, Llama, Kimi, GLM, DeepSeek, Mistral…', site: 'https://build.nvidia.com/settings/api-keys' },
+  { name: 'OpenRouter', label: 'OpenRouter', url: 'https://openrouter.ai', apiPath: '/api/v1', api: 'openai', hint: 'sk-or-…', desc: 'plateforme : presque tous les modèles, dont des gratuits', site: 'https://openrouter.ai/keys' },
+  { name: 'Groq', label: 'Groq', url: 'https://api.groq.com', apiPath: '/openai/v1', api: 'openai', hint: 'gsk_…', desc: 'plateforme très rapide, niveau gratuit : Llama, Kimi, Qwen…', site: 'https://console.groq.com/keys' },
+  { name: 'Cerebras', label: 'Cerebras', url: 'https://api.cerebras.ai', apiPath: '/v1', api: 'openai', hint: 'csk-…', desc: 'plateforme très rapide, niveau gratuit : Llama, Qwen, GLM…', site: 'https://cloud.cerebras.ai' },
+  { name: 'HuggingFace', label: 'Hugging Face', url: 'https://router.huggingface.co', apiPath: '/v1', api: 'openai', hint: 'hf_…', desc: 'plateforme : modèles ouverts de nombreux hébergeurs, crédit mensuel offert', site: 'https://huggingface.co/settings/tokens' },
+  { name: 'Together', label: 'Together AI', url: 'https://api.together.xyz', apiPath: '/v1', api: 'openai', hint: 'clé Together', desc: 'plateforme : Llama, DeepSeek, Qwen, Kimi…', site: 'https://api.together.ai/settings/api-keys' },
+  { name: 'Fireworks', label: 'Fireworks AI', url: 'https://api.fireworks.ai', apiPath: '/inference/v1', api: 'openai', hint: 'fw_…', desc: 'plateforme : DeepSeek, Kimi, Qwen, Llama…', site: 'https://fireworks.ai/account/api-keys' },
+  { name: 'DeepInfra', label: 'DeepInfra', url: 'https://api.deepinfra.com', apiPath: '/v1/openai', api: 'openai', hint: 'clé DeepInfra', desc: 'plateforme : nombreux modèles ouverts, petits prix', site: 'https://deepinfra.com/dash/api_keys' },
+  { name: 'SambaNova', label: 'SambaNova', url: 'https://api.sambanova.ai', apiPath: '/v1', api: 'openai', hint: 'clé SambaNova', desc: 'plateforme rapide : Llama, DeepSeek, Qwen…', site: 'https://cloud.sambanova.ai/apis' },
+  { name: 'Claude', label: 'Claude (Anthropic)', url: 'https://api.anthropic.com', apiPath: '/v1', api: 'anthropic', hint: 'sk-ant-…', desc: 'Haiku, Sonnet, Opus — solde prépayé', site: 'https://console.anthropic.com/settings/keys' },
+  { name: 'OpenAI', label: 'OpenAI', url: 'https://api.openai.com', apiPath: '/v1', api: 'openai', hint: 'sk-…', desc: 'GPT — solde prépayé', site: 'https://platform.openai.com/api-keys' },
+  { name: 'Gemini', label: 'Google Gemini', url: 'https://generativelanguage.googleapis.com', apiPath: '/v1beta/openai', api: 'openai', hint: 'AIza…', desc: 'Gemini, niveau gratuit', site: 'https://aistudio.google.com/apikey' },
+  { name: 'Mistral', label: 'Mistral', url: 'https://api.mistral.ai', apiPath: '/v1', api: 'openai', hint: 'clé Mistral', desc: 'Mistral, niveau gratuit', site: 'https://console.mistral.ai/api-keys' },
+  { name: 'DeepSeek', label: 'DeepSeek', url: 'https://api.deepseek.com', apiPath: '/v1', api: 'openai', hint: 'sk-…', desc: 'DeepSeek — solde prépayé, petits prix', site: 'https://platform.deepseek.com/api_keys' },
+  { name: 'Kimi', label: 'Kimi (Moonshot)', url: 'https://api.moonshot.ai', apiPath: '/v1', api: 'openai', hint: 'sk-…', desc: 'Kimi — solde prépayé', site: 'https://platform.moonshot.ai/console/api-keys' },
+  { name: 'GLM', label: 'GLM (Z.ai)', url: 'https://api.z.ai', apiPath: '/api/paas/v4', api: 'openai', hint: 'clé Z.ai', desc: 'GLM — solde prépayé, modèles Flash gratuits', site: 'https://z.ai/manage-apikey/apikey-list' },
+  { name: 'Qwen', label: 'Qwen (Alibaba)', url: 'https://dashscope-intl.aliyuncs.com', apiPath: '/compatible-mode/v1', api: 'openai', hint: 'sk-…', desc: 'Qwen — quota gratuit puis prépayé', site: 'https://modelstudio.console.alibabacloud.com' },
+  { name: 'xAI', label: 'xAI (Grok)', url: 'https://api.x.ai', apiPath: '/v1', api: 'openai', hint: 'xai-…', desc: 'Grok — solde prépayé', site: 'https://console.x.ai' },
+  { name: 'Experiential', label: 'Experiential Labs', url: 'https://api.experientiallabs.ai', apiPath: '/v1', api: 'openai', hint: 'xpl_…', desc: 'plateforme : modèles gratuits « :free »', site: 'https://experientiallabs.ai' },
 ];
+
+/** Page « obtenir une clé » : dans le navigateur (la fenêtre de l'application n'a pas d'onglets). */
+function openSite(url: string) {
+  if (inAppWindow()) fetch(`/api/ouvrir?url=${encodeURIComponent(url)}`, { method: 'POST' }).catch(() => {});
+  else window.open(url, '_blank', 'noopener');
+}
+
 
 /** Fournisseur d'API (compatible OpenAI ou Claude), par opposition à une machine Ollama. */
 const isGateway = (n: { api?: string }) => n.api === 'openai' || n.api === 'anthropic';
 
 /** Les deux passerelles connues + tous les fournisseurs importés (clé à saisir une fois). */
 function gatewaysOf(settings: HubSettings): (typeof GATEWAYS)[number][] {
-  const extra = settings.ai.nodes.filter((n) => isGateway(n) && !GATEWAYS.some((g) => g.name === n.name)).map((n) => ({ name: n.name, label: n.name, url: n.url, hint: 'clé API' }));
+  const extra = settings.ai.nodes.filter((n) => isGateway(n) && !GATEWAYS.some((g) => g.name === n.name)).map((n) => ({ name: n.name, label: n.name, url: n.url, apiPath: n.apiPath ?? '/v1', api: (n.api === 'anthropic' ? 'anthropic' : 'openai') as 'openai' | 'anthropic', hint: 'clé API', desc: 'ajouté à la main', site: '' }));
   return [...GATEWAYS, ...extra];
 }
 
-function GatewayRow({ gateway: g, settings, save, reload }: { gateway: (typeof GATEWAYS)[number]; settings: HubSettings; save: (p: (s: HubSettings) => HubSettings) => void; reload: () => void }) {
+function GatewayRow({ gateway: g, settings, save, reload, status }: { gateway: (typeof GATEWAYS)[number]; settings: HubSettings; save: (p: (s: HubSettings) => HubSettings) => void; reload: () => void; status?: NodeStatus }) {
   const [key, setKey] = useState('');
   const [free, setFree] = useState<string[] | null>(null);
   const node = settings.ai.nodes.find((n) => isGateway(n) && n.name === g.name);
+  const hasKey = !!node?.token;
   useEffect(() => {
-    if (node) api<{ models: string[] }>(`/api/ai/gateway/models?node=${encodeURIComponent(g.name)}`).then((r) => setFree(r.models)).catch(() => setFree([]));
+    if (hasKey) api<{ models: string[] }>(`/api/ai/gateway/models?node=${encodeURIComponent(g.name)}`).then((r) => setFree(r.models)).catch(() => setFree([]));
   }, [g.name, node?.token]);
   const setNodes = (f: (nodes: HubSettings['ai']['nodes']) => HubSettings['ai']['nodes']) => { save((s) => ({ ...s, ai: { ...s.ai, nodes: f(s.ai.nodes) } })); window.setTimeout(reload, 600); };
   const addKey = () => {
     if (!key.trim()) return;
-    setNodes((nodes) => [...nodes.filter((x) => x.name !== g.name), { ...node, name: g.name, url: node?.url ?? g.url, api: node?.api ?? 'openai', token: key.trim(), models: node?.models ?? [] }]);
+    setNodes((nodes) => [...nodes.filter((x) => x.name !== g.name), { ...node, name: g.name, url: node?.url ?? g.url, apiPath: node?.apiPath ?? g.apiPath, api: node?.api ?? g.api, token: key.trim(), models: node?.models ?? [] }]);
     setKey('');
   };
-  // Liste vide = tous les gratuits ; décocher écrit la liste complète moins ce modèle.
+  // Liste vide = tous ; décocher écrit la liste complète moins ce modèle.
   const toggle = (id: string) => {
     const on = node?.models?.length ? node.models : free ?? [];
     const next = on.includes(id) ? on.filter((m) => m !== id) : (free ?? []).filter((m) => m === id || on.includes(m));
     setNodes((nodes) => nodes.map((x) => (x.name === g.name ? { ...x, models: next } : x)));
   };
+  const paused = status?.pausedMinutes ?? 0;
+  const state = !hasKey ? null : free === null ? '…' : free.length === 0 ? 'clé refusée ?' : `${free.length} modèle(s)`;
   return (
-    <div className="stack-sm">
-      <div className="secondary small">{g.label} — modèles, du meilleur au moins bon :</div>
-      {node && (
-        <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-          {free === null && <span className="muted small">…</span>}
-          {free?.length === 0 && <span className="muted small">aucun modèle (clé refusée ?)</span>}
-          {free?.map((id) => (
-            <label key={id} className="small"><input type="checkbox" checked={!node.models?.length || node.models.includes(id)} onChange={() => toggle(id)} /> {id.replace(/:free$/, '')}</label>
-          ))}
-        </div>
-      )}
+    <div className="stack-sm" style={{ paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
+      <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <span className="dot" style={{ background: !hasKey ? 'var(--surface-3)' : free?.length ? 'var(--good)' : 'var(--critical)' }} aria-hidden />
+        <b>{g.label}</b>
+        <span className="muted small">{g.desc}</span>
+        <span className="spacer" />
+        {paused > 0 && <span className="pill small-pill" title="Crédit épuisé : réessayé automatiquement ; une nouvelle clé le remet en service">en pause {paused} min</span>}
+        {state && <span className="muted small">{state}</span>}
+      </div>
       <form className="row" onSubmit={(e) => { e.preventDefault(); addKey(); }}>
-        <input className="input" type="password" style={{ flex: '1 1 220px' }} value={key} onChange={(e) => setKey(e.target.value)} placeholder={node ? 'nouvelle clé (remplace l\'actuelle)' : g.hint} autoComplete="off" aria-label={`Clé ${g.label}`} />
-        <button className="btn" disabled={!key.trim()}>{node ? 'Changer la clé' : 'Ajouter'}</button>
+        <input className="input" type="password" style={{ flex: '1 1 220px' }} value={key} onChange={(e) => setKey(e.target.value)} placeholder={hasKey ? 'clé enregistrée — coller une nouvelle clé pour la remplacer' : `coller la clé (${g.hint})`} autoComplete="off" aria-label={`Clé ${g.label}`} />
+        <button className="btn" disabled={!key.trim()}>{hasKey ? 'Remplacer' : 'Enregistrer'}</button>
+        {g.site && <button type="button" className="chip" onClick={() => openSite(g.site)}>Obtenir une clé ↗</button>}
         {node && <button type="button" className="close" onClick={() => setNodes((nodes) => nodes.filter((x) => x.name !== g.name))} aria-label={`Retirer ${g.label}`}>✕</button>}
       </form>
+      {hasKey && !!free?.length && (
+        <details className="small">
+          <summary className="secondary">Modèles utilisés ({node?.models?.length || free.length} sur {free.length})</summary>
+          <div className="row" style={{ flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+            {free.map((id) => (
+              <label key={id} className="small"><input type="checkbox" checked={!node?.models?.length || node.models.includes(id)} onChange={() => toggle(id)} /> {id.replace(/:free$/, '')}</label>
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+/** Onglet « Fournisseurs IA » : prompt, import, ajout à la main, clés d'API et modèles à bascule. */
+export function ProvidersView() {
+  const { settings, save, reload: reloadSettings } = useHubSettings();
+  const [models, setModels] = useState<ModelsResponse | null>(null);
+  const loadModels = useCallback(() => {
+    api<ModelsResponse>('/api/ai/models').then(setModels).catch((e) => setModels({ ok: false, error: (e as Error).message, models: [], nodes: [] }));
+  }, []);
+  useEffect(loadModels, [loadModels]);
+  if (!settings) return <div className="muted">Chargement…</div>;
+  const status = (name: string) => models?.nodes.find((n) => n.name.toLowerCase() === name.toLowerCase());
+  return (
+    <div className="stack">
+      <section className="card">
+        <div className="card-head"><span className="card-title">Fournisseurs IA</span><span className="muted">collez une clé : ses modèles apparaissent dans Ingénieur IA › Modèles</span></div>
+        <div className="card-body stack-sm">
+          {gatewaysOf(settings).map((g) => <GatewayRow key={g.name} gateway={g} settings={settings} save={save} reload={loadModels} status={status(g.name)} />)}
+          <div className="muted small">Les clés restent sur cet ordinateur et ne sont jamais renvoyées à l'interface.</div>
+        </div>
+      </section>
+      <details className="card">
+        <summary className="card-head" style={{ cursor: 'pointer' }}><span className="card-title">Avancé</span><span className="muted">bascule entre fournisseurs, prompt pour une autre IA, autre fournisseur</span></summary>
+        <ProvidersCard settings={settings} models={models} reload={loadModels} reloadSettings={reloadSettings} />
+      </details>
     </div>
   );
 }
@@ -976,7 +1042,7 @@ function ProvidersCard({ settings, models, reload, reloadSettings }: { settings:
     const res = await fetch('/api/ai/import', { method: 'POST', body: text });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) { setResult({ ok: false, lines: [body.error ?? `${res.status} ${res.statusText}`] }); return; }
-    setResult({ ok: true, lines: [`${body.report.providers} fournisseur(s), ${body.report.routes} modèle(s) à bascule importés. Saisissez la clé de chaque fournisseur dans « Machines IA ».`, ...body.report.warnings] });
+    setResult({ ok: true, lines: [`${body.report.providers} fournisseur(s), ${body.report.routes} modèle(s) à bascule importés. Collez la clé de chaque fournisseur dans sa ligne, en haut.`, ...body.report.warnings] });
     setText('');
     await reloadSettings();
     reload();
@@ -988,17 +1054,17 @@ function ProvidersCard({ settings, models, reload, reloadSettings }: { settings:
     const body = await res.json().catch(() => ({}));
     if (!res.ok) { setResult({ ok: false, lines: [body.error ?? `${res.status} ${res.statusText}`] }); return; }
     const warn: string[] = body.report.warnings;
-    setResult({ ok: body.report.providers > 0, lines: body.report.providers > 0 ? [`${mName.trim()} ajouté : saisissez sa clé dans « Machines IA ».`] : warn });
+    setResult({ ok: body.report.providers > 0, lines: body.report.providers > 0 ? [`${mName.trim()} ajouté : collez sa clé dans sa ligne, en haut.`] : warn });
     if (body.report.providers > 0) { setMName(''); setMUrl(''); await reloadSettings(); reload(); }
   };
   return (
     <section className="card">
-      <div className="card-head"><span className="card-title">Fournisseurs IA</span><span className="muted">plusieurs API, bascule quand le crédit est épuisé</span></div>
+      <div className="card-head"><span className="card-title">Modèles à bascule</span><span className="muted">quand le crédit d'un fournisseur est épuisé, le suivant prend le relais</span></div>
       <div className="card-body stack-sm">
         <ol className="small secondary" style={{ paddingLeft: 18, lineHeight: 1.7, margin: 0 }}>
           <li>Copiez le prompt ci-dessous (il contient vos fournisseurs et leurs modèles) et collez-le dans Gemini, ChatGPT ou Mistral.</li>
           <li>Enregistrez sa réponse en .json (ou copiez-la), puis importez-la ici.</li>
-          <li>Saisissez la clé de chaque fournisseur dans « Machines IA », puis choisissez le modèle à bascule dans « Modèles ».</li>
+          <li>Collez la clé de chaque fournisseur dans sa ligne, en haut, puis choisissez le modèle à bascule dans Ingénieur IA › Modèles (Réflexion).</li>
         </ol>
         <input className="input" value={wish} onChange={(e) => setWish(e.target.value)} placeholder="Ce que vous voulez (facultatif) — par défaut : un modèle « rapide » et un « puissant »" aria-label="Ce que vous voulez" />
         <div className="row">
@@ -1016,10 +1082,10 @@ function ProvidersCard({ settings, models, reload, reloadSettings }: { settings:
             {result.lines.map((l, i) => <div key={i} className="small">{l}</div>)}
           </div>
         )}
-        <div className="secondary small">Ou ajoutez un fournisseur à la main (Kimi, DeepSeek, GLM, Claude…) — l'adresse va jusqu'avant « /models », version comprise :</div>
+        <div className="secondary small">Un fournisseur absent de la liste : son nom, puis l'adresse de son API (jusqu'avant « /models », version comprise). La clé se colle ensuite dans sa ligne, en haut.</div>
         <form className="row" onSubmit={(e) => { e.preventDefault(); addManual().catch((er) => setResult({ ok: false, lines: [String(er)] })); }}>
-          <input className="input" style={{ flex: '1 1 100px' }} value={mName} onChange={(e) => setMName(e.target.value)} placeholder="nom (ex. Kimi)" aria-label="Nom du fournisseur" />
-          <input className="input" style={{ flex: '3 1 240px' }} value={mUrl} onChange={(e) => setMUrl(e.target.value)} placeholder="https://api.moonshot.ai/v1" aria-label="Adresse de l'API" />
+          <input className="input" style={{ flex: '1 1 100px' }} value={mName} onChange={(e) => setMName(e.target.value)} placeholder="nom (ex. MonFournisseur)" aria-label="Nom du fournisseur" />
+          <input className="input" style={{ flex: '3 1 240px' }} value={mUrl} onChange={(e) => setMUrl(e.target.value)} placeholder="adresse https://api.exemple.com/v1 (pas la clé)" aria-label="Adresse de l'API" />
           <select className="select" value={mApi} onChange={(e) => setMApi(e.target.value as 'openai' | 'anthropic')} aria-label="Format de l'API">
             <option value="openai">compatible OpenAI</option>
             <option value="anthropic">Claude (Anthropic)</option>

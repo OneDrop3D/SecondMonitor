@@ -178,7 +178,7 @@ public sealed class OllamaClient
     private static bool IsNvidia(string url) => url.Contains("nvidia.com", StringComparison.OrdinalIgnoreCase);
 
     private static readonly System.Text.RegularExpressions.Regex NonChat =
-        new(@"embed|rerank|clip|guard|reward|safety|parse|detect|pii|retriever|vila|neva|kosmos|paligemma|deplot|fuyu|cosmos|flux|sdxl|stable-diffusion|asr|tts|riva", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        new(@"embed|rerank|clip|guard|reward|safety|parse|detect|pii|retriever|vila|neva|kosmos|paligemma|deplot|fuyu|cosmos|flux|sdxl|stable-diffusion|asr|tts|riva|whisper|dall-e|moderation|image|audio|realtime|transcri", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     /// <summary>Milliards de paramètres lus dans un id (« llama-3.1-405b » → 405, « mixtral-8x22b » → 176) ; 0 si absent.</summary>
     internal static double SizeB(string id)
