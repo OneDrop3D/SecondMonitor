@@ -332,7 +332,9 @@ export interface HubSettings {
     ollamaUrl: string;
     localNodeName: string;
     /** token : « relié » pour un serveur de calcul relié (le vrai jeton ne quitte jamais SecondMonitor). */
-    nodes: { name: string; url: string; token?: string; serverId?: string; api?: string; models?: string[] }[];
+    nodes: { name: string; url: string; token?: string; serverId?: string; api?: string; models?: string[]; limits?: string; pauseMinutes?: number; apiPath?: string }[];
+    /** Modèles à bascule : « modèle@fournisseur » essayés dans l'ordre ; un fournisseur à court de crédit est sauté. */
+    routes?: { name: string; targets: string[] }[];
     aliases: Record<string, string>;
     listenModel: string;
     thinkModel: string;
@@ -396,6 +398,8 @@ export interface NodeStatus {
   error: string | null;
   modelCount: number;
   milliseconds: number;
+  /** Minutes avant de réessayer ce fournisseur (crédit épuisé) ; 0 = en service. */
+  pausedMinutes?: number;
 }
 
 export interface MemoryState {

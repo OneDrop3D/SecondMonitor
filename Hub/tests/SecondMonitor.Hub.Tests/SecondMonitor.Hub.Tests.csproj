@@ -14,6 +14,15 @@
     <ProjectReference Include="..\..\src\SecondMonitor.Hub\SecondMonitor.Hub.csproj" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Fournisseurs d'API et modèles à bascule : les trois fichiers sont compilés ici (le Hub n'est pas référencé, voir plus haut). -->
+    <Compile Include="..\..\src\SecondMonitor.Hub\HubSettings.cs" Link="Linked\HubSettings.cs" />
+    <Compile Include="..\..\src\SecondMonitor.Hub\Services\OllamaClient.cs" Link="Linked\OllamaClient.cs" />
+    <Compile Include="..\..\src\SecondMonitor.Hub\Services\AiRouting.cs" Link="Linked\AiRouting.cs" />
+  </ItemGroup>
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);CS8632</NoWarn> <!-- sources annotées « string? » compilées dans un projet sans nullable -->
+  </PropertyGroup>
+  <ItemGroup>
     <!-- Menu des stands de Le Mans Ultimate (collecteur) : testé contre un faux LMU local. -->
     <Compile Include="..\..\..\Collector\src\LmuPitMenu.cs" Link="Linked\LmuPitMenu.cs" />
   </ItemGroup>

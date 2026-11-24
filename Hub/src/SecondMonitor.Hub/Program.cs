@@ -196,6 +196,7 @@ app.MapPut("/api/settings", (SettingsStore store, HubSettings incoming) =>
         AiSettings ai = incoming.Ai ?? new AiSettings();
         SettingsStore.KeepTokens(ai, s.Ai); // l'interface ne connaît pas les jetons : on garde ceux enregistrés
         s.Ai = ai;
+        s.Ai.Routes ??= new();
         // Lexique du pilote : seulement des corrections complètes et courtes ; morceaux d'audio entre 5 s et 2 min.
         s.Ai.Lexicon = (s.Ai.Lexicon ?? new()).Where(SecondMonitor.Hub.Core.Ai.RadioLexicon.IsValid)
             .Select(e => new SecondMonitor.Hub.Core.Ai.LexiconEntry { Heard = e.Heard.Trim(), Meant = e.Meant.Trim() }).Take(200).ToList();
@@ -229,10 +230,45 @@ app.MapGet("/api/ai/briefing", (RaceEngine engine, string? q) => Results.Text(Se
 // Tous les modèles gratuits d'une passerelle OpenAI (pour les cocher dans l'interface), activés ou non.
 app.MapGet("/api/ai/gateway/models", async (OllamaClient ollama, SettingsStore store, string node, CancellationToken ct) =>
 {
-    AiNode? gw = store.Current.Ai.Nodes.FirstOrDefault(n => n.Api == "openai" && n.Name.Equals(node, StringComparison.OrdinalIgnoreCase));
+    AiNode? gw = store.Current.Ai.Nodes.FirstOrDefault(n => n.IsGateway && n.Name.Equals(node, StringComparison.OrdinalIgnoreCase));
     if (gw == null) return Results.NotFound();
     try { return Results.Json(new { ok = true, models = (await ollama.ListGatewayAsync(gw, ct)).Select(m => m.Name) }); }
     catch (Exception ex) { return Results.Json(new { ok = false, error = ex.Message, models = Array.Empty<string>() }); }
+});
+// Prompt à coller dans Gemini, ChatGPT ou Mistral : fournisseurs reliés, modèles réellement listés, format du JSON attendu en retour.
+app.MapGet("/api/ai/prompt", async (OllamaClient ollama, SettingsStore store, string? wish, CancellationToken ct) =>
+{
+    AiSettings ai = store.Current.Ai;
+    var live = new System.Collections.Concurrent.ConcurrentDictionary<string, List<string>>();
+    await Task.WhenAll(ai.Nodes.Where(n => n.IsGateway).Select(async gw =>
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(6));
+        try { live[gw.Name] = (await ollama.ListGatewayAsync(gw, cts.Token)).Select(m => m.Name).ToList(); }
+        catch (Exception) { live[gw.Name] = new(); } // clé absente ou fournisseur injoignable : le prompt le dit
+    }));
+    return Results.Json(new { prompt = AiRouting.BuildPrompt(ai, live, wish) });
+});
+// Le JSON rendu par cette IA : fournisseurs et modèles à bascule fusionnés dans les réglages (les clés se saisissent ensuite).
+app.MapPost("/api/ai/import", async (HttpRequest request, SettingsStore store) =>
+{
+    using var reader = new StreamReader(request.Body);
+    string text = await reader.ReadToEndAsync();
+    if (text.Length > AiRouting.MaxBytes)
+    {
+        return Results.Json(new { error = "Fichier trop gros." }, statusCode: 413);
+    }
+
+    try
+    {
+        AiRouting.Report? report = null;
+        store.Update(s => report = AiRouting.Import(text, s.Ai));
+        return Results.Json(new { report, settings = store.PublicCopy() });
+    }
+    catch (FormatException ex)
+    {
+        return Results.Json(new { error = ex.Message }, statusCode: 400);
+    }
 });
 app.MapPost("/api/ai/ask", async (EngineerService engineer, AskRequest req, CancellationToken ct) =>
 {

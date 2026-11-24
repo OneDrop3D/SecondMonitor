@@ -178,6 +178,7 @@ export function EngineerView({ radio, hasLiveData, sessionType }: { radio: Radio
         <ModelsCard settings={settings} save={save} models={models} reload={loadModels} />
         <SpecialistsCard settings={settings} save={save} models={models} />
         <MachinesCard settings={settings} save={save} models={models} reload={loadModels} reloadSettings={reloadSettings} />
+        <ProvidersCard settings={settings} models={models} reload={loadModels} reloadSettings={reloadSettings} />
       </div>
     </div>
   );
@@ -852,7 +853,7 @@ function MachinesCard({ settings, save, models, reload, reloadSettings }: { sett
             <div key={n.name} className="node-row">
               <NodeDot s={st} />
               <b>{n.name}</b>
-              {n.token && n.api !== 'openai' && <span className="pill small-pill" title="Serveur de calcul SecondMonitor relié par code (jeton)">serveur de calcul</span>}
+              {n.token && !isGateway(n) && <span className="pill small-pill" title="Serveur de calcul SecondMonitor relié par code (jeton)">serveur de calcul</span>}
               <span className="muted small">{n.url}</span>
               <span className="spacer" />
               <span className="muted small">{st?.ok ? `${st.modelCount} modèle(s) · ${st.milliseconds} ms` : n.token && st?.error?.includes('401') ? 'jeton refusé : reliez de nouveau ci-dessous' : st?.error ?? '…'}</span>
@@ -860,7 +861,7 @@ function MachinesCard({ settings, save, models, reload, reloadSettings }: { sett
             </div>
           );
         })}
-        {GATEWAYS.map((g) => <GatewayRow key={g.name} gateway={g} settings={settings} save={save} reload={reload} />)}
+        {gatewaysOf(settings).map((g) => <GatewayRow key={g.name} gateway={g} settings={settings} save={save} reload={reload} />)}
         <ComputeLinkPanel onLinked={() => { reloadSettings().then(reload); }} />
         <div className="secondary small">Ou un Ollama ouvert au réseau (Raspberry Pi, autre PC…) :</div>
         <form className="row" onSubmit={(e) => { e.preventDefault(); add(); }}>
@@ -900,17 +901,26 @@ const GATEWAYS = [
   { name: 'NVIDIA', label: 'NVIDIA (build.nvidia.com)', url: 'https://integrate.api.nvidia.com', hint: 'clé nvapi-…' },
 ];
 
+/** Fournisseur d'API (compatible OpenAI ou Claude), par opposition à une machine Ollama. */
+const isGateway = (n: { api?: string }) => n.api === 'openai' || n.api === 'anthropic';
+
+/** Les deux passerelles connues + tous les fournisseurs importés (clé à saisir une fois). */
+function gatewaysOf(settings: HubSettings): (typeof GATEWAYS)[number][] {
+  const extra = settings.ai.nodes.filter((n) => isGateway(n) && !GATEWAYS.some((g) => g.name === n.name)).map((n) => ({ name: n.name, label: n.name, url: n.url, hint: 'clé API' }));
+  return [...GATEWAYS, ...extra];
+}
+
 function GatewayRow({ gateway: g, settings, save, reload }: { gateway: (typeof GATEWAYS)[number]; settings: HubSettings; save: (p: (s: HubSettings) => HubSettings) => void; reload: () => void }) {
   const [key, setKey] = useState('');
   const [free, setFree] = useState<string[] | null>(null);
-  const node = settings.ai.nodes.find((n) => n.api === 'openai' && n.name === g.name);
+  const node = settings.ai.nodes.find((n) => isGateway(n) && n.name === g.name);
   useEffect(() => {
     if (node) api<{ models: string[] }>(`/api/ai/gateway/models?node=${encodeURIComponent(g.name)}`).then((r) => setFree(r.models)).catch(() => setFree([]));
   }, [g.name, node?.token]);
   const setNodes = (f: (nodes: HubSettings['ai']['nodes']) => HubSettings['ai']['nodes']) => { save((s) => ({ ...s, ai: { ...s.ai, nodes: f(s.ai.nodes) } })); window.setTimeout(reload, 600); };
   const addKey = () => {
     if (!key.trim()) return;
-    setNodes((nodes) => [...nodes.filter((x) => x.name !== g.name), { name: g.name, url: g.url, api: 'openai', token: key.trim(), models: node?.models ?? [] }]);
+    setNodes((nodes) => [...nodes.filter((x) => x.name !== g.name), { ...node, name: g.name, url: node?.url ?? g.url, api: node?.api ?? 'openai', token: key.trim(), models: node?.models ?? [] }]);
     setKey('');
   };
   // Liste vide = tous les gratuits ; décocher écrit la liste complète moins ce modèle.
@@ -921,7 +931,7 @@ function GatewayRow({ gateway: g, settings, save, reload }: { gateway: (typeof G
   };
   return (
     <div className="stack-sm">
-      <div className="secondary small">{g.label} — modèles gratuits, du meilleur au moins bon :</div>
+      <div className="secondary small">{g.label} — modèles, du meilleur au moins bon :</div>
       {node && (
         <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
           {free === null && <span className="muted small">…</span>}
@@ -937,6 +947,102 @@ function GatewayRow({ gateway: g, settings, save, reload }: { gateway: (typeof G
         {node && <button type="button" className="close" onClick={() => setNodes((nodes) => nodes.filter((x) => x.name !== g.name))} aria-label={`Retirer ${g.label}`}>✕</button>}
       </form>
     </div>
+  );
+}
+
+/**
+ * Fournisseurs d'API et modèles à bascule : le prompt à coller dans Gemini, ChatGPT ou Mistral, puis le JSON qu'ils renvoient.
+ * Les clés ne sont jamais dans le JSON : on les saisit dans « Machines IA » (une ligne par fournisseur).
+ */
+function ProvidersCard({ settings, models, reload, reloadSettings }: { settings: HubSettings | null; models: ModelsResponse | null; reload: () => void; reloadSettings: () => Promise<unknown> }) {
+  const [wish, setWish] = useState('');
+  const [prompt, setPrompt] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [text, setText] = useState('');
+  const [result, setResult] = useState<{ ok: boolean; lines: string[] } | null>(null);
+  const [mName, setMName] = useState('');
+  const [mUrl, setMUrl] = useState('');
+  const [mApi, setMApi] = useState<'openai' | 'anthropic'>('openai');
+  if (!settings) return null;
+  const gateways = settings.ai.nodes.filter(isGateway);
+  const routes = settings.ai.routes ?? [];
+  const paused = (node: string) => models?.nodes.find((x) => x.name.toLowerCase() === node.toLowerCase())?.pausedMinutes ?? 0;
+  const makePrompt = async () => {
+    const r = await api<{ prompt: string }>(`/api/ai/prompt?wish=${encodeURIComponent(wish)}`);
+    setPrompt(r.prompt);
+    try { await navigator.clipboard.writeText(r.prompt); setCopied(true); window.setTimeout(() => setCopied(false), 2500); } catch { /* presse-papiers refusé : le prompt reste affiché, à copier à la main */ }
+  };
+  const doImport = async () => {
+    const res = await fetch('/api/ai/import', { method: 'POST', body: text });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) { setResult({ ok: false, lines: [body.error ?? `${res.status} ${res.statusText}`] }); return; }
+    setResult({ ok: true, lines: [`${body.report.providers} fournisseur(s), ${body.report.routes} modèle(s) à bascule importés. Saisissez la clé de chaque fournisseur dans « Machines IA ».`, ...body.report.warnings] });
+    setText('');
+    await reloadSettings();
+    reload();
+  };
+  const pickFile = async (f: File | undefined) => { if (f) setText(await f.text()); };
+  const addManual = async () => {
+    const json = JSON.stringify({ providers: [{ name: mName.trim(), url: mUrl.trim(), api: mApi }] });
+    const res = await fetch('/api/ai/import', { method: 'POST', body: json });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) { setResult({ ok: false, lines: [body.error ?? `${res.status} ${res.statusText}`] }); return; }
+    const warn: string[] = body.report.warnings;
+    setResult({ ok: body.report.providers > 0, lines: body.report.providers > 0 ? [`${mName.trim()} ajouté : saisissez sa clé dans « Machines IA ».`] : warn });
+    if (body.report.providers > 0) { setMName(''); setMUrl(''); await reloadSettings(); reload(); }
+  };
+  return (
+    <section className="card">
+      <div className="card-head"><span className="card-title">Fournisseurs IA</span><span className="muted">plusieurs API, bascule quand le crédit est épuisé</span></div>
+      <div className="card-body stack-sm">
+        <ol className="small secondary" style={{ paddingLeft: 18, lineHeight: 1.7, margin: 0 }}>
+          <li>Copiez le prompt ci-dessous (il contient vos fournisseurs et leurs modèles) et collez-le dans Gemini, ChatGPT ou Mistral.</li>
+          <li>Enregistrez sa réponse en .json (ou copiez-la), puis importez-la ici.</li>
+          <li>Saisissez la clé de chaque fournisseur dans « Machines IA », puis choisissez le modèle à bascule dans « Modèles ».</li>
+        </ol>
+        <input className="input" value={wish} onChange={(e) => setWish(e.target.value)} placeholder="Ce que vous voulez (facultatif) — par défaut : un modèle « rapide » et un « puissant »" aria-label="Ce que vous voulez" />
+        <div className="row">
+          <button className="btn" onClick={() => { makePrompt().catch(() => setPrompt('Prompt indisponible.')); }}>{copied ? 'Copié ✓' : 'Générer et copier le prompt'}</button>
+        </div>
+        {prompt && <textarea className="input code" readOnly rows={6} value={prompt} onFocus={(e) => e.currentTarget.select()} aria-label="Prompt à coller" />}
+        <textarea className="input code" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="Collez ici le JSON rendu par l'IA, ou choisissez le fichier" aria-label="JSON à importer" />
+        <div className="row">
+          <input type="file" accept=".json,application/json,text/plain" onChange={(e) => { pickFile(e.target.files?.[0]); e.target.value = ''; }} aria-label="Fichier JSON" />
+          <span className="spacer" />
+          <button className="btn" disabled={!text.trim()} onClick={() => { doImport().catch((e) => setResult({ ok: false, lines: [String(e)] })); }}>Importer</button>
+        </div>
+        {result && (
+          <div className={`status ${result.ok ? '' : 'critical'}`} style={{ display: 'block' }}>
+            {result.lines.map((l, i) => <div key={i} className="small">{l}</div>)}
+          </div>
+        )}
+        <div className="secondary small">Ou ajoutez un fournisseur à la main (Kimi, DeepSeek, GLM, Claude…) — l'adresse va jusqu'avant « /models », version comprise :</div>
+        <form className="row" onSubmit={(e) => { e.preventDefault(); addManual().catch((er) => setResult({ ok: false, lines: [String(er)] })); }}>
+          <input className="input" style={{ flex: '1 1 100px' }} value={mName} onChange={(e) => setMName(e.target.value)} placeholder="nom (ex. Kimi)" aria-label="Nom du fournisseur" />
+          <input className="input" style={{ flex: '3 1 240px' }} value={mUrl} onChange={(e) => setMUrl(e.target.value)} placeholder="https://api.moonshot.ai/v1" aria-label="Adresse de l'API" />
+          <select className="select" value={mApi} onChange={(e) => setMApi(e.target.value as 'openai' | 'anthropic')} aria-label="Format de l'API">
+            <option value="openai">compatible OpenAI</option>
+            <option value="anthropic">Claude (Anthropic)</option>
+          </select>
+          <button className="btn" disabled={!mName.trim() || !mUrl.trim()}>Ajouter</button>
+        </form>
+        {gateways.map((n) => (
+          <div key={n.name} className="small">
+            <b>{n.name}</b> <span className="muted">{n.limits || 'limites inconnues'}</span>
+            {paused(n.name) > 0 && <span className="pill small-pill" style={{ marginLeft: 6 }} title="Crédit épuisé ou clé refusée : réessayé automatiquement ; une nouvelle clé le remet en service">en pause {paused(n.name)} min</span>}
+            {!n.token && <span className="pill small-pill" style={{ marginLeft: 6 }}>clé à saisir</span>}
+          </div>
+        ))}
+        {routes.map((r) => (
+          <div key={r.name} className="small">
+            <b>{r.name}</b> <span className="muted">→</span> {r.targets.map((t, i) => {
+              const node = t.slice(t.lastIndexOf('@') + 1);
+              return <span key={i} className={paused(node) > 0 ? 'muted' : ''} style={paused(node) > 0 ? { textDecoration: 'line-through' } : undefined}>{i > 0 ? ' → ' : ''}{t}</span>;
+            })}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

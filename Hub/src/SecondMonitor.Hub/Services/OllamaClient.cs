@@ -21,6 +21,27 @@ public sealed class OllamaClient
         _settings = settings;
     }
 
+    /// <summary>Fournisseurs en pause (crédit épuisé, clé refusée) : nom → fin de la pause. Statique : le client est recréé à chaque usage.</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> Paused = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Dernier fournisseur qui a répondu pour chaque modèle à bascule (« modèle@fournisseur »).</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> Answered = new(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly System.Text.RegularExpressions.Regex CreditWords =
+        new(@"credit|quota|insufficient|exhaust|balance|billing|payment", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    /// <summary>Minutes restantes de la pause d'un fournisseur (0 = disponible).</summary>
+    public static int PausedMinutes(string node) =>
+        Paused.TryGetValue(node, out DateTime until) && until > DateTime.UtcNow ? (int)Math.Ceiling((until - DateTime.UtcNow).TotalMinutes) : 0;
+
+    /// <summary>Remet un fournisseur en service (nouvelle clé).</summary>
+    public static void Resume(string node) => Paused.TryRemove(node, out _);
+
+    /// <summary>Le fournisseur qui a répondu en dernier pour ce modèle à bascule, sinon null.</summary>
+    public static string? AnsweredBy(string route) => Answered.GetValueOrDefault(route);
+
+    private AiRoute? Route(string spec) => _settings.Current.Ai.Routes?.FirstOrDefault(r => r.Name.Equals(spec, StringComparison.OrdinalIgnoreCase));
+
     /// <summary>Machine et nom réel d'un modèle « nom@machine ».</summary>
     public (string Url, string Model, string Node) Resolve(string spec)
     {
@@ -67,7 +88,12 @@ public sealed class OllamaClient
             }
         }).ToList();
         var results = await Task.WhenAll(tasks);
-        return (results.SelectMany(r => r.Models).ToList(), results.Select(r => r.Status).ToList());
+        List<NodeStatus> statuses = results.Select(r => r.Status).ToList();
+        statuses.ForEach(st => st.PausedMinutes = PausedMinutes(st.Name));
+        List<OllamaModel> all = results.SelectMany(r => r.Models).ToList();
+        // Les modèles à bascule se choisissent comme les autres (liste des modèles, ordre à la voix « passe sur … »).
+        all.AddRange((ai.Routes ?? new()).Where(r => r.Targets.Count > 0).Select(r => new OllamaModel { Name = r.Name, Id = r.Name, Node = "bascule", Capabilities = new() { "completion" } }));
+        return (all, statuses);
     }
 
     /// <summary>Modèles de ce Mac uniquement (compatibilité).</summary>
@@ -112,8 +138,10 @@ public sealed class OllamaClient
         return result;
     }
 
-    /// <summary>Machine de type passerelle OpenAI dont l'adresse est <paramref name="url"/>, sinon null.</summary>
-    private AiNode? Gateway(string url) => _settings.Current.Ai.Nodes.FirstOrDefault(n => n.Api == "openai" && Normalize(n.Url).Equals(url, StringComparison.OrdinalIgnoreCase));
+    /// <summary>Fournisseur d'API (compatible OpenAI ou Claude) dont l'adresse est <paramref name="url"/>, sinon null.</summary>
+    private AiNode? Gateway(string url) => _settings.Current.Ai.Nodes.FirstOrDefault(n => n.IsGateway && Normalize(n.Url).Equals(url, StringComparison.OrdinalIgnoreCase));
+
+    private static string GatewayUrl(AiNode node, string route) => $"{Normalize(node.Url)}{node.ApiPath}{route}";
 
     /// <summary>
     /// Modèles de conversation gratuits d'une passerelle, du meilleur au moins bon.
@@ -121,14 +149,18 @@ public sealed class OllamaClient
     /// </summary>
     public async Task<List<OllamaModel>> ListGatewayAsync(AiNode node, CancellationToken ct)
     {
-        using var resp = await SendAsync(HttpMethod.Get, $"{Normalize(node.Url)}/v1/models", null, ct);
+        using var resp = await SendAsync(HttpMethod.Get, GatewayUrl(node, node.Api == "anthropic" ? "/models?limit=100" : "/models"), null, ct);
         await EnsureOk(resp, ct);
         JsonNode? json = await resp.Content.ReadFromJsonAsync<JsonNode>(ct);
         var all = (json?["data"]?.AsArray() ?? new JsonArray()).Where(m => m?["id"] != null).DistinctBy(m => m!["id"]!.GetValue<string>()).ToDictionary(m => m!["id"]!.GetValue<string>(), m => m!);
         IEnumerable<string> ids;
-        if (IsNvidia(node.Url))
+        if (node.Api == "anthropic")
         {
-            // shortcut: /v1/models de NVIDIA ne dit ni le type ni la qualité ; on écarte les non-conversationnels par leur nom
+            ids = all.Keys; // Claude : le plus récent d'abord, tel que l'API le renvoie
+        }
+        else if (IsNvidia(node.Url) || !all.Keys.Any(id => id.EndsWith(":free", StringComparison.Ordinal)))
+        {
+            // shortcut: /v1/models de NVIDIA (et des fournisseurs sans « :free ») ne dit ni le type ni la qualité ; on écarte les non-conversationnels par leur nom
             // et on classe par taille lue dans le nom (« 253b », « 8x22b ») ; à revoir si NVIDIA publie ces champs.
             ids = all.Keys.Where(id => !NonChat.IsMatch(id)).OrderByDescending(SizeB).ThenBy(id => id, StringComparer.Ordinal);
         }
@@ -162,7 +194,7 @@ public sealed class OllamaClient
     public async Task<bool> SupportsThinkingAsync(string spec, CancellationToken ct)
     {
         var (url, model, _) = Resolve(spec);
-        if (Gateway(url) != null)
+        if (Route(spec) != null || Gateway(url) != null)
         {
             return false; // le raisonnement de la passerelle est géré par elle (reasoning_effort non envoyé)
         }
@@ -193,12 +225,128 @@ public sealed class OllamaClient
     /// </summary>
     public async Task<string> ChatAsync(string spec, IEnumerable<object> messages, CancellationToken ct, int maxTokens = 160, bool think = false)
     {
-        var (url, model, _) = Resolve(spec);
-        if (Gateway(url) != null)
+        if (Route(spec) is not AiRoute route)
         {
+            return await ChatOnceAsync(spec, messages, ct, maxTokens, think);
+        }
+
+        // Modèle à bascule : du premier au dernier, en sautant les fournisseurs en pause ; seule une erreur de crédit/clé met en pause.
+        messages = messages.ToList();
+        Exception? last = null;
+        for (int i = 0; i < route.Targets.Count; i++)
+        {
+            string target = route.Targets[i];
+            string node = Resolve(target).Node;
+            if (PausedMinutes(node) > 0)
+            {
+                continue;
+            }
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            if (i < route.Targets.Count - 1)
+            {
+                cts.CancelAfter(TimeSpan.FromSeconds(30)); // un fournisseur qui traîne ne bloque pas la radio : on passe au suivant
+            }
+
+            try
+            {
+                string text = await ChatOnceAsync(target, messages, cts.Token, maxTokens, think);
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    last = new InvalidOperationException($"{target} : réponse vide");
+                    continue; // refus ou réflexion trop longue : on essaie le fournisseur suivant
+                }
+
+                Answered[route.Name] = target;
+                return text;
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                last = ex;
+                PauseAfter(node, ex);
+            }
+        }
+
+        throw last ?? new InvalidOperationException($"« {route.Name} » : tous les fournisseurs sont en pause (crédit épuisé). Ajoutez du crédit ou une nouvelle clé.");
+    }
+
+    /// <summary>Crédit épuisé (402, ou un message qui le dit) ou clé refusée (401) : pause de <see cref="AiNode.PauseMinutes"/> ; trop de requêtes (429) : une minute.</summary>
+    private void PauseAfter(string node, Exception ex)
+    {
+        if (ex is not AiHttpException h)
+        {
+            return; // réseau, délai, 5xx, modèle inconnu : on passe au suivant sans condamner le fournisseur
+        }
+
+        bool credit = h.Status is 401 or 402 || CreditWords.IsMatch(h.Body);
+        if (!credit && h.Status != 429)
+        {
+            return;
+        }
+
+        int configured = _settings.Current.Ai.Nodes.FirstOrDefault(n => n.Name.Equals(node, StringComparison.OrdinalIgnoreCase))?.PauseMinutes ?? 60;
+        int minutes = credit ? Math.Clamp(configured, 1, 43200) : 1;
+        Paused[node] = DateTime.UtcNow.AddMinutes(minutes);
+    }
+
+    /// <summary>
+    /// Claude, par son API native (/messages) : le « system » est un champ à part, pas un message. Sur les modèles 5.x la réflexion est
+    /// active d'office : effort « low » (réponses radio rapides) et une limite assez large pour qu'elle ne mange pas la réponse.
+    /// </summary>
+    private async Task<string> ChatClaudeAsync(AiNode gateway, string model, IEnumerable<object> messages, CancellationToken ct, int maxTokens, bool think)
+    {
+        var system = new List<string>();
+        var turns = new List<object>();
+        foreach (object m in messages)
+        {
+            JsonNode? node = System.Text.Json.JsonSerializer.SerializeToNode(m);
+            string role = node?["role"]?.GetValue<string>() ?? "user", content = node?["content"]?.ToString() ?? string.Empty;
+            if (role == "system")
+            {
+                system.Add(content);
+            }
+            else
+            {
+                turns.Add(new { role, content });
+            }
+        }
+
+        var body = new Dictionary<string, object> { ["model"] = model, ["max_tokens"] = Math.Max(maxTokens, think ? 8192 : 2048), ["messages"] = turns };
+        if (system.Count > 0)
+        {
+            body["system"] = string.Join("\n\n", system);
+        }
+
+        if (System.Text.RegularExpressions.Regex.IsMatch(model, "^claude-(haiku|sonnet|opus|fable|mythos)-5"))
+        {
+            body["output_config"] = new { effort = "low" }; // shortcut: l'effort est refusé par les anciens modèles ; seule la famille 5.x le reçoit
+        }
+
+        using var resp = await SendAsync(HttpMethod.Post, GatewayUrl(gateway, "/messages"), JsonContent.Create(body), ct);
+        await EnsureOk(resp, ct);
+        JsonNode? json = await resp.Content.ReadFromJsonAsync<JsonNode>(ct);
+        string text = string.Concat((json?["content"]?.AsArray() ?? new JsonArray()).Where(b => b?["type"]?.GetValue<string>() == "text").Select(b => b!["text"]?.GetValue<string>())).Trim();
+        if (text.Length == 0 && json?["stop_reason"]?.GetValue<string>() == "refusal")
+        {
+            throw new InvalidOperationException("Claude a refusé de répondre."); // la bascule passe au fournisseur suivant
+        }
+
+        return text;
+    }
+
+    private async Task<string> ChatOnceAsync(string spec, IEnumerable<object> messages, CancellationToken ct, int maxTokens, bool think)
+    {
+        var (url, model, _) = Resolve(spec);
+        if (Gateway(url) is AiNode gateway)
+        {
+            if (gateway.Api == "anthropic")
+            {
+                return await ChatClaudeAsync(gateway, model, messages, ct, maxTokens, think);
+            }
+
             // Corps minimal : model + messages + max_tokens (pas d'échantillonnage, certains modèles le refusent → 502).
             var gw = new { model, messages, max_tokens = Math.Max(maxTokens, think ? 2048 : 512) };
-            using var gResp = await SendAsync(HttpMethod.Post, $"{url}/v1/chat/completions", JsonContent.Create(gw), ct);
+            using var gResp = await SendAsync(HttpMethod.Post, GatewayUrl(gateway, "/chat/completions"), JsonContent.Create(gw), ct);
             await EnsureOk(gResp, ct);
             JsonNode? gJson = await gResp.Content.ReadFromJsonAsync<JsonNode>(ct);
             string text = gJson?["choices"]?[0]?["message"]?["content"]?.GetValue<string>() ?? string.Empty;
@@ -279,7 +427,15 @@ public sealed class OllamaClient
         AiNode? node = _settings.Current.Ai.Nodes.FirstOrDefault(n => !string.IsNullOrEmpty(n.Token) && url.StartsWith(Normalize(n.Url) + "/", StringComparison.OrdinalIgnoreCase));
         if (node != null)
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", node.Token);
+            if (node.Api == "anthropic")
+            {
+                request.Headers.Add("x-api-key", node.Token);
+                request.Headers.Add("anthropic-version", "2023-06-01");
+            }
+            else
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", node.Token);
+            }
         }
         else if (_settings.Current.Ai.Nodes.Any(n => n.Api == "openai" && url.StartsWith(Normalize(n.Url) + "/", StringComparison.OrdinalIgnoreCase))
                  && Environment.GetEnvironmentVariable(IsNvidia(url) ? "NVIDIA_API_KEY" : "EXPLABS_API_KEY") is { Length: > 0 } envKey)
@@ -311,8 +467,23 @@ public sealed class OllamaClient
         }
 
         string body = await resp.Content.ReadAsStringAsync(ct);
-        throw new InvalidOperationException($"Ollama a répondu {(int)resp.StatusCode} : {body}");
+        throw new AiHttpException((int)resp.StatusCode, body);
     }
+}
+
+/// <summary>Réponse d'erreur d'une machine ou d'un fournisseur ; le code et le corps servent à la bascule (crédit épuisé).</summary>
+public sealed class AiHttpException : InvalidOperationException
+{
+    public AiHttpException(int status, string body)
+        : base($"Le fournisseur a répondu {status} : {body}")
+    {
+        Status = status;
+        Body = body;
+    }
+
+    public int Status { get; }
+
+    public string Body { get; }
 }
 
 public sealed class OllamaModel
@@ -346,4 +517,7 @@ public sealed class NodeStatus
     public int ModelCount { get; set; }
 
     public int Milliseconds { get; set; }
+
+    /// <summary>Minutes restantes avant de réessayer ce fournisseur (crédit épuisé) ; 0 = en service.</summary>
+    public int PausedMinutes { get; set; }
 }

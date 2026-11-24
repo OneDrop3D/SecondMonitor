@@ -74,8 +74,17 @@ public sealed class AiNode
     /// </summary>
     public string Token { get; set; } = "";
 
-    /// <summary>« openai » = passerelle compatible OpenAI (Experiential Labs : /v1/models, /v1/chat/completions, clé dans <see cref="Token"/>) ; vide = Ollama.</summary>
+    /// <summary>
+    /// « openai » = fournisseur compatible OpenAI (NVIDIA, DeepSeek, Kimi, GLM, Groq… : /models et /chat/completions, clé dans <see cref="Token"/>) ;
+    /// « anthropic » = Claude (API native /messages, clé dans <see cref="Token"/>) ; vide = Ollama.
+    /// </summary>
     public string Api { get; set; } = "";
+
+    /// <summary>Fournisseur : chemin de l'API entre l'adresse et « /models » (« /v1 » pour la plupart, « /api/paas/v4 » pour GLM, « /v1beta/openai » pour Gemini).</summary>
+    public string ApiPath { get; set; } = "/v1";
+
+    [JsonIgnore]
+    public bool IsGateway => Api is "openai" or "anthropic";
 
     /// <summary>Passerelle : modèles gratuits activés (ids tels que renvoyés, « …:free »). Vide = tous les gratuits.</summary>
     public List<string> Models { get; set; } = new();
@@ -83,8 +92,25 @@ public sealed class AiNode
     /// <summary>Identifiant du serveur de calcul : son adresse est mise à jour quand il réapparaît ailleurs sur le réseau.</summary>
     public string ServerId { get; set; } = "";
 
+    /// <summary>Passerelle : limites du fournisseur (crédit offert, requêtes par minute…), pour mémoire — texte libre, venu de l'import.</summary>
+    public string Limits { get; set; } = "";
+
+    /// <summary>Passerelle : minutes de pause quand son crédit est épuisé, avant de la réessayer (1 440 = un jour).</summary>
+    public int PauseMinutes { get; set; } = 60;
+
     /// <summary>Ce que l'interface reçoit à la place du jeton.</summary>
     public const string HiddenToken = "relié";
+}
+
+/// <summary>
+/// Un « modèle » à bascule : <see cref="Targets"/> (« modèle@fournisseur », dans l'ordre) est essayé du premier au dernier ;
+/// un fournisseur dont le crédit est épuisé est sauté, puis la liste passe au modèle suivant. S'utilise comme n'importe quel modèle.
+/// </summary>
+public sealed class AiRoute
+{
+    public string Name { get; set; } = "";
+
+    public List<string> Targets { get; set; } = new();
 }
 
 /// <summary>Réglages du serveur de calcul (« ordinateur 3 ») et de la découverte (« ordinateur 2 »).</summary>
@@ -109,6 +135,9 @@ public sealed class AiSettings
 
     /// <summary>Machines IA supplémentaires. Un modèle s'écrit « nom@machine » (sans « @ » = ce Mac).</summary>
     public List<AiNode> Nodes { get; set; } = new();
+
+    /// <summary>Modèles à bascule entre fournisseurs (importés depuis le JSON du générateur de prompt, ou écrits à la main).</summary>
+    public List<AiRoute> Routes { get; set; } = new();
 
     /// <summary>Surnoms de modèles pour les changer à la voix (« omniaudio » → « lfm3-omni:2b »).</summary>
     public Dictionary<string, string> Aliases { get; set; } = new();
@@ -245,8 +274,13 @@ public sealed class SettingsStore
             bool same = known != null
                 && ((!string.IsNullOrEmpty(known.ServerId) && known.ServerId == node.ServerId) || string.Equals(known.Url, node.Url, StringComparison.OrdinalIgnoreCase));
             // Passerelle : la clé est saisie dans l'interface ; « relié » ou vide = garder celle enregistrée.
-            bool newKey = node.Api == "openai" && !string.IsNullOrWhiteSpace(node.Token) && node.Token != AiNode.HiddenToken;
+            bool newKey = node.IsGateway && !string.IsNullOrWhiteSpace(node.Token) && node.Token != AiNode.HiddenToken;
             node.Token = newKey ? node.Token.Trim() : same ? known!.Token : "";
+            if (newKey)
+            {
+                Services.OllamaClient.Resume(node.Name); // nouvelle clé : le fournisseur n'est plus en pause
+            }
+
             node.ServerId = same ? known!.ServerId : "";
             if (same)
             {

@@ -1067,7 +1067,7 @@ public sealed class EngineerService
                         new { role = "system", content = "Tu es un ingénieur de course. Réponds en français, en une phrase très courte." },
                         new { role = "user", content = "Test radio, tu m'entends ?" },
                     }, ct);
-                    return new DiagnosticResult { Step = step, Ok = !string.IsNullOrWhiteSpace(answer), Milliseconds = (int)sw.ElapsedMilliseconds, Detail = Clean(answer), Model = ai.ThinkModel };
+                    return new DiagnosticResult { Step = step, Ok = !string.IsNullOrWhiteSpace(answer), Milliseconds = (int)sw.ElapsedMilliseconds, Detail = Clean(answer) + (OllamaClient.AnsweredBy(ai.ThinkModel) is { } via ? $" (via {via})" : string.Empty), Model = ai.ThinkModel };
                 }
 
                 case "speak":
