@@ -6,4 +6,3 @@
   Mets aussi à jour le README / la documentation si une fonction change.
   Ne mets pas de numéro de version : le Publieur le gère. Il vide ce fichier après la publication.
 -->
-- **Ingénieur IA** : le contexte envoyé à Ollama est limité à 8192 jetons, pour que le modèle consomme moins de mémoire (RAM) sur le Mac.
