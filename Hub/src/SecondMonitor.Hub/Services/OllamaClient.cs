@@ -75,6 +75,12 @@ public sealed class OllamaClient
 
     public async Task<List<OllamaModel>> ListModelsAsync(string baseUrl, CancellationToken ct)
     {
+        if (Gateway(baseUrl) is AiNode gw)
+        {
+            List<OllamaModel> free = await ListGatewayAsync(gw, ct);
+            return gw.Models.Count == 0 ? free : free.Where(m => gw.Models.Contains(m.Name)).ToList();
+        }
+
         using var tagsResp = await SendAsync(HttpMethod.Get, $"{baseUrl}/api/tags", null, ct);
         await EnsureOk(tagsResp, ct);
         JsonNode? tags = await tagsResp.Content.ReadFromJsonAsync<JsonNode>(ct);
@@ -106,6 +112,49 @@ public sealed class OllamaClient
         return result;
     }
 
+    /// <summary>Machine de type passerelle OpenAI dont l'adresse est <paramref name="url"/>, sinon null.</summary>
+    private AiNode? Gateway(string url) => _settings.Current.Ai.Nodes.FirstOrDefault(n => n.Api == "openai" && Normalize(n.Url).Equals(url, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Modèles de conversation gratuits d'une passerelle, du meilleur au moins bon.
+    /// Experiential Labs : ids « …:free » classés par prix de leur version payante. NVIDIA (build.nvidia.com) : tout est gratuit, classé par taille.
+    /// </summary>
+    public async Task<List<OllamaModel>> ListGatewayAsync(AiNode node, CancellationToken ct)
+    {
+        using var resp = await SendAsync(HttpMethod.Get, $"{Normalize(node.Url)}/v1/models", null, ct);
+        await EnsureOk(resp, ct);
+        JsonNode? json = await resp.Content.ReadFromJsonAsync<JsonNode>(ct);
+        var all = (json?["data"]?.AsArray() ?? new JsonArray()).Where(m => m?["id"] != null).DistinctBy(m => m!["id"]!.GetValue<string>()).ToDictionary(m => m!["id"]!.GetValue<string>(), m => m!);
+        IEnumerable<string> ids;
+        if (IsNvidia(node.Url))
+        {
+            // shortcut: /v1/models de NVIDIA ne dit ni le type ni la qualité ; on écarte les non-conversationnels par leur nom
+            // et on classe par taille lue dans le nom (« 253b », « 8x22b ») ; à revoir si NVIDIA publie ces champs.
+            ids = all.Keys.Where(id => !NonChat.IsMatch(id)).OrderByDescending(SizeB).ThenBy(id => id, StringComparer.Ordinal);
+        }
+        else
+        {
+            // shortcut: le prix de la version payante (id sans « :free ») sert de mesure de qualité, faute de note ; inconnu = en dernier.
+            long Price(string id) => all.TryGetValue(id[..^5], out JsonNode? paid) ? paid["pricing"]?["output_nano_usd_per_million_tokens"]?.GetValue<long?>() ?? -1 : -1;
+            long Context(string id) => all[id]["context_window_tokens"]?.GetValue<long?>() ?? 0;
+            ids = all.Keys.Where(id => id.EndsWith(":free", StringComparison.Ordinal)).OrderByDescending(Price).ThenByDescending(Context);
+        }
+
+        return ids.Select(id => new OllamaModel { Name = id, Id = id, Capabilities = new() { "completion" } }).ToList();
+    }
+
+    private static bool IsNvidia(string url) => url.Contains("nvidia.com", StringComparison.OrdinalIgnoreCase);
+
+    private static readonly System.Text.RegularExpressions.Regex NonChat =
+        new(@"embed|rerank|clip|guard|reward|safety|parse|detect|pii|retriever|vila|neva|kosmos|paligemma|deplot|fuyu|cosmos|flux|sdxl|stable-diffusion|asr|tts|riva", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    /// <summary>Milliards de paramètres lus dans un id (« llama-3.1-405b » → 405, « mixtral-8x22b » → 176) ; 0 si absent.</summary>
+    internal static double SizeB(string id)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(id, @"(?<![a-z\d])(?:(\d+)x)?(\d+(?:\.\d+)?)b(?![a-z])", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return !m.Success ? 0 : double.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture) * (m.Groups[1].Success ? int.Parse(m.Groups[1].Value) : 1);
+    }
+
     /// <summary>Capacité « thinking » par modèle (url|nom), retenue pour toute la vie de l'application (le client est recréé à chaque usage).</summary>
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> ThinkingSupport = new();
 
@@ -113,6 +162,11 @@ public sealed class OllamaClient
     public async Task<bool> SupportsThinkingAsync(string spec, CancellationToken ct)
     {
         var (url, model, _) = Resolve(spec);
+        if (Gateway(url) != null)
+        {
+            return false; // le raisonnement de la passerelle est géré par elle (reasoning_effort non envoyé)
+        }
+
         string key = $"{url}|{model}";
         if (ThinkingSupport.TryGetValue(key, out bool known))
         {
@@ -140,6 +194,17 @@ public sealed class OllamaClient
     public async Task<string> ChatAsync(string spec, IEnumerable<object> messages, CancellationToken ct, int maxTokens = 160, bool think = false)
     {
         var (url, model, _) = Resolve(spec);
+        if (Gateway(url) != null)
+        {
+            // Corps minimal : model + messages + max_tokens (pas d'échantillonnage, certains modèles le refusent → 502).
+            var gw = new { model, messages, max_tokens = Math.Max(maxTokens, think ? 2048 : 512) };
+            using var gResp = await SendAsync(HttpMethod.Post, $"{url}/v1/chat/completions", JsonContent.Create(gw), ct);
+            await EnsureOk(gResp, ct);
+            JsonNode? gJson = await gResp.Content.ReadFromJsonAsync<JsonNode>(ct);
+            string text = gJson?["choices"]?[0]?["message"]?["content"]?.GetValue<string>() ?? string.Empty;
+            return System.Text.RegularExpressions.Regex.Replace(text, @"<think>[\s\S]*?</think>", string.Empty).Trim(); // modèles qui raisonnent en clair (NVIDIA)
+        }
+
         bool thinks = await SupportsThinkingAsync(spec, ct);
         var body = new Dictionary<string, object>
         {
@@ -147,7 +212,8 @@ public sealed class OllamaClient
             ["stream"] = false,
             ["keep_alive"] = "30m",
             // Le raisonnement compte dans la limite : on la relève quand il est demandé, pour qu'il reste de la place pour la réponse.
-            ["options"] = new { temperature = 0.2, num_predict = thinks && think ? Math.Max(maxTokens, 2048) : maxTokens },
+            // num_ctx borné : le cache de contexte grossit vite et pèse sur la RAM (8192 jetons ≈ 0,7 Go avec le cache KV en q8_0).
+            ["options"] = new { temperature = 0.2, num_ctx = 8192, num_predict = thinks && think ? Math.Max(maxTokens, 2048) : maxTokens },
             ["messages"] = messages,
         };
         if (thinks)
@@ -215,6 +281,11 @@ public sealed class OllamaClient
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", node.Token);
         }
+        else if (_settings.Current.Ai.Nodes.Any(n => n.Api == "openai" && url.StartsWith(Normalize(n.Url) + "/", StringComparison.OrdinalIgnoreCase))
+                 && Environment.GetEnvironmentVariable(IsNvidia(url) ? "NVIDIA_API_KEY" : "EXPLABS_API_KEY") is { Length: > 0 } envKey)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", envKey); // clé saisie nulle part : variable d'environnement
+        }
 
         return await _http.SendAsync(request, ct);
     }
@@ -227,9 +298,9 @@ public sealed class OllamaClient
             url = "http://" + url;
         }
 
-        // « raspberrypi.local » sans port → port par défaut d'Ollama.
+        // « raspberrypi.local » sans port → port par défaut d'Ollama (http seulement : https = passerelle distante).
         var uri = new Uri(url);
-        return uri.IsDefaultPort && !url.Contains(":" + uri.Port) ? $"{uri.Scheme}://{uri.Host}:11434" : url;
+        return uri.Scheme == "http" && uri.IsDefaultPort && !url.Contains(":" + uri.Port) ? $"{uri.Scheme}://{uri.Host}:11434" : url;
     }
 
     private static async Task EnsureOk(HttpResponseMessage resp, CancellationToken ct)

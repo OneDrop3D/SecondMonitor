@@ -226,6 +226,14 @@ app.MapGet("/api/ai/models", async (OllamaClient ollama, CancellationToken ct) =
     }
 });
 app.MapGet("/api/ai/briefing", (RaceEngine engine, string? q) => Results.Text(SecondMonitor.Hub.Core.Ai.RaceBriefing.Build(engine.BuildSnapshot(), q), "text/plain; charset=utf-8"));
+// Tous les modèles gratuits d'une passerelle OpenAI (pour les cocher dans l'interface), activés ou non.
+app.MapGet("/api/ai/gateway/models", async (OllamaClient ollama, SettingsStore store, string node, CancellationToken ct) =>
+{
+    AiNode? gw = store.Current.Ai.Nodes.FirstOrDefault(n => n.Api == "openai" && n.Name.Equals(node, StringComparison.OrdinalIgnoreCase));
+    if (gw == null) return Results.NotFound();
+    try { return Results.Json(new { ok = true, models = (await ollama.ListGatewayAsync(gw, ct)).Select(m => m.Name) }); }
+    catch (Exception ex) { return Results.Json(new { ok = false, error = ex.Message, models = Array.Empty<string>() }); }
+});
 app.MapPost("/api/ai/ask", async (EngineerService engineer, AskRequest req, CancellationToken ct) =>
 {
     try

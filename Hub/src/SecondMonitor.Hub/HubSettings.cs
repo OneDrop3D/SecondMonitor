@@ -74,6 +74,12 @@ public sealed class AiNode
     /// </summary>
     public string Token { get; set; } = "";
 
+    /// <summary>« openai » = passerelle compatible OpenAI (Experiential Labs : /v1/models, /v1/chat/completions, clé dans <see cref="Token"/>) ; vide = Ollama.</summary>
+    public string Api { get; set; } = "";
+
+    /// <summary>Passerelle : modèles gratuits activés (ids tels que renvoyés, « …:free »). Vide = tous les gratuits.</summary>
+    public List<string> Models { get; set; } = new();
+
     /// <summary>Identifiant du serveur de calcul : son adresse est mise à jour quand il réapparaît ailleurs sur le réseau.</summary>
     public string ServerId { get; set; } = "";
 
@@ -238,7 +244,9 @@ public sealed class SettingsStore
             AiNode? known = current.Nodes.FirstOrDefault(n => n.Name.Equals(node.Name, StringComparison.OrdinalIgnoreCase));
             bool same = known != null
                 && ((!string.IsNullOrEmpty(known.ServerId) && known.ServerId == node.ServerId) || string.Equals(known.Url, node.Url, StringComparison.OrdinalIgnoreCase));
-            node.Token = same ? known!.Token : "";
+            // Passerelle : la clé est saisie dans l'interface ; « relié » ou vide = garder celle enregistrée.
+            bool newKey = node.Api == "openai" && !string.IsNullOrWhiteSpace(node.Token) && node.Token != AiNode.HiddenToken;
+            node.Token = newKey ? node.Token.Trim() : same ? known!.Token : "";
             node.ServerId = same ? known!.ServerId : "";
             if (same)
             {

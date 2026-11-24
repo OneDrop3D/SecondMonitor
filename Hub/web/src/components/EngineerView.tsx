@@ -812,7 +812,7 @@ function ModelSelect({ label, value, options, onChange, allowSame }: { label: st
       <select className="select" value={value} onChange={(e) => onChange(e.target.value)}>
         {allowSame ? <option value="">Même modèle que la réflexion</option> : <option value="">— choisir —</option>}
         {value && !known && <option value={value}>{value} (machine injoignable)</option>}
-        {options.map((m) => <option key={m.id} value={m.id}>{m.name} · {m.node} ({(m.sizeBytes / 1e9).toFixed(1)} Go)</option>)}
+        {options.map((m) => <option key={m.id} value={m.id}>{m.name} · {m.node}{m.sizeBytes > 0 ? ` (${(m.sizeBytes / 1e9).toFixed(1)} Go)` : ''}</option>)}
       </select>
     </div>
   );
@@ -852,7 +852,7 @@ function MachinesCard({ settings, save, models, reload, reloadSettings }: { sett
             <div key={n.name} className="node-row">
               <NodeDot s={st} />
               <b>{n.name}</b>
-              {n.token && <span className="pill small-pill" title="Serveur de calcul SecondMonitor relié par code (jeton)">serveur de calcul</span>}
+              {n.token && n.api !== 'openai' && <span className="pill small-pill" title="Serveur de calcul SecondMonitor relié par code (jeton)">serveur de calcul</span>}
               <span className="muted small">{n.url}</span>
               <span className="spacer" />
               <span className="muted small">{st?.ok ? `${st.modelCount} modèle(s) · ${st.milliseconds} ms` : n.token && st?.error?.includes('401') ? 'jeton refusé : reliez de nouveau ci-dessous' : st?.error ?? '…'}</span>
@@ -860,6 +860,7 @@ function MachinesCard({ settings, save, models, reload, reloadSettings }: { sett
             </div>
           );
         })}
+        {GATEWAYS.map((g) => <GatewayRow key={g.name} gateway={g} settings={settings} save={save} reload={reload} />)}
         <ComputeLinkPanel onLinked={() => { reloadSettings().then(reload); }} />
         <div className="secondary small">Ou un Ollama ouvert au réseau (Raspberry Pi, autre PC…) :</div>
         <form className="row" onSubmit={(e) => { e.preventDefault(); add(); }}>
@@ -890,6 +891,52 @@ function MachinesCard({ settings, save, models, reload, reloadSettings }: { sett
         </details>
       </div>
     </section>
+  );
+}
+
+/** Passerelles compatibles OpenAI : leurs modèles gratuits arrivent du meilleur au moins bon (classement fait par le Hub). */
+const GATEWAYS = [
+  { name: 'Experiential', label: 'Experiential Labs', url: 'https://api.experientiallabs.ai', hint: 'clé xpl_…' },
+  { name: 'NVIDIA', label: 'NVIDIA (build.nvidia.com)', url: 'https://integrate.api.nvidia.com', hint: 'clé nvapi-…' },
+];
+
+function GatewayRow({ gateway: g, settings, save, reload }: { gateway: (typeof GATEWAYS)[number]; settings: HubSettings; save: (p: (s: HubSettings) => HubSettings) => void; reload: () => void }) {
+  const [key, setKey] = useState('');
+  const [free, setFree] = useState<string[] | null>(null);
+  const node = settings.ai.nodes.find((n) => n.api === 'openai' && n.name === g.name);
+  useEffect(() => {
+    if (node) api<{ models: string[] }>(`/api/ai/gateway/models?node=${encodeURIComponent(g.name)}`).then((r) => setFree(r.models)).catch(() => setFree([]));
+  }, [g.name, node?.token]);
+  const setNodes = (f: (nodes: HubSettings['ai']['nodes']) => HubSettings['ai']['nodes']) => { save((s) => ({ ...s, ai: { ...s.ai, nodes: f(s.ai.nodes) } })); window.setTimeout(reload, 600); };
+  const addKey = () => {
+    if (!key.trim()) return;
+    setNodes((nodes) => [...nodes.filter((x) => x.name !== g.name), { name: g.name, url: g.url, api: 'openai', token: key.trim(), models: node?.models ?? [] }]);
+    setKey('');
+  };
+  // Liste vide = tous les gratuits ; décocher écrit la liste complète moins ce modèle.
+  const toggle = (id: string) => {
+    const on = node?.models?.length ? node.models : free ?? [];
+    const next = on.includes(id) ? on.filter((m) => m !== id) : (free ?? []).filter((m) => m === id || on.includes(m));
+    setNodes((nodes) => nodes.map((x) => (x.name === g.name ? { ...x, models: next } : x)));
+  };
+  return (
+    <div className="stack-sm">
+      <div className="secondary small">{g.label} — modèles gratuits, du meilleur au moins bon :</div>
+      {node && (
+        <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+          {free === null && <span className="muted small">…</span>}
+          {free?.length === 0 && <span className="muted small">aucun modèle (clé refusée ?)</span>}
+          {free?.map((id) => (
+            <label key={id} className="small"><input type="checkbox" checked={!node.models?.length || node.models.includes(id)} onChange={() => toggle(id)} /> {id.replace(/:free$/, '')}</label>
+          ))}
+        </div>
+      )}
+      <form className="row" onSubmit={(e) => { e.preventDefault(); addKey(); }}>
+        <input className="input" type="password" style={{ flex: '1 1 220px' }} value={key} onChange={(e) => setKey(e.target.value)} placeholder={node ? 'nouvelle clé (remplace l\'actuelle)' : g.hint} autoComplete="off" aria-label={`Clé ${g.label}`} />
+        <button className="btn" disabled={!key.trim()}>{node ? 'Changer la clé' : 'Ajouter'}</button>
+        {node && <button type="button" className="close" onClick={() => setNodes((nodes) => nodes.filter((x) => x.name !== g.name))} aria-label={`Retirer ${g.label}`}>✕</button>}
+      </form>
+    </div>
   );
 }
 

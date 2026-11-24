@@ -3,6 +3,12 @@
 SecondMonitor (l'application qui affiche) et SecondMonitor Collecteur (PC de jeu), pour Windows, Mac et Linux/SteamOS.
 Basé sur [SecondMonitor](https://gitlab.com/winzarten/SecondMonitor) de winzarten (licence MIT).
 
+## Version 0.7.9
+
+- **Ingénieur IA** : le contexte envoyé à Ollama est limité à 8192 jetons, pour que le modèle consomme moins de mémoire (RAM) sur le Mac.
+
+---
+
 ## Version 0.7.7
 
 - **Analyse de course** (nouvel écran, marche sans le PC de jeu) : choisissez une course enregistrée, puis des tours, un ou plusieurs relais ; affichez la moyenne par relais, la moyenne de tous les tours choisis, ou comparez jusqu'à 6 tours. Vitesse, écart cumulé, accélérateur et frein, rapports et régime le long du tour, avec un tableau temps moyen, Vmax, essence, énergie et usure de chaque pneu, puis le bilan par tour du carnet. Les tracés de chaque tour sont désormais gardés avec la course (les sessions plus anciennes n'ont que le bilan). Depuis l'écran d'attente, « Analyser une course passée » y mène directement.

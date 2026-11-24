@@ -332,7 +332,7 @@ export interface HubSettings {
     ollamaUrl: string;
     localNodeName: string;
     /** token : « relié » pour un serveur de calcul relié (le vrai jeton ne quitte jamais SecondMonitor). */
-    nodes: { name: string; url: string; token?: string; serverId?: string }[];
+    nodes: { name: string; url: string; token?: string; serverId?: string; api?: string; models?: string[] }[];
     aliases: Record<string, string>;
     listenModel: string;
     thinkModel: string;
