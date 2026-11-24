@@ -334,7 +334,7 @@ export interface HubSettings {
     /** token : « relié » pour un serveur de calcul relié (le vrai jeton ne quitte jamais SecondMonitor). */
     nodes: { name: string; url: string; token?: string; serverId?: string; api?: string; models?: string[]; limits?: string; pauseMinutes?: number; apiPath?: string }[];
     /** Modèles à bascule : « modèle@fournisseur » essayés dans l'ordre ; un fournisseur à court de crédit est sauté. */
-    routes?: { name: string; targets: string[] }[];
+    routes?: { name: string; targets: string[]; then?: string }[];
     aliases: Record<string, string>;
     listenModel: string;
     thinkModel: string;

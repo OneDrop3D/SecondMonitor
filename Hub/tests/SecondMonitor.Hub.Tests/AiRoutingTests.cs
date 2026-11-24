@@ -97,6 +97,8 @@ public class AiRoutingTests
 
         Assert.That(prompt, Does.Contain("meta/llama-3.1-8b-instruct").And.Contain("https://integrate.api.nvidia.com").And.Contain("un seul modèle nommé haiku").And.Contain("rapide : llama-8b@NVIDIA"));
         Assert.That(prompt, Does.Not.Contain("nvapi-secret"));
+        Assert.That(AiRouting.ModelKey("google/gemma-4-31B-it:free"), Is.EqualTo("gemma-4-31b-it"));
+        Assert.That(AiRouting.ModelKey("models/gemma-4-31b-it"), Is.EqualTo("gemma-4-31b-it"));
         Assert.That(prompt, Does.Contain("OpenRouter").And.Contain("Kimi").And.Contain("DeepSeek").And.Contain("GLM").And.Contain("Anthropic (Claude)"), "les fournisseurs pas encore reliés sont proposés");
         Assert.That(prompt, Does.Contain("https://integrate.api.nvidia.com/v1"));
     }
@@ -226,5 +228,51 @@ public class AiRoutingTests
         await Ask(client, route);
 
         Assert.That(api.Requests.Single().Path, Is.EqualTo("/api/paas/v4/chat/completions"));
+    }
+
+    // ───── Chaîne de routes et rôles ─────
+
+    [Test]
+    public void Import_EnchaineLesRoutesEtRegleLesRoles()
+    {
+        var ai = new AiSettings();
+        ai.Nodes.Add(Gateway("NVIDIA", "https://integrate.api.nvidia.com", "k"));
+        ai.ThinkModel = "qwen3.5:9b";
+        AiRouting.Report report = AiRouting.Import("""
+            { "routes": [
+                { "name": "gemma", "targets": ["google/gemma-4-31b-it@NVIDIA"], "then": "nemotron" },
+                { "name": "nemotron", "targets": ["nvidia/nemotron-3-ultra-550b-a55b@NVIDIA"], "then": "inconnue" }
+              ],
+              "assign": { "think": "gemma", "hard": "nemotron", "specialists": { "pneus": "gemma", "strategie": "nemotron", "voiture": "qwen3.5:9b" } } }
+            """, ai);
+
+        Assert.That(ai.Routes.Single(r => r.Name == "gemma").Then, Is.EqualTo("nemotron"));
+        Assert.That(ai.Routes.Single(r => r.Name == "nemotron").Then, Is.Empty, "route suivante inconnue : la chaîne s'arrête");
+        Assert.That(ai.ThinkModel, Is.EqualTo("gemma"));
+        Assert.That(ai.HardModel, Is.EqualTo("nemotron"));
+        Assert.That(ai.Specialists["pneus"], Is.EqualTo("gemma"));
+        Assert.That(ai.Specialists["stratégie"], Is.EqualTo("nemotron"), "« strategie » sans accent accepté");
+        Assert.That(ai.Specialists.ContainsKey("voiture"), Is.False, "seulement des routes, pas un modèle quelconque");
+        Assert.That(report.Assigned, Does.Contain("Réflexion → gemma"));
+        Assert.That(report.Warnings.Count, Is.EqualTo(2), string.Join(" | ", report.Warnings));
+    }
+
+    [Test]
+    public async Task Chaine_ModeleEpuisePartout_PasseALaRouteSuivante()
+    {
+        var (client, api, route, store) = Setup("7", "Alpha", "Beta");
+        store.Update(s =>
+        {
+            s.Ai.Routes[0].Targets = new() { "gemma@Alpha7" };
+            s.Ai.Routes[0].Then = "suite7";
+            s.Ai.Routes.Add(new AiRoute { Name = "suite7", Targets = { "nemotron@Beta7" }, Then = route }); // boucle : ne doit pas tourner sans fin
+        });
+        api.Status["alpha7.test"] = HttpStatusCode.PaymentRequired;
+
+        Assert.That(await Ask(client, route), Is.EqualTo("réponse de beta7.test"));
+        Assert.That(OllamaClient.AnsweredBy(route), Is.EqualTo("nemotron@Beta7"));
+
+        api.Status["beta7.test"] = HttpStatusCode.PaymentRequired;
+        Assert.ThrowsAsync<AiHttpException>(() => Ask(client, route), "tout épuisé : erreur, pas de boucle infinie");
     }
 }

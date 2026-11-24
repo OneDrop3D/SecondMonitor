@@ -805,6 +805,9 @@ function SpecialistsCard({ settings, save, models }: { settings: HubSettings | n
   );
 }
 
+/** Rubriques de la liste des modèles : les modèles à bascule d'abord, puis chaque machine ou fournisseur dans l'ordre reçu. */
+const groupsOf = (options: OllamaModel[]) => [...new Set(options.map((m) => m.node))].sort((a, b) => Number(b === 'bascule') - Number(a === 'bascule'));
+
 function ModelSelect({ label, value, options, onChange, allowSame }: { label: string; value: string; options: OllamaModel[]; onChange: (v: string) => void; allowSame?: boolean }) {
   const known = options.some((m) => m.id === value);
   return (
@@ -813,7 +816,11 @@ function ModelSelect({ label, value, options, onChange, allowSame }: { label: st
       <select className="select" value={value} onChange={(e) => onChange(e.target.value)}>
         {allowSame ? <option value="">Même modèle que la réflexion</option> : <option value="">— choisir —</option>}
         {value && !known && <option value={value}>{value} (machine injoignable)</option>}
-        {options.map((m) => <option key={m.id} value={m.id}>{m.name} · {m.node}{m.sizeBytes > 0 ? ` (${(m.sizeBytes / 1e9).toFixed(1)} Go)` : ''}</option>)}
+        {groupsOf(options).map((g) => (
+          <optgroup key={g} label={g === 'bascule' ? 'Modèles à bascule (conseillé : changent de fournisseur tout seuls)' : g}>
+            {options.filter((m) => m.node === g).map((m) => <option key={m.id} value={m.id}>{m.name}{m.sizeBytes > 0 ? ` (${(m.sizeBytes / 1e9).toFixed(1)} Go)` : ''}</option>)}
+          </optgroup>
+        ))}
       </select>
     </div>
   );
@@ -899,25 +906,25 @@ function MachinesCard({ settings, save, models, reload, reloadSettings }: { sett
  * Fournisseurs connus : il suffit de coller la clé. « url » + « apiPath » = adresse de l'API avant « /models » et « /chat/completions »
  * (« /messages » pour Claude). Les plateformes (NVIDIA, OpenRouter, Groq…) donnent accès à beaucoup de modèles d'autres marques.
  */
-const GATEWAYS: { name: string; label: string; url: string; apiPath: string; api: 'openai' | 'anthropic'; hint: string; desc: string; site: string }[] = [
+const GATEWAYS: { name: string; label: string; url: string; apiPath: string; api: 'openai' | 'anthropic'; hint: string; desc: string; site: string; paid?: boolean }[] = [
   { name: 'NVIDIA', label: 'NVIDIA', url: 'https://integrate.api.nvidia.com', apiPath: '/v1', api: 'openai', hint: 'nvapi-…', desc: 'plateforme gratuite : Nemotron, Llama, Kimi, GLM, DeepSeek, Mistral…', site: 'https://build.nvidia.com/settings/api-keys' },
   { name: 'OpenRouter', label: 'OpenRouter', url: 'https://openrouter.ai', apiPath: '/api/v1', api: 'openai', hint: 'sk-or-…', desc: 'plateforme : presque tous les modèles, dont des gratuits', site: 'https://openrouter.ai/keys' },
   { name: 'Groq', label: 'Groq', url: 'https://api.groq.com', apiPath: '/openai/v1', api: 'openai', hint: 'gsk_…', desc: 'plateforme très rapide, niveau gratuit : Llama, Kimi, Qwen…', site: 'https://console.groq.com/keys' },
-  { name: 'Cerebras', label: 'Cerebras', url: 'https://api.cerebras.ai', apiPath: '/v1', api: 'openai', hint: 'csk-…', desc: 'plateforme très rapide, niveau gratuit : Llama, Qwen, GLM…', site: 'https://cloud.cerebras.ai' },
+  { name: 'Cerebras', label: 'Cerebras', url: 'https://api.cerebras.ai', apiPath: '/v1', api: 'openai', hint: 'csk-…', desc: 'carte bancaire demandée : Llama, Qwen, GLM…', site: 'https://cloud.cerebras.ai' , paid: true },
   { name: 'HuggingFace', label: 'Hugging Face', url: 'https://router.huggingface.co', apiPath: '/v1', api: 'openai', hint: 'hf_…', desc: 'plateforme : modèles ouverts de nombreux hébergeurs, crédit mensuel offert', site: 'https://huggingface.co/settings/tokens' },
-  { name: 'Together', label: 'Together AI', url: 'https://api.together.xyz', apiPath: '/v1', api: 'openai', hint: 'clé Together', desc: 'plateforme : Llama, DeepSeek, Qwen, Kimi…', site: 'https://api.together.ai/settings/api-keys' },
-  { name: 'Fireworks', label: 'Fireworks AI', url: 'https://api.fireworks.ai', apiPath: '/inference/v1', api: 'openai', hint: 'fw_…', desc: 'plateforme : DeepSeek, Kimi, Qwen, Llama…', site: 'https://fireworks.ai/account/api-keys' },
+  { name: 'Together', label: 'Together AI', url: 'https://api.together.xyz', apiPath: '/v1', api: 'openai', hint: 'clé Together', desc: 'carte bancaire demandée : Llama, DeepSeek, Qwen, Kimi…', site: 'https://api.together.ai/settings/api-keys' , paid: true },
+  { name: 'Fireworks', label: 'Fireworks AI', url: 'https://api.fireworks.ai', apiPath: '/inference/v1', api: 'openai', hint: 'fw_…', desc: 'carte bancaire demandée : DeepSeek, Kimi, Qwen, Llama…', site: 'https://fireworks.ai/account/api-keys' , paid: true },
   { name: 'DeepInfra', label: 'DeepInfra', url: 'https://api.deepinfra.com', apiPath: '/v1/openai', api: 'openai', hint: 'clé DeepInfra', desc: 'plateforme : nombreux modèles ouverts, petits prix', site: 'https://deepinfra.com/dash/api_keys' },
   { name: 'SambaNova', label: 'SambaNova', url: 'https://api.sambanova.ai', apiPath: '/v1', api: 'openai', hint: 'clé SambaNova', desc: 'plateforme rapide : Llama, DeepSeek, Qwen…', site: 'https://cloud.sambanova.ai/apis' },
-  { name: 'Claude', label: 'Claude (Anthropic)', url: 'https://api.anthropic.com', apiPath: '/v1', api: 'anthropic', hint: 'sk-ant-…', desc: 'Haiku, Sonnet, Opus — solde prépayé', site: 'https://console.anthropic.com/settings/keys' },
-  { name: 'OpenAI', label: 'OpenAI', url: 'https://api.openai.com', apiPath: '/v1', api: 'openai', hint: 'sk-…', desc: 'GPT — solde prépayé', site: 'https://platform.openai.com/api-keys' },
+  { name: 'Claude', label: 'Claude (Anthropic)', url: 'https://api.anthropic.com', apiPath: '/v1', api: 'anthropic', hint: 'sk-ant-…', desc: 'Haiku, Sonnet, Opus — solde prépayé', site: 'https://console.anthropic.com/settings/keys' , paid: true },
+  { name: 'OpenAI', label: 'OpenAI', url: 'https://api.openai.com', apiPath: '/v1', api: 'openai', hint: 'sk-…', desc: 'GPT — solde prépayé', site: 'https://platform.openai.com/api-keys' , paid: true },
   { name: 'Gemini', label: 'Google Gemini', url: 'https://generativelanguage.googleapis.com', apiPath: '/v1beta/openai', api: 'openai', hint: 'AIza…', desc: 'Gemini, niveau gratuit', site: 'https://aistudio.google.com/apikey' },
   { name: 'Mistral', label: 'Mistral', url: 'https://api.mistral.ai', apiPath: '/v1', api: 'openai', hint: 'clé Mistral', desc: 'Mistral, niveau gratuit', site: 'https://console.mistral.ai/api-keys' },
-  { name: 'DeepSeek', label: 'DeepSeek', url: 'https://api.deepseek.com', apiPath: '/v1', api: 'openai', hint: 'sk-…', desc: 'DeepSeek — solde prépayé, petits prix', site: 'https://platform.deepseek.com/api_keys' },
-  { name: 'Kimi', label: 'Kimi (Moonshot)', url: 'https://api.moonshot.ai', apiPath: '/v1', api: 'openai', hint: 'sk-…', desc: 'Kimi — solde prépayé', site: 'https://platform.moonshot.ai/console/api-keys' },
+  { name: 'DeepSeek', label: 'DeepSeek', url: 'https://api.deepseek.com', apiPath: '/v1', api: 'openai', hint: 'sk-…', desc: 'DeepSeek — solde prépayé, petits prix', site: 'https://platform.deepseek.com/api_keys' , paid: true },
+  { name: 'Kimi', label: 'Kimi (Moonshot)', url: 'https://api.moonshot.ai', apiPath: '/v1', api: 'openai', hint: 'sk-…', desc: 'Kimi — solde prépayé', site: 'https://platform.moonshot.ai/console/api-keys' , paid: true },
   { name: 'GLM', label: 'GLM (Z.ai)', url: 'https://api.z.ai', apiPath: '/api/paas/v4', api: 'openai', hint: 'clé Z.ai', desc: 'GLM — solde prépayé, modèles Flash gratuits', site: 'https://z.ai/manage-apikey/apikey-list' },
-  { name: 'Qwen', label: 'Qwen (Alibaba)', url: 'https://dashscope-intl.aliyuncs.com', apiPath: '/compatible-mode/v1', api: 'openai', hint: 'sk-…', desc: 'Qwen — quota gratuit puis prépayé', site: 'https://modelstudio.console.alibabacloud.com' },
-  { name: 'xAI', label: 'xAI (Grok)', url: 'https://api.x.ai', apiPath: '/v1', api: 'openai', hint: 'xai-…', desc: 'Grok — solde prépayé', site: 'https://console.x.ai' },
+  { name: 'Qwen', label: 'Qwen (Alibaba)', url: 'https://dashscope-intl.aliyuncs.com', apiPath: '/compatible-mode/v1', api: 'openai', hint: 'sk-…', desc: 'Qwen — quota gratuit puis prépayé', site: 'https://modelstudio.console.alibabacloud.com' , paid: true },
+  { name: 'xAI', label: 'xAI (Grok)', url: 'https://api.x.ai', apiPath: '/v1', api: 'openai', hint: 'xai-…', desc: 'Grok — solde prépayé', site: 'https://console.x.ai' , paid: true },
   { name: 'Experiential', label: 'Experiential Labs', url: 'https://api.experientiallabs.ai', apiPath: '/v1', api: 'openai', hint: 'xpl_…', desc: 'plateforme : modèles gratuits « :free »', site: 'https://experientiallabs.ai' },
 ];
 
@@ -935,6 +942,11 @@ const isGateway = (n: { api?: string }) => n.api === 'openai' || n.api === 'anth
 function gatewaysOf(settings: HubSettings): (typeof GATEWAYS)[number][] {
   const extra = settings.ai.nodes.filter((n) => isGateway(n) && !GATEWAYS.some((g) => g.name === n.name)).map((n) => ({ name: n.name, label: n.name, url: n.url, apiPath: n.apiPath ?? '/v1', api: (n.api === 'anthropic' ? 'anthropic' : 'openai') as 'openai' | 'anthropic', hint: 'clé API', desc: 'ajouté à la main', site: '' }));
   return [...GATEWAYS, ...extra];
+}
+
+/** Fournisseur à montrer d'office : gratuit, ou déjà relié par une clé. */
+function shownByDefault(g: (typeof GATEWAYS)[number], settings: HubSettings) {
+  return !g.paid || settings.ai.nodes.some((n) => isGateway(n) && n.name === g.name && !!n.token);
 }
 
 function GatewayRow({ gateway: g, settings, save, reload, status }: { gateway: (typeof GATEWAYS)[number]; settings: HubSettings; save: (p: (s: HubSettings) => HubSettings) => void; reload: () => void; status?: NodeStatus }) {
@@ -1004,7 +1016,15 @@ export function ProvidersView() {
       <section className="card">
         <div className="card-head"><span className="card-title">Fournisseurs IA</span><span className="muted">collez une clé : ses modèles apparaissent dans Ingénieur IA › Modèles</span></div>
         <div className="card-body stack-sm">
-          {gatewaysOf(settings).map((g) => <GatewayRow key={g.name} gateway={g} settings={settings} save={save} reload={loadModels} status={status(g.name)} />)}
+          {gatewaysOf(settings).filter((g) => shownByDefault(g, settings)).map((g) => <GatewayRow key={g.name} gateway={g} settings={settings} save={save} reload={loadModels} status={status(g.name)} />)}
+          {gatewaysOf(settings).some((g) => !shownByDefault(g, settings)) && (
+            <details>
+              <summary className="secondary small" style={{ cursor: 'pointer' }}>Fournisseurs payants ou qui demandent une carte bancaire ({gatewaysOf(settings).filter((g) => !shownByDefault(g, settings)).map((g) => g.label).join(', ')})</summary>
+              <div className="stack-sm" style={{ marginTop: 8 }}>
+                {gatewaysOf(settings).filter((g) => !shownByDefault(g, settings)).map((g) => <GatewayRow key={g.name} gateway={g} settings={settings} save={save} reload={loadModels} status={status(g.name)} />)}
+              </div>
+            </details>
+          )}
           <div className="muted small">Les clés restent sur cet ordinateur et ne sont jamais renvoyées à l'interface.</div>
         </div>
       </section>
@@ -1042,7 +1062,7 @@ function ProvidersCard({ settings, models, reload, reloadSettings }: { settings:
     const res = await fetch('/api/ai/import', { method: 'POST', body: text });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) { setResult({ ok: false, lines: [body.error ?? `${res.status} ${res.statusText}`] }); return; }
-    setResult({ ok: true, lines: [`${body.report.providers} fournisseur(s), ${body.report.routes} modèle(s) à bascule importés. Collez la clé de chaque fournisseur dans sa ligne, en haut.`, ...body.report.warnings] });
+    setResult({ ok: true, lines: [`${body.report.providers} fournisseur(s), ${body.report.routes} modèle(s) à bascule importés.`, ...(body.report.assigned ?? []), ...body.report.warnings] });
     setText('');
     await reloadSettings();
     reload();
@@ -1105,6 +1125,7 @@ function ProvidersCard({ settings, models, reload, reloadSettings }: { settings:
               const node = t.slice(t.lastIndexOf('@') + 1);
               return <span key={i} className={paused(node) > 0 ? 'muted' : ''} style={paused(node) > 0 ? { textDecoration: 'line-through' } : undefined}>{i > 0 ? ' → ' : ''}{t}</span>;
             })}
+            {r.then && <span className="muted"> ⇒ puis <b>{r.then}</b></span>}
           </div>
         ))}
       </div>

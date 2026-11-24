@@ -30,7 +30,10 @@ public static class AiRouting
     };
 
     /// <summary>Résultat d'un import : ce qui a été pris, et pourquoi le reste a été écarté.</summary>
-    public sealed record Report(int Providers, int Routes, List<string> Warnings);
+    public sealed record Report(int Providers, int Routes, List<string> Warnings, List<string> Assigned);
+
+    /// <summary>Rôles que le JSON peut régler : la réflexion (réponses radio), les questions difficiles, les quatre spécialistes.</summary>
+    private static readonly string[] SpecialistKeys = { Core.Ai.Specialists.Tyres, Core.Ai.Specialists.Strategy, Core.Ai.Specialists.Car, Core.Ai.Specialists.Race };
 
     /// <summary>Le prompt : ce que l'application sait déjà (fournisseurs, modèles réellement listés, routes) + le format du JSON attendu.</summary>
     public static string BuildPrompt(AiSettings ai, IReadOnlyDictionary<string, List<string>> live, string? wish)
@@ -55,7 +58,17 @@ public static class AiRouting
         foreach (AiNode n in gateways)
         {
             List<string> ids = live.TryGetValue(n.Name, out List<string>? l) ? l : new();
-            sb.AppendLine($"- {n.Name} ({n.Api}) — {n.Url}{n.ApiPath} — " + (ids.Count == 0 ? "modèles non lus (clé absente ou refusée)" : $"{ids.Count} modèles : {string.Join(", ", ids.Take(60))}{(ids.Count > 60 ? ", …" : string.Empty)}"));
+            sb.AppendLine($"- {n.Name} ({n.Api}) — {n.Url}{n.ApiPath} — " + (ids.Count == 0 ? "modèles non lus (clé absente ou refusée)" : $"{ids.Count} modèles"));
+        }
+
+        // Chaque modèle une seule fois, avec toutes ses cibles exactes : c'est la matière des modèles à bascule.
+        var byModel = gateways.SelectMany(n => (live.TryGetValue(n.Name, out List<string>? l) ? l : new()).Select(id => (Key: ModelKey(id), Target: $"{id}@{n.Name}")))
+            .GroupBy(x => x.Key).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal).ToList();
+        if (byModel.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## Les {byModel.Count} modèles disponibles, avec leurs cibles exactes (« identifiant@fournisseur », à recopier tels quels)");
+            byModel.ForEach(g => sb.AppendLine($"- {g.Key} : {string.Join(", ", g.Select(x => x.Target))}"));
         }
 
         sb.AppendLine();
@@ -73,7 +86,7 @@ public static class AiRouting
         }
         else
         {
-            ai.Routes.ForEach(r => sb.AppendLine($"- {r.Name} : {string.Join(" → ", r.Targets)}"));
+            ai.Routes.ForEach(r => sb.AppendLine($"- {r.Name} : {string.Join(" → ", r.Targets)}{(string.IsNullOrEmpty(r.Then) ? string.Empty : $" ; puis la route « {r.Then} »")}"));
         }
 
         sb.AppendLine();
@@ -84,10 +97,13 @@ public static class AiRouting
             : trimmed[..Math.Min(trimmed.Length, 1000)]);
         sb.AppendLine();
         sb.AppendLine("## À faire");
+        sb.AppendLine("0. N'utilise que les fournisseurs listés ci-dessus comme « déjà dans l'application » s'ils ont des modèles lus : ce sont ceux dont j'ai la clé. Les autres, seulement s'ils sont dans « Ce que je veux ».");
         sb.AppendLine("1. Pour chaque fournisseur retenu, relève ses limites gratuites actuelles (crédit offert, requêtes par minute, par jour) et écris-les en une phrase dans « limits ».");
         sb.AppendLine("2. Mets dans « pauseMinutes » le temps à attendre avant de réessayer le fournisseur une fois son crédit épuisé : 1440 si la limite se renouvelle chaque jour, 60 si elle est horaire, 43200 si le crédit offert ne se renouvelle pas.");
-        sb.AppendLine("3. Construis les modèles à bascule demandés. N'utilise que des identifiants de modèles qui existent vraiment, tels qu'écrits par le fournisseur (copie-les de la liste ci-dessus quand elle existe) ; si tu n'es pas sûr d'un identifiant, ne le mets pas.");
-        sb.AppendLine("4. Ne mets AUCUNE clé d'API dans ta réponse.");
+        sb.AppendLine("3. Construis les modèles à bascule demandés. N'utilise que des identifiants de modèles qui existent vraiment, tels qu'écrits par le fournisseur (recopie-les de la liste « modèles disponibles » ci-dessus, et pour un même modèle mets toutes ses cibles) ; si tu n'es pas sûr d'un identifiant, ne le mets pas.");
+        sb.AppendLine("4. Enchaîne les routes : chaque route a « then » = le nom de la route suivante, à utiliser quand tous ses fournisseurs sont épuisés. Fais une seule chaîne du meilleur modèle au moins bon (par exemple gemma → nemotron → glm → kimi → …), la dernière route sans « then ». Ainsi, quand un modèle est épuisé partout, une liste de modèles prend le relais dans l'ordre.");
+        sb.AppendLine("5. Mets tout en place dans « assign » : « think » = la route des réponses radio (la plus rapide parmi les bonnes, quelques secondes), « hard » = la route des questions difficiles (la plus puissante), « specialists » = une route par domaine (« pneus », « stratégie », « voiture », « course »), ou rien pour qu'ils suivent « think ». N'y mets que des noms de routes de ta réponse.");
+        sb.AppendLine("6. Ne mets AUCUNE clé d'API dans ta réponse.");
         sb.AppendLine();
         sb.AppendLine("## Format de ta réponse");
         sb.AppendLine("Réponds uniquement avec un fichier JSON valide (dans un seul bloc de code, ou en pièce jointe .json), sans autre texte, de cette forme :");
@@ -99,8 +115,10 @@ public static class AiRouting
                 { "name": "Claude", "api": "anthropic", "url": "https://api.anthropic.com/v1", "limits": "solde prépayé", "pauseMinutes": 60 }
               ],
               "routes": [
-                { "name": "rapide", "targets": ["claude-haiku-5-5@Claude", "meta/llama-3.1-8b-instruct@NVIDIA", "llama-3.1-8b-instant@Groq"] }
+                { "name": "rapide", "targets": ["google/gemma-4-31b-it@NVIDIA", "gemma-4-31b-it@Experiential"], "then": "secours" },
+                { "name": "secours", "targets": ["moonshotai/kimi-k3.1-pro@NVIDIA", "kimi-k3.1-pro@Kimi"] }
               ],
+              "assign": { "think": "rapide", "hard": "secours", "specialists": { "pneus": "rapide", "stratégie": "secours" } },
               "ignores": [
                 { "name": "DeepAI", "reason": "API non compatible OpenAI" }
               ]
@@ -209,7 +227,34 @@ public static class AiRouting
                 continue;
             }
 
-            routes.Add(new AiRoute { Name = name, Targets = targets });
+            routes.Add(new AiRoute { Name = name, Targets = targets, Then = Str(r, "then") });
+        }
+
+        // « then » doit nommer une route connue (importée ou déjà là), sinon la chaîne s'arrête là.
+        var allNames = routes.Select(r => r.Name).Concat((ai.Routes ?? new()).Select(r => r.Name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (AiRoute r in routes.Where(r => r.Then.Length > 0 && (!allNames.Contains(r.Then) || r.Then.Equals(r.Name, StringComparison.OrdinalIgnoreCase))))
+        {
+            warnings.Add($"« {r.Name} » : route suivante « {r.Then} » inconnue, ignorée");
+            r.Then = string.Empty;
+        }
+
+        // « assign » : seulement des noms de routes, jamais un modèle quelconque.
+        string? Pick(string? value) => value != null && allNames.Contains(value) ? allNames.First(n => n.Equals(value, StringComparison.OrdinalIgnoreCase)) : null;
+        JsonNode? assign = obj["assign"];
+        string? think = Pick(Str(assign, "think")), hard = Pick(Str(assign, "hard"));
+        var specialists = new Dictionary<string, string>();
+        foreach (string key in SpecialistKeys)
+        {
+            string raw = Str(assign?["specialists"], key);
+            raw = raw.Length > 0 ? raw : Str(assign?["specialists"], key.Replace("é", "e")); // « strategie » sans accent
+            if (Pick(raw) is string route)
+            {
+                specialists[key] = route;
+            }
+            else if (raw.Length > 0)
+            {
+                warnings.Add($"spécialiste « {key} » : « {raw} » n'est pas une route, ignoré");
+            }
         }
 
         foreach (JsonNode? ig in obj["ignores"] as JsonArray ?? new JsonArray())
@@ -220,7 +265,33 @@ public static class AiRouting
         // Tout est vérifié : on applique.
         ai.Nodes = nodes;
         ai.Routes = (ai.Routes ?? new()).Where(old => !routes.Any(n => n.Name.Equals(old.Name, StringComparison.OrdinalIgnoreCase))).Concat(routes).ToList();
-        return new Report(providers.Count, routes.Count, warnings);
+        var assigned = new List<string>();
+        if (think != null)
+        {
+            ai.ThinkModel = think;
+            assigned.Add($"Réflexion → {think}");
+        }
+
+        if (hard != null)
+        {
+            ai.HardModel = hard;
+            assigned.Add($"Questions difficiles → {hard}");
+        }
+
+        if (assign != null)
+        {
+            ai.Specialists = specialists; // spécialiste absent = il suit la réflexion
+            assigned.AddRange(SpecialistKeys.Select(k => $"Spécialiste {k} → {(specialists.TryGetValue(k, out string? v) ? v : "comme la réflexion")}"));
+        }
+
+        return new Report(providers.Count, routes.Count, warnings, assigned);
+    }
+
+    /// <summary>Même modèle chez plusieurs fournisseurs : « google/gemma-4-31B-it », « models/gemma-4-31b-it », « …:free » → « gemma-4-31b-it ».</summary>
+    internal static string ModelKey(string id)
+    {
+        string key = id[(id.LastIndexOf('/') + 1)..].ToLowerInvariant();
+        return key.EndsWith(":free", StringComparison.Ordinal) ? key[..^5] : key;
     }
 
     private static string Str(JsonNode? node, string key) =>

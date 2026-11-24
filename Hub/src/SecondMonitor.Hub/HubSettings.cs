@@ -111,6 +111,9 @@ public sealed class AiRoute
     public string Name { get; set; } = "";
 
     public List<string> Targets { get; set; } = new();
+
+    /// <summary>Route suivante quand toutes les cibles sont épuisées (« gemma » → « nemotron » → …) ; vide = fin de la liste.</summary>
+    public string Then { get; set; } = "";
 }
 
 /// <summary>Réglages du serveur de calcul (« ordinateur 3 ») et de la découverte (« ordinateur 2 »).</summary>

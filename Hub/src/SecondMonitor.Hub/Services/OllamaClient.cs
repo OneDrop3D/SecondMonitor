@@ -178,7 +178,7 @@ public sealed class OllamaClient
     private static bool IsNvidia(string url) => url.Contains("nvidia.com", StringComparison.OrdinalIgnoreCase);
 
     private static readonly System.Text.RegularExpressions.Regex NonChat =
-        new(@"embed|rerank|clip|guard|reward|safety|parse|detect|pii|retriever|vila|neva|kosmos|paligemma|deplot|fuyu|cosmos|flux|sdxl|stable-diffusion|asr|tts|riva|whisper|dall-e|moderation|image|audio|realtime|transcri", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        new(@"embed|rerank|clip|guard|reward|safety|parse|detect|pii|retriever|vila|neva|kosmos|paligemma|deplot|fuyu|cosmos|flux|sdxl|stable-diffusion|asr|tts|riva|whisper|dall-e|moderation|image|audio|realtime|transcri|banana|lyria|robotics|orpheus|veo|imagen|genie|playai", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     /// <summary>Milliards de paramètres lus dans un id (« llama-3.1-405b » → 405, « mixtral-8x22b » → 176) ; 0 si absent.</summary>
     internal static double SizeB(string id)
@@ -232,10 +232,18 @@ public sealed class OllamaClient
 
         // Modèle à bascule : du premier au dernier, en sautant les fournisseurs en pause ; seule une erreur de crédit/clé met en pause.
         messages = messages.ToList();
-        Exception? last = null;
-        for (int i = 0; i < route.Targets.Count; i++)
+        // Chaîne « then » : les cibles de la route, puis celles de la suivante, etc. (une route déjà vue arrête la chaîne).
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var targets = new List<string>();
+        for (AiRoute? r = route; r != null && seen.Add(r.Name); r = string.IsNullOrWhiteSpace(r.Then) ? null : Route(r.Then))
         {
-            string target = route.Targets[i];
+            targets.AddRange(r.Targets.Where(t => !targets.Contains(t, StringComparer.OrdinalIgnoreCase)));
+        }
+
+        Exception? last = null;
+        for (int i = 0; i < targets.Count; i++)
+        {
+            string target = targets[i];
             string node = Resolve(target).Node;
             if (PausedMinutes(node) > 0)
             {
@@ -243,7 +251,7 @@ public sealed class OllamaClient
             }
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            if (i < route.Targets.Count - 1)
+            if (i < targets.Count - 1)
             {
                 cts.CancelAfter(TimeSpan.FromSeconds(30)); // un fournisseur qui traîne ne bloque pas la radio : on passe au suivant
             }
