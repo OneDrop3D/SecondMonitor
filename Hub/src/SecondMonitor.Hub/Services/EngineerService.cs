@@ -52,6 +52,10 @@ public sealed class EngineerService
     private readonly List<(DateTime At, string Who, string Text)> _radioLog = new();
     private readonly SemaphoreSlim _thinkQueue = new(1, 1);
     private int _thinking;
+    private DateTime _lastDriverUtc;
+
+    /// <summary>Le pilote a parlé il y a moins de 45 s : les interventions spontanées sans urgence attendent.</summary>
+    public bool DriverTalking => DateTime.UtcNow - _lastDriverUtc < TimeSpan.FromSeconds(45);
     private (DateTime At, List<OllamaModel> Models) _modelCache = (DateTime.MinValue, new());
     private DateTime _stopRequestedUtc = DateTime.MinValue;
 
@@ -143,6 +147,11 @@ public sealed class EngineerService
     {
         AiSettings ai = _settings.Current.Ai;
         var started = DateTime.UtcNow;
+        if (!test)
+        {
+            _lastDriverUtc = started;
+        }
+
         // Lexique de piste : erreurs connues de la dictée (« books » → « box ») et corrections du pilote.
         question = RadioLexicon.Correct(RadioLexicon.CleanTranscript(question), ai.Lexicon) ?? question;
         Prepared prep;
@@ -199,7 +208,9 @@ public sealed class EngineerService
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Réflexion de l'IA impossible");
-                later = prep.Brief.Suggestion ?? RaceBriefing.Missing(question, prep.Snapshot);
+                // Le modèle n'a pas répondu (délai, fournisseurs épuisés) : on le dit, pas « je n'ai pas de donnée ».
+                string failed = $"L'IA ({prep.Model ?? ModelFor(prep)}) n'a pas répondu à temps. Redemande-moi dans un moment.";
+                later = prep.Insist == null ? prep.Brief.Suggestion ?? failed : failed;
                 kind = "calculée";
             }
 
@@ -248,6 +259,31 @@ public sealed class EngineerService
 
         /// <summary>Modèle qui a formulé la réponse (affiché sous l'échange).</summary>
         public string? Model;
+
+        /// <summary>Consigne de plus pour le modèle : vraie analyse demandée, ou réponse toute faite déjà dite (ne pas la répéter).</summary>
+        public string? Insist;
+    }
+
+    private const string AnalysisAsked = "LE PILOTE DEMANDE UNE VRAIE ANALYSE, pas un chiffre : croise tout ce qu'il a dit dans les derniers échanges radio avec les faits, "
+        + "donne la cause la plus probable puis une ou deux solutions concrètes (d'abord un réglage en roulant, cran par cran ; sinon le setup au stand ou un geste de pilotage).";
+
+    private static string AlreadySaid(string text) => $"TU AS DÉJÀ DIT AU PILOTE : « {text} ». Il revient sur le même sujet, donc ça ne l'a pas aidé : ne le répète pas. "
+        + "Croise ce qu'il a dit dans les derniers échanges radio avec les faits et propose UNE autre solution concrète, avec la raison en quelques mots.";
+
+    /// <summary>Même phrase déjà dite dans les cinq dernières minutes (au « Reçu, » de tête près) : la redire n'aide pas le pilote.</summary>
+    private bool SaidRecently(string text)
+    {
+        static string Core(string s) => System.Text.RegularExpressions.Regex.Replace(RadioCommands.Normalize(s).Trim(), @"^(copy( that)?|recu|bien recu|compris|reçu)\s+", string.Empty);
+        string n = Core(text);
+        if (n.Length < 12)
+        {
+            return false;
+        }
+
+        lock (_history)
+        {
+            return _radioLog.Any(l => l.Who == "ingénieur" && (DateTime.Now - l.At).TotalMinutes <= 5 && Core(l.Text).Contains(n, StringComparison.Ordinal));
+        }
     }
 
     private async Task<Prepared> PrepareAsync(string question, bool test, CancellationToken ct)
@@ -270,6 +306,14 @@ public sealed class EngineerService
         string q = RadioLexicon.Understand(question) ?? question;
         prep.ModelInput = q;
         prep.PendingText = memory.Pending()?.Text;
+        bool hasModel = !string.IsNullOrWhiteSpace(ai.ThinkModel);
+
+        // « Demande à une IA … » : le pilote veut l'avis du modèle (celui des questions difficiles), jamais une réponse toute faite.
+        if (hasModel && RadioCommands.AskAi(q))
+        {
+            memory.ClearPending();
+            return WithBrief(AnalysisAsked, hard: true);
+        }
 
         // Réponse à « Je peux remplir le menu des stands moi-même. Je l'active ? »
         if (!test && memory.Pending()?.Topic == "stand-auto" && RadioCommands.YesNo(q) is bool accept && RadioCommands.Normalize(q).Split(' ').Length <= 10)
@@ -315,10 +359,18 @@ public sealed class EngineerService
 
         // L'ingénieur vient de demander « Qu'est-ce qui s'est passé ? » après une usure anormale (plus récent que sa dernière proposition).
         // Fenêtre courte (90 s) : au-delà, une remarque sans rapport (« la piste sèche ») n'est plus prise pour l'explication.
-        PendingQuestion? wearQuestion = memory.Pending(90) is { Topic: "usure" } pq && (memory.Thread.Open == null || pq.AskedAtUtc >= memory.Thread.Open.AtUtc) ? pq : null;
+        // « Trouve-moi des solutions » n'est pas l'explication d'une usure : la demande passe avant.
+        bool wantsAdvice = RadioCommands.WantsAdvice(q) && SetupAdvisor.DetectSymptom(q) == null;
+        PendingQuestion? wearQuestion = !wantsAdvice && memory.Pending(90) is { Topic: "usure" } pq && (memory.Thread.Open == null || pq.AskedAtUtc >= memory.Thread.Open.AtUtc) ? pq : null;
         if (wearQuestion == null && memory.Pending() is { Topic: "usure" })
         {
             memory.ClearPending(); // question d'usure trop ancienne : oubliée
+        }
+
+        // « Je peux modifier quoi ? » sans symptôme précis : une statistique de pilotage ne répond pas, le modèle analyse.
+        if (hasModel && wantsAdvice)
+        {
+            return WithBrief(AnalysisAsked, hard: false);
         }
 
         // Suites de conversation (« oui », « non », « autre chose ? ») avant les politesses : « ok » répond à la proposition.
@@ -370,6 +422,21 @@ public sealed class EngineerService
             dialog = RadioDialog.Feedback(q, memory, car, snapshot, prep.Lap);
         }
 
+        // Conseil déjà donné tel quel il y a peu : le pilote revient, donc il n'a pas aidé. Le modèle cherche autre chose ;
+        // sans modèle, la proposition suivante de la base de réglages.
+        if (dialog is { Kind: "conseil" or "retour" } && prep.Prefix == null && SaidRecently(dialog.Text))
+        {
+            if (hasModel)
+            {
+                return WithBrief(AlreadySaid(dialog.Text), hard: false);
+            }
+
+            if (dialog.Kind == "conseil" && memory.Thread.Next() is Proposal next)
+            {
+                dialog = new DialogReply(SetupAdvisor.Offer(next, alternative: true), "suite", dialog.Category, dialog.Symptom);
+            }
+        }
+
         if (dialog != null)
         {
             prep.Answer = ai.EnglishCalls && dialog.Kind is "retour" or "suite" && prep.Prefix == null ? RadioStyle.WithCopy(dialog.Text) : dialog.Text;
@@ -396,43 +463,55 @@ public sealed class EngineerService
             return prep;
         }
 
-        bool live = snapshot.HasData && !test;
-        var extras = new BriefingExtras
-        {
-            Speeds = live ? _engine.BuildSpeedAnalysis() : null,
-            MicroSectors = live ? _engine.BuildMicroSectors() : null,
-            Weather = live ? _engine.BuildWeather() : null,
-            Laps = live ? _engine.PlayerLaps() : null,
-            DrivingSummary = live ? _engine.DrivingSummary() : null,
-            WearSpikes = live ? _engine.WearSpikes() : null,
-            Memory = memory,
-            WetThresholdPct = ai.WetThresholdPct,
-        };
-        BriefingResult brief = RaceBriefing.Prepare(snapshot, q, extras);
-        prep.Brief = brief;
-        prep.Facts = brief.Facts;
-        prep.Domain = Specialists.For(brief.Topics);
-        prep.Hard = RaceBriefing.IsHardQuestion(q, brief);
-        prep.Category = ExchangeCategorizer.Categorize(q, brief.Topics);
-        if (prep.Category == null)
-        {
-            prep.Category = ExchangeCategorizer.RaceInfo;
-            prep.CategorySource = "défaut"; // le carnet demandera au modèle de classer l'échange
-        }
+        return WithBrief(null, hard: false);
 
-        if (brief.Suggestion != null && (ai.StrictAnswers || string.IsNullOrWhiteSpace(ai.ThinkModel)))
+        // Faits de la course pour le modèle ; réponse calculée dite telle quelle en mode strict, sauf si elle vient d'être dite
+        // ou si le pilote demande une vraie analyse (insist).
+        Prepared WithBrief(string? insist, bool hard)
         {
-            // Réponse calculée par le hub : dite telle quelle (fiable, et sans attendre le modèle).
-            prep.Answer = brief.Suggestion;
-            prep.Kind = "calculée";
-            if (brief.Proposal != null)
+            bool live = snapshot.HasData && !test;
+            var extras = new BriefingExtras
             {
-                // La réponse propose quelque chose (un cran d'aileron, une sortie de virage) : « oui » / « non » s'y rattachent.
-                RadioDialog.Offered(memory, brief.Proposal, "vitesse", "Vitesse de pointe", prep.Category);
+                Speeds = live ? _engine.BuildSpeedAnalysis() : null,
+                MicroSectors = live ? _engine.BuildMicroSectors() : null,
+                Weather = live ? _engine.BuildWeather() : null,
+                Laps = live ? _engine.PlayerLaps() : null,
+                DrivingSummary = live ? _engine.DrivingSummary() : null,
+                WearSpikes = live ? _engine.WearSpikes() : null,
+                Memory = memory,
+                WetThresholdPct = ai.WetThresholdPct,
+            };
+            BriefingResult brief = RaceBriefing.Prepare(snapshot, q, extras);
+            prep.Brief = brief;
+            prep.Facts = brief.Facts;
+            prep.Domain = Specialists.For(brief.Topics);
+            prep.Hard = hard || RaceBriefing.IsHardQuestion(q, brief);
+            prep.Insist = insist;
+            prep.Category = ExchangeCategorizer.Categorize(q, brief.Topics);
+            if (prep.Category == null)
+            {
+                prep.Category = ExchangeCategorizer.RaceInfo;
+                prep.CategorySource = "défaut"; // le carnet demandera au modèle de classer l'échange
             }
-        }
 
-        return prep;
+            if (insist == null && brief.Suggestion != null && hasModel && SaidRecently(brief.Suggestion))
+            {
+                prep.Insist = AlreadySaid(brief.Suggestion);
+            }
+            else if (insist == null && brief.Suggestion != null && (ai.StrictAnswers || !hasModel))
+            {
+                // Réponse calculée par le hub : dite telle quelle (fiable, et sans attendre le modèle).
+                prep.Answer = brief.Suggestion;
+                prep.Kind = "calculée";
+                if (brief.Proposal != null)
+                {
+                    // La réponse propose quelque chose (un cran d'aileron, une sortie de virage) : « oui » / « non » s'y rattachent.
+                    RadioDialog.Offered(memory, brief.Proposal, "vitesse", "Vitesse de pointe", prep.Category);
+                }
+            }
+
+            return prep;
+        }
     }
 
     /// <summary>Diffuse la réponse (voix comprise), la garde dans l'historique et le carnet.</summary>
@@ -813,7 +892,12 @@ public sealed class EngineerService
         {
             system += $"\n\nQUESTION QUE TU VIENS DE POSER AU PILOTE : « {prep.PendingText} ». Sa phrase y répond peut-être.";
         }
-        if (brief.Suggestion != null)
+        if (prep.Insist != null)
+        {
+            // Analyse demandée ou réponse déjà dite : la réponse préparée n'est qu'un fait parmi d'autres, pas à réciter.
+            system += "\n\n" + prep.Insist + (brief.Suggestion != null ? "\n\nCHIFFRES DÉJÀ CALCULÉS (à utiliser s'ils aident, pas à réciter) :\n" + brief.Suggestion : string.Empty);
+        }
+        else if (brief.Suggestion != null)
         {
             system += "\n\nRÉPONSE PRÉPARÉE POUR CETTE QUESTION (à dire au pilote, presque mot pour mot) :\n" + brief.Suggestion;
         }
@@ -835,11 +919,12 @@ public sealed class EngineerService
         string answer = Shorten(Clean(await _ollama.ChatAsync(prep.Model, messages, ct, think: _settings.Current.Ai.ThinkingMode)));
 
         // Garde-fous : chiffre inventé, réponse en anglais ou qui parle du « document » → réponse du hub.
-        bool invented = brief.Suggestion != null && HasUnknownNumber(answer, brief.Facts + " " + prep.Question);
+        // Analyse demandée : les crans et réglages proposés ne sont pas dans les faits, ce n'est pas une invention.
+        bool invented = prep.Insist == null && brief.Suggestion != null && HasUnknownNumber(answer, brief.Facts + " " + prep.Question);
         if (invented || RadioCommands.IsUnusableAnswer(answer))
         {
             _logger.LogInformation("Réponse IA écartée : {Answer}", answer);
-            return brief.Suggestion ?? RaceBriefing.Missing(prep.Question, prep.Snapshot);
+            return prep.Insist != null ? "L'IA a répondu à côté. Redis-moi le problème autrement." : brief.Suggestion ?? RaceBriefing.Missing(prep.Question, prep.Snapshot);
         }
 
         // Le modèle répète la phrase du pilote (« 10 heures. » → « 10 heures. ») : la radio n'était pas claire.
@@ -849,7 +934,7 @@ public sealed class EngineerService
         }
 
         // « Je n'ai pas cette information » : on dit plutôt quelle donnée manque et pourquoi.
-        if (RadioCommands.Normalize(answer).Contains("pas cette information"))
+        if (prep.Insist == null && RadioCommands.Normalize(answer).Contains("pas cette information"))
         {
             return brief.Suggestion ?? RaceBriefing.Missing(prep.Question, prep.Snapshot);
         }

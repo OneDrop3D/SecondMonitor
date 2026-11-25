@@ -507,6 +507,7 @@ const PATHS: Record<string, string> = {
   rain: 'M7 14h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 14zM8 17l-1 3M12 17l-1 3M16 17l-1 3',
   brake: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
   fuel: 'M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h14M7 8h6M15 10h2a2 2 0 0 1 2 2v5a1 1 0 0 0 2 0V9l-3-3',
+  energy: 'M13 3 4 14h7l-1 7 9-11h-7z',
   water: 'M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z',
   oil: 'M4 14h10l4-4h3M4 14v4h10l3-3M7 10V7h4v3',
   // Accueil (blocs)

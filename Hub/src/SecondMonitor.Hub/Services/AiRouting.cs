@@ -64,11 +64,19 @@ public static class AiRouting
         // Chaque modèle une seule fois, avec toutes ses cibles exactes : c'est la matière des modèles à bascule.
         var byModel = gateways.SelectMany(n => (live.TryGetValue(n.Name, out List<string>? l) ? l : new()).Select(id => (Key: ModelKey(id), Target: $"{id}@{n.Name}")))
             .GroupBy(x => x.Key).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal).ToList();
+        // La liste va à la fin du prompt (un chat qui coupe un long collage ne perd alors que la fin de la liste, pas les consignes).
+        var list = new StringBuilder();
         if (byModel.Count > 0)
         {
-            sb.AppendLine();
-            sb.AppendLine($"## Les {byModel.Count} modèles disponibles, avec leurs cibles exactes (« identifiant@fournisseur », à recopier tels quels)");
-            byModel.ForEach(g => sb.AppendLine($"- {g.Key} : {string.Join(", ", g.Select(x => x.Target))}"));
+            list.AppendLine();
+            list.AppendLine($"## Les {byModel.Count} modèles disponibles (« identifiant@fournisseur », à recopier tels quels)");
+            list.AppendLine("### Chez plusieurs fournisseurs (les meilleurs candidats pour la bascule)");
+            byModel.Where(g => g.Count() > 1).ToList().ForEach(g => list.AppendLine($"- {g.Key} : {string.Join(", ", g.Select(x => x.Target))}"));
+            list.AppendLine("### Chez un seul fournisseur (cible = identifiant@fournisseur)");
+            foreach (var single in byModel.Where(g => g.Count() == 1).Select(g => g.First().Target).GroupBy(t => t[(t.LastIndexOf('@') + 1)..]))
+            {
+                list.AppendLine($"- @{single.Key} : {string.Join(", ", single.Select(t => t[..t.LastIndexOf('@')]))}");
+            }
         }
 
         sb.AppendLine();
@@ -100,7 +108,7 @@ public static class AiRouting
         sb.AppendLine("0. N'utilise que les fournisseurs listés ci-dessus comme « déjà dans l'application » s'ils ont des modèles lus : ce sont ceux dont j'ai la clé. Les autres, seulement s'ils sont dans « Ce que je veux ».");
         sb.AppendLine("1. Pour chaque fournisseur retenu, relève ses limites gratuites actuelles (crédit offert, requêtes par minute, par jour) et écris-les en une phrase dans « limits ».");
         sb.AppendLine("2. Mets dans « pauseMinutes » le temps à attendre avant de réessayer le fournisseur une fois son crédit épuisé : 1440 si la limite se renouvelle chaque jour, 60 si elle est horaire, 43200 si le crédit offert ne se renouvelle pas.");
-        sb.AppendLine("3. Construis les modèles à bascule demandés. N'utilise que des identifiants de modèles qui existent vraiment, tels qu'écrits par le fournisseur (recopie-les de la liste « modèles disponibles » ci-dessus, et pour un même modèle mets toutes ses cibles) ; si tu n'es pas sûr d'un identifiant, ne le mets pas.");
+        sb.AppendLine("3. Construis les modèles à bascule demandés. N'utilise que des identifiants de modèles qui existent vraiment, tels qu'écrits par le fournisseur (recopie-les de la liste « modèles disponibles » à la fin de ce message, et pour un même modèle mets toutes ses cibles) ; si tu n'es pas sûr d'un identifiant, ne le mets pas.");
         sb.AppendLine("4. Enchaîne les routes : chaque route a « then » = le nom de la route suivante, à utiliser quand tous ses fournisseurs sont épuisés. Fais une seule chaîne du meilleur modèle au moins bon (par exemple gemma → nemotron → glm → kimi → …), la dernière route sans « then ». Ainsi, quand un modèle est épuisé partout, une liste de modèles prend le relais dans l'ordre.");
         sb.AppendLine("5. Mets tout en place dans « assign » : « think » = la route des réponses radio (la plus rapide parmi les bonnes, quelques secondes), « hard » = la route des questions difficiles (la plus puissante), « specialists » = une route par domaine (« pneus », « stratégie », « voiture », « course »), ou rien pour qu'ils suivent « think ». N'y mets que des noms de routes de ta réponse.");
         sb.AppendLine("6. Ne mets AUCUNE clé d'API dans ta réponse.");
@@ -125,6 +133,10 @@ public static class AiRouting
             }
             """);
         sb.AppendLine("Règles : « name » = lettres, chiffres, espaces, point, tiret (40 caractères au plus) ; « api » = « openai » (par défaut) ou « anthropic » ; « url » commence par https:// ; chaque cible d'une route nomme un fournisseur de « providers » ou déjà relié ci-dessus.");
+        sb.AppendLine("La liste des modèles suit. Après l'avoir lue, réponds UNIQUEMENT par le JSON décrit ci-dessus (avec « then » et « assign »), sans texte autour.");
+        sb.Append(list);
+        sb.AppendLine();
+        sb.AppendLine("Rappel : ta réponse est uniquement le JSON (providers, routes avec then, assign, ignores).");
         return sb.ToString();
     }
 

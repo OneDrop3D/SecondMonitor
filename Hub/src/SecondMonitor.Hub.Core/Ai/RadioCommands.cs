@@ -203,6 +203,21 @@ namespace SecondMonitor.Hub.Core.Ai
                 && SetupAdvisor.DetectSymptom(question) == null;
         }
 
+        /// <summary>« Demande à une IA … », « pose la question à llm … », « analyse pourquoi … » : le pilote veut l'avis du modèle, pas une réponse toute faite.</summary>
+        public static bool AskAi(string text)
+        {
+            string t = Normalize(text);
+            return Regex.IsMatch(t, @"\b(demande|pose (la|ta|cette|ma) question|transmets?)\b.{0,14}\b(ia|ai|llm|intelligence artificielle|modele|gemini|kimi|glm|chatgpt|claude|mistral)\b")
+                || Regex.IsMatch(t, @"^(analyse|reflechis|cherche (une|des) solutions?)\b");
+        }
+
+        /// <summary>Le pilote demande quoi changer (« je peux modifier quoi », « trouve-moi des solutions ») plutôt qu'il ne décrit un symptôme.</summary>
+        public static bool WantsAdvice(string text)
+        {
+            string t = Normalize(text);
+            return Regex.IsMatch(t, @"\b((je|on) (peux|peut|pourrais|dois) (modifier|changer|regler|faire|apporter|ameliorer) quoi|peu[xt]? fair\w* quoi|(je|on) (modifie|change|regle) quoi|qu est ce que (je|on) (peux|peut|dois) (modifier|changer|regler|faire)|que (faire|modifier|regler|changer)|(trouve|donne|propose)( moi)? (des|une) solutions?|des solutions|une solution|quoi comme (solution|reglage|parametre)s?|quels? (reglages?|parametres?)|parametres? a regler|il faut que je (modifie|change|regle) quoi)\b");
+        }
+
         /// <summary>Réponse oui / non du pilote à une question de l'IA : true, false ou null (ni l'un ni l'autre).</summary>
         public static bool? YesNo(string text)
         {

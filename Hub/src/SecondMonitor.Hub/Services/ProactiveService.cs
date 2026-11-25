@@ -117,7 +117,8 @@ public sealed class ProactiveService : BackgroundService
                     continue;
                 }
 
-                if (!ai.ProactiveRadio)
+                // Le pilote est en pleine conversation : les interventions sans urgence attendent (les règles gardent leur tour).
+                if (!ai.ProactiveRadio || _engineer.DriverTalking)
                 {
                     continue;
                 }

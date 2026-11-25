@@ -307,6 +307,51 @@ public class BriefingTests
         Assert.That(mid.Category, Is.EqualTo(ExchangeCategorizer.CarSetup));
     }
 
+    // Retour de course du 24/11 : l'ingénieur répétait « avancer la répartition » quand l'avant ET l'arrière bloquaient.
+    [TestCase("Des solutions sur ce système de freinage, j'arrive pas à bien freiner. À faible vitesse, je bloque l'arrière et haute vitesse, je bloque le train avant.", "lock-both")]
+    [TestCase("je bloque les roue avant est arrière", "lock-both")]
+    [TestCase("L'arrière ne bloque que à basse vitesse. À haute vitesse, c'est l'avant qui bloque.", "lock-both")]
+    [TestCase("C'est l'arrière qui bloque.", "lock-rear")]
+    [TestCase("je bloque l'avant", "lock-front")]
+    public void Symptom_FrontAndRearLocking(string text, string expected)
+    {
+        Assert.That(SetupAdvisor.DetectSymptom(text), Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void Advice_FrontAndRearLocking_ProposesMigrationNotBias()
+    {
+        var hyper = new CarContext { Game = "LMU", CarClass = "Hypercar", HasTc = true, StintLaps = 5 };
+        SetupAdvisor.Advice a = SetupAdvisor.Advise("je bloque l'arrière à basse vitesse et l'avant à haute vitesse", hyper);
+        Assert.That(a.Main.Key, Is.EqualTo("migration-less"));
+        Assert.That(a.Text, Does.Contain("migration").And.Contain("ne règle pas les deux"));
+        Assert.That(a.Proposals.Select(p => p.Key), Does.Not.Contain("bias-fwd").And.Not.Contain("bias-back"));
+
+        // GT3 sans migration réglable : l'ABS d'abord.
+        Assert.That(SetupAdvisor.Advise("je bloque l'arrière à basse vitesse et l'avant à haute vitesse", Gt3()).Main.Key, Is.EqualTo("abs-up"));
+    }
+
+    [TestCase("demande a une ia Des solutions sur ce système de freinage", true)]
+    [TestCase("pose la question a llm 5.3 Des solutions sur ce système de freinage", true)]
+    [TestCase("analyse pourquoi je bloque", true)]
+    [TestCase("demande au stand de préparer les pneus", false)]
+    [TestCase("Pilote devant.", false)]
+    public void AskAi_ExplicitRequestToTheModel(string text, bool expected)
+    {
+        Assert.That(RadioCommands.AskAi(text), Is.EqualTo(expected));
+    }
+
+    [TestCase("Pas à l'aise sur les freinages. Je peux modifier quoi sur la voiture pour améliorer?", true)]
+    [TestCase("je suis vraiment pas a l’aise sur les freinage ke peut fair quoi?", true)]
+    [TestCase("Que les freins sont bizarres, j'arrive pas à rouler avec ces freins. Trouve-moi des solutions, des paramètres à régler.", true)]
+    [TestCase("Problème, on peut apporter quoi comme solution?", true)]
+    [TestCase("Pilote devant.", false)]
+    [TestCase("Stratégie des autres pilotes.", false)]
+    public void WantsAdvice_RequestForASolution(string text, bool expected)
+    {
+        Assert.That(RadioCommands.WantsAdvice(text), Is.EqualTo(expected));
+    }
+
     [TestCase("comment chauffent mes pneus ?", null)]
     [TestCase("j'ai du sous-virage", "understeer")]
     [TestCase("l'arrière glisse beaucoup en sortie de virage", "oversteer")]

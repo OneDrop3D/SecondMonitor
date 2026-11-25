@@ -17,6 +17,7 @@ namespace SecondMonitor.Hub.Core.Ai
         {
             Course("bias-back", "reculer la répartition de freinage d'un cran", "recule la répartition de freinage d'un cran", "répartition de freinage reculée"),
             Course("bias-fwd", "avancer la répartition de freinage d'un cran", "avance la répartition de freinage d'un cran", "répartition de freinage avancée"),
+            Course("migration-less", "baisser la migration de freinage d'un cran", "baisse la migration de freinage d'un cran", "migration de freinage plus basse"),
             Course("abs-up", "monter l'ABS d'un cran", "monte l'ABS d'un cran", "ABS plus haut"),
             Course("tc-up", "monter le TC d'un cran", "monte le TC d'un cran", "TC plus haut"),
             Course("map-soft", "passer sur une cartographie moteur plus douce", "passe sur une cartographie moteur plus douce", "cartographie moteur plus douce"),
@@ -64,6 +65,8 @@ namespace SecondMonitor.Hub.Core.Ai
         private static readonly Symptom[] Symptoms =
         {
             new("lock-inside", "Blocage de la roue intérieure", R(@"\b(bloqu\w*|blocage|meplat)\b.*\binterieur\w*|\binterieur\w*.*\b(bloqu\w*|blocage)"), ExchangeCategorizer.RaceSettings),
+            // « L'arrière bloque à basse vitesse, l'avant à haute vitesse » : la répartition seule ne règle pas les deux.
+            new("lock-both", "Blocages avant et arrière", R(@"^(?=.*\b(bloqu\w*|blocage)\b)(?=.*\bavant\b)(?=.*\barriere\b)"), ExchangeCategorizer.RaceSettings),
             new("lock-rear", "Blocage de l'arrière", R(@"\b(bloqu\w*|blocage)\b.*\b(arriere|roues ar)\b|\b(arriere)\b.*\b(bloqu\w*|blocage)\b"), ExchangeCategorizer.RaceSettings),
             new("lock-front", "Blocage de l'avant", R(@"\b(bloqu\w*|blocage|meplat|flat spot|plat sur le pneu)\b"), ExchangeCategorizer.RaceSettings),
             new("brake-unstable", "Voiture instable au freinage", R(@"\b(instable|louvoie|se dandine|se tortille|bouge|danse)\b.*\b(freinage|freine|freins)\b|\b(freinage|freine)\b.*\b(instable|louvoie|bouge)\b|\barriere\b.*\b(se derobe|derobe|decroche|chasse)\b.*\bfrein"), ExchangeCategorizer.RaceSettings),
@@ -92,6 +95,7 @@ namespace SecondMonitor.Hub.Core.Ai
             ["lock-front:"] = new[] { "bias-back", "abs-up", "trail-brake", "brake-pressure-less" },
             ["lock-inside:"] = new[] { "bias-back", "abs-up", "arb-front-soft", "brake-pressure-less" },
             ["lock-rear:"] = new[] { "bias-fwd", "abs-up", "downshift-slow", "diff-coast-more" },
+            ["lock-both:"] = new[] { "migration-less", "abs-up", "trail-brake", "downshift-slow", "brake-pressure-less" },
             ["brake-unstable:"] = new[] { "bias-fwd", "abs-up", "brake-straight", "diff-coast-more", "wing-rear-more" },
             ["wheelspin:"] = new[] { "tc-up", "map-soft", "diff-lock", "throttle-smooth", "short-shift", "springs-rear-soft", "wing-rear-more" },
             ["bouncing:"] = new[] { "kerbs-avoid", "ride-height-up", "bump-soft", "springs-soft" },
@@ -383,6 +387,13 @@ namespace SecondMonitor.Hub.Core.Ai
 
         private static string ContextNote(string key, CarContext ctx)
         {
+            if (key == "lock-both")
+            {
+                return ctx.Controls?.MigrationMax > 0 || ctx.CarClass == "Hypercar"
+                    ? "L'avant bloque en début de freinage, l'arrière en fin de freinage quand la migration renvoie le freinage vers l'arrière : la répartition seule ne règle pas les deux."
+                    : "L'avant bloque à haute vitesse et l'arrière à basse vitesse : la répartition seule ne règle pas les deux.";
+            }
+
             if (ctx.Wet && key != "rain")
             {
                 return $"Piste mouillée à {ctx.WetnessPct} % :";
@@ -421,6 +432,7 @@ namespace SecondMonitor.Hub.Core.Ai
 
         private static bool Applies(Proposal p, CarContext ctx) => p.Key switch
         {
+            "migration-less" => ctx.Controls?.MigrationMax > 0 || ctx.CarClass == "Hypercar",
             "abs-up" => ctx.HasAbs,
             "tc-up" => ctx.HasTc,
             "map-soft" => ctx.HasEngineMap,
